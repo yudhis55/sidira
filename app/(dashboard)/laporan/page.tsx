@@ -1,25 +1,89 @@
-import { Card, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart3 } from "lucide-react";
+import { Suspense } from "react";
+import { getRooms } from "@/lib/auth/rooms";
+import { getLaporanSummary, getLaporanPerRoom } from "@/lib/auth/laporan";
+import { LaporanFilter } from "@/components/laporan/laporan-filter";
+import { LaporanSummary } from "@/components/laporan/laporan-summary";
+import { LaporanRoomDetail } from "@/components/laporan/laporan-room-detail";
+import { ExportButtons } from "@/components/laporan/export-buttons";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export default function LaporanPage() {
+interface LaporanPageProps {
+  searchParams: Promise<{
+    bulan?: string;
+    tahun?: string;
+    room_id?: string;
+    kategori?: string;
+  }>;
+}
+
+function LaporanLoading() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Laporan</h1>
-        <p className="text-muted-foreground">
-          Laporan bulanan kondisi barang dan inventaris
-        </p>
-      </div>
-
       <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <BarChart3 className="h-12 w-12 text-muted-foreground/50" />
-          <CardTitle className="mt-4">Module Dalam Pengembangan</CardTitle>
-          <CardDescription className="mt-2 text-center">
-            Fitur laporan sedang dalam tahap implementasi.
-          </CardDescription>
+        <CardHeader>
+          <Skeleton className="h-6 w-48" />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+export default async function LaporanPage({ searchParams }: LaporanPageProps) {
+  const params = await searchParams;
+  const now = new Date();
+
+  const bulan = params.bulan ? parseInt(params.bulan) : now.getMonth() + 1;
+  const tahun = params.tahun ? parseInt(params.tahun) : now.getFullYear();
+  const room_id = params.room_id;
+  const kategori = params.kategori;
+
+  const rooms = await getRooms();
+  const summary = await getLaporanSummary({ bulan, tahun, room_id, kategori });
+  const laporanRooms = await getLaporanPerRoom({ bulan, tahun, room_id, kategori });
+
+  const bulanNames = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+  ];
+
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Laporan Inventaris</h1>
+          <p className="text-muted-foreground">
+            Laporan kondisi inventaris bulan {bulanNames[bulan - 1]} {tahun}
+          </p>
+        </div>
+        <ExportButtons
+          bulan={bulan}
+          tahun={tahun}
+          room_id={room_id}
+          kategori={kategori}
+          summary={summary}
+          rooms={laporanRooms}
+        />
+      </div>
+
+      <LaporanFilter
+        bulan={bulan}
+        tahun={tahun}
+        room_id={room_id}
+        kategori={kategori}
+        rooms={rooms}
+      />
+
+      <Suspense fallback={<LaporanLoading />}>
+        <LaporanSummary summary={summary} />
+        <LaporanRoomDetail rooms={laporanRooms} />
+      </Suspense>
     </div>
   );
 }
