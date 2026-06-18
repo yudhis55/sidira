@@ -28,9 +28,7 @@ interface SbbkFormProps {
 export function SbbkForm({ sbbk, rooms, initialItems = [] }: SbbkFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [selectedRoom, setSelectedRoom] = useState<string>(
-    sbbk?.items?.[0]?.item_id ? String(initialItems.find(i => i.id === sbbk.items[0].item_id)?.room_id || "") : ""
-  );
+  const [selectedRoom, setSelectedRoom] = useState<string>("");
   const [availableItems, setAvailableItems] = useState(initialItems);
   const [formData, setFormData] = useState({
     no: sbbk?.no || "",
