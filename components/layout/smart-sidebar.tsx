@@ -38,6 +38,7 @@ import {
   Armchair,
   Briefcase,
   Package,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -252,6 +253,11 @@ export function SmartSidebar({ rooms, favorites, user, onLogout }: SmartSidebarP
     { href: "/laporan", label: "Laporan", icon: BarChart3 },
     { href: "/riwayat", label: "Riwayat", icon: History },
   ];
+
+  // Tambah menu admin jika user adalah admin
+  if (user?.role === "admin") {
+    mainNavItems.push({ href: "/admin/users", label: "Kelola User", icon: Users });
+  }
 
   // Utilitas items
   const utilitasItems = [
@@ -590,16 +596,17 @@ function RoomItem({ room, isActive, isFavorite, onNavigate, onFavoriteToggle }: 
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <button
+      <div
         onClick={onNavigate}
         className={`
-          flex w-full items-center gap-2 rounded-sm px-3 py-2 text-sm transition-colors duration-150
+          flex w-full items-center gap-2 rounded-sm px-3 py-2 text-sm transition-colors duration-150 cursor-pointer
           ${
             isActive
               ? "bg-accent text-accent-foreground font-medium"
               : "text-foreground hover:bg-accent hover:text-accent-foreground"
           }
         `}
+        role="button"
         aria-current={isActive ? "page" : undefined}
       >
         <IconComponent className="h-4 w-4" />
@@ -621,7 +628,7 @@ function RoomItem({ room, isActive, isFavorite, onNavigate, onFavoriteToggle }: 
             <PinOff className="h-3.5 w-3.5 text-muted-foreground" />
           )}
         </button>
-      </button>
+      </div>
     </div>
   );
 }
