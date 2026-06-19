@@ -27,11 +27,11 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
   const getConditionBadge = (condition: string) => {
     switch (condition) {
       case "baik":
-        return <Badge className="bg-green-500">Baik</Badge>;
+        return <Badge variant="default">Baik</Badge>;
       case "rusak_ringan":
-        return <Badge className="bg-yellow-500">Rusak Ringan</Badge>;
+        return <Badge variant="secondary">Rusak Ringan</Badge>;
       case "rusak_berat":
-        return <Badge className="bg-red-500">Rusak Berat</Badge>;
+        return <Badge variant="destructive">Rusak Berat</Badge>;
       default:
         return <Badge variant="outline">{condition}</Badge>;
     }

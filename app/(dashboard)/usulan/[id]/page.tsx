@@ -2,7 +2,7 @@ import { getUsulanById } from "@/lib/auth/usulan";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Trash2, Package, TrendingUp, Calendar } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Package, TrendingUp, Calendar, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DeleteUsulanButton } from "@/components/usulan/delete-button";
@@ -125,10 +125,10 @@ export default async function UsulanDetailPage({ params }: UsulanDetailPageProps
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Disetujui</CardTitle>
-            <span className="text-2xl">✅</span>
+            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{approvedCount}</div>
+            <div className="text-2xl font-bold">{approvedCount}</div>
           </CardContent>
         </Card>
 

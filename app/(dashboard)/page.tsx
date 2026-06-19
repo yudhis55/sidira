@@ -67,7 +67,7 @@ export default async function DashboardPage() {
                 <CardTitle className="text-sm font-medium">
                   {stat.title}
                 </CardTitle>
-                <div className="rounded-lg bg-muted p-2">
+                <div className="rounded-none bg-muted p-2">
                   <Icon className="h-5 w-5 text-foreground" aria-hidden="true" />
                 </div>
               </CardHeader>
@@ -93,10 +93,10 @@ export default async function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2 text-sm text-muted-foreground">
-            <p>✅ Terintegrasi dengan Supabase (PostgreSQL + Real-time Sync)</p>
-            <p>✅ Cross-browser synchronization otomatis</p>
-            <p>✅ Role-based access control (Admin, Editor, Viewer)</p>
-            <p>✅ Modern UI dengan shadcn/ui</p>
+            <p>• Terintegrasi dengan Supabase (PostgreSQL + Real-time Sync)</p>
+            <p>• Cross-browser synchronization otomatis</p>
+            <p>• Role-based access control (Admin, Editor, Viewer)</p>
+            <p>• Modern UI dengan shadcn/ui</p>
           </div>
         </CardContent>
       </Card>
