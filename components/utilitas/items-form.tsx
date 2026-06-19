@@ -62,7 +62,7 @@ export function ItemsForm({ utilId, initialItems }: ItemsFormProps) {
           </p>
         ) : (
           items.map((item, index) => (
-            <div key={index} className="border rounded-lg p-4 space-y-3">
+            <div key={index} className="border rounded-none p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold">Item #{index + 1}</h4>
                 <Button
@@ -103,7 +103,7 @@ export function ItemsForm({ utilId, initialItems }: ItemsFormProps) {
         {items.length > 0 && (
           <div className="flex justify-end gap-2">
             {success && (
-              <span className="text-green-600 text-sm self-center">
+              <span className="text-foreground text-sm self-center">
                 ✓ Berhasil disimpan
               </span>
             )}

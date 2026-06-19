@@ -108,7 +108,7 @@ export function UtilitasForm({ utilitas }: UtilitasFormProps) {
                     key={iconOption.id}
                     type="button"
                     onClick={() => setSelectedIcon(iconOption.id)}
-                    className={`h-16 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 ${
+                    className={`h-16 rounded-none border-2 transition-all flex flex-col items-center justify-center gap-2 ${
                       selectedIcon === iconOption.id
                         ? "border-primary bg-primary/10"
                         : "border-muted hover:border-primary/50"
@@ -158,7 +158,7 @@ export function UtilitasForm({ utilitas }: UtilitasFormProps) {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-none">
               {error}
             </div>
           )}

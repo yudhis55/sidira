@@ -75,7 +75,7 @@ export function Checklist({ utilId, items, states }: ChecklistProps) {
               const isLoading = loading === stateKey;
 
               return (
-                <div key={index} className="border rounded-lg p-4 space-y-2">
+                <div key={index} className="border rounded-none p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-semibold">{item.nama}</h4>
@@ -142,7 +142,7 @@ export function Checklist({ utilId, items, states }: ChecklistProps) {
           </div>
 
           {getNoteForDate(today) && (
-            <div className="border rounded-lg p-4 bg-muted">
+            <div className="border rounded-none p-4 bg-muted">
               <p className="text-sm font-semibold mb-2">Catatan Tersimpan:</p>
               <p className="text-sm">{getNoteForDate(today)?.value}</p>
             </div>

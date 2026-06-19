@@ -113,7 +113,7 @@ export function RoomForm({ room }: RoomFormProps) {
                 key={iconOption.id}
                 type="button"
                 onClick={() => setSelectedIcon(iconOption.id)}
-                className={`h-12 w-12 rounded-lg border-2 transition-all flex items-center justify-center ${
+                className={`h-12 w-12 rounded-none border-2 transition-all flex items-center justify-center ${
                   selectedIcon === iconOption.id
                     ? "border-primary bg-primary/10"
                     : "border-muted hover:border-primary/50"
@@ -128,7 +128,7 @@ export function RoomForm({ room }: RoomFormProps) {
         </div>
       </div>
       {error && (
-        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+        <div className="rounded-none bg-destructive/10 p-3 text-sm text-destructive">
           {error}
         </div>
       )}
