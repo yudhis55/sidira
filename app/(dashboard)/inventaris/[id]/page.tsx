@@ -20,8 +20,9 @@ interface RoomDetailPageProps {
 }
 
 export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
-  const room = await getRoomById(params.id);
-  const items = await getItems(params.id);
+  const { id } = await params;
+  const room = await getRoomById(id);
+  const items = await getItems(id);
 
   const getConditionBadge = (condition: string) => {
     switch (condition) {

@@ -8,7 +8,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import {
+  Loader2,
+  Building2,
+  Home,
+  Hospital,
+  Store,
+  School,
+  Warehouse,
+  Factory,
+  Building,
+  Sofa,
+  Armchair,
+  Briefcase,
+  Package,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 interface RoomFormProps {
   room?: {
@@ -19,13 +34,32 @@ interface RoomFormProps {
   };
 }
 
-const ICON_OPTIONS = ["🏥", "🏨", "🏪", "🏫", "🏬", "🏭", "🏢", "🏠", "🛋️", "🪑", "💼", "📦"];
+interface IconOption {
+  id: string;
+  icon: LucideIcon;
+  label: string;
+}
+
+const ICON_OPTIONS: IconOption[] = [
+  { id: "building2", icon: Building2, label: "Gedung" },
+  { id: "home", icon: Home, label: "Rumah" },
+  { id: "hospital", icon: Hospital, label: "RS" },
+  { id: "store", icon: Store, label: "Toko" },
+  { id: "school", icon: School, label: "Sekolah" },
+  { id: "warehouse", icon: Warehouse, label: "Gudang" },
+  { id: "factory", icon: Factory, label: "Pabrik" },
+  { id: "building", icon: Building, label: "Kantor" },
+  { id: "sofa", icon: Sofa, label: "Sofa" },
+  { id: "armchair", icon: Armchair, label: "Kursi" },
+  { id: "briefcase", icon: Briefcase, label: "Tas" },
+  { id: "package", icon: Package, label: "Paket" },
+];
 
 export function RoomForm({ room }: RoomFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedIcon, setSelectedIcon] = useState(room?.icon || "🏥");
+  const [selectedIcon, setSelectedIcon] = useState(room?.icon || "hospital");
 
   async function handleSubmit(formData: FormData) {
     setLoading(true);
@@ -72,21 +106,25 @@ export function RoomForm({ room }: RoomFormProps) {
       <div className="grid gap-2">
         <Label>Icon</Label>
         <div className="grid grid-cols-6 gap-2">
-          {ICON_OPTIONS.map((icon) => (
-            <button
-              key={icon}
-              type="button"
-              onClick={() => setSelectedIcon(icon)}
-              className={`h-12 w-12 rounded-lg border-2 text-2xl transition-all ${
-                selectedIcon === icon
-                  ? "border-primary bg-primary/10"
-                  : "border-muted hover:border-primary/50"
-              }`}
-              disabled={loading}
-            >
-              {icon}
-            </button>
-          ))}
+          {ICON_OPTIONS.map((iconOption) => {
+            const IconComponent = iconOption.icon;
+            return (
+              <button
+                key={iconOption.id}
+                type="button"
+                onClick={() => setSelectedIcon(iconOption.id)}
+                className={`h-12 w-12 rounded-lg border-2 transition-all flex items-center justify-center ${
+                  selectedIcon === iconOption.id
+                    ? "border-primary bg-primary/10"
+                    : "border-muted hover:border-primary/50"
+                }`}
+                disabled={loading}
+                title={iconOption.label}
+              >
+                <IconComponent className="h-6 w-6" />
+              </button>
+            );
+          })}
         </div>
       </div>
       {error && (

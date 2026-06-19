@@ -15,6 +15,8 @@ export interface Profile {
   updated_at: string;
 }
 
+export type RoomCategory = "pelayanan" | "penunjang" | "administrasi" | "gudang" | "pustu" | "lain";
+
 export interface Room {
   id: string;
   name: string;
@@ -23,13 +25,15 @@ export interface Room {
   bg: string;
   description?: string;
   pj?: string;
+  pj_nip?: string;
+  category?: RoomCategory;
   order_index: number;
   created_at: string;
   updated_at: string;
 }
 
 export type ItemCategory = "alkes" | "meubelair" | "elektronik" | "lainnya";
-export type ItemCondition = "baik" | "rr" | "rb" | "ta";
+export type ItemCondition = "baik" | "kb" | "rb";
 
 export interface Item {
   id: number;
@@ -44,6 +48,11 @@ export interface Item {
   condition: ItemCondition;
   notes?: string;
   index_in_room: number;
+  bahan?: string;
+  no_seri?: string;
+  kode_barang?: string;
+  harga?: number;
+  kategori?: string;
   created_at: string;
   updated_at: string;
 }
@@ -136,6 +145,8 @@ export interface PenanggungJawab {
   id: number;
   room_id: string;
   nama: string;
+  nip?: string;
+  jabatan?: string;
   created_at: string;
   updated_at: string;
 }

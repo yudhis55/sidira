@@ -10,7 +10,7 @@ interface EditUtilitasPageProps {
 }
 
 export default async function EditUtilitasPage({ params }: EditUtilitasPageProps) {
-  const { utilId } = params;
+  const { utilId } = await params;
 
   let utilMeta;
   try {

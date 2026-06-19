@@ -12,7 +12,8 @@ interface EditSBBKPageProps {
 }
 
 export default async function EditSBBKPage({ params }: EditSBBKPageProps) {
-  const sbbk = await getSbbkById(params.id);
+  const { id } = await params;
+  const sbbk = await getSbbkById(id);
   const rooms = await getRooms();
 
   if (!sbbk) {

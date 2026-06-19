@@ -6,21 +6,37 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, Save } from "lucide-react";
+import { Plus, Trash2, Save, Ambulance, Zap, Droplets } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { UtilMeta } from "@/lib/auth/utilitas";
 
 interface UtilitasFormProps {
   utilitas?: UtilMeta;
 }
 
+interface IconOption {
+  id: string;
+  icon: LucideIcon;
+  label: string;
+}
+
+const UTIL_ICON_OPTIONS: IconOption[] = [
+  { id: "ambulance", icon: Ambulance, label: "Ambulance" },
+  { id: "genset", icon: Zap, label: "Genset" },
+  { id: "ipal", icon: Droplets, label: "IPAL" },
+];
+
 export function UtilitasForm({ utilitas }: UtilitasFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [selectedIcon, setSelectedIcon] = useState(utilitas?.icon || "ambulance");
 
   async function handleSubmit(formData: FormData) {
     setLoading(true);
     setError("");
+
+    formData.set("icon", selectedIcon);
 
     try {
       const response = await fetch(
@@ -83,15 +99,28 @@ export function UtilitasForm({ utilitas }: UtilitasFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="icon">Icon *</Label>
-            <Input
-              id="icon"
-              name="icon"
-              defaultValue={utilitas?.icon}
-              placeholder="Contoh: 🚑, ⚡, 💧"
-              required
-              disabled={loading}
-            />
+            <Label>Icon *</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {UTIL_ICON_OPTIONS.map((iconOption) => {
+                const IconComponent = iconOption.icon;
+                return (
+                  <button
+                    key={iconOption.id}
+                    type="button"
+                    onClick={() => setSelectedIcon(iconOption.id)}
+                    className={`h-16 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 ${
+                      selectedIcon === iconOption.id
+                        ? "border-primary bg-primary/10"
+                        : "border-muted hover:border-primary/50"
+                    }`}
+                    disabled={loading}
+                  >
+                    <IconComponent className="h-6 w-6" />
+                    <span className="text-xs">{iconOption.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

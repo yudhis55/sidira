@@ -19,11 +19,12 @@ async function handleDelete(formData: FormData) {
 }
 
 export default async function DeleteItemPage({ params }: DeleteItemPageProps) {
+  const { id, itemId } = await params;
   const supabase = await createClient();
   const { data: item } = await supabase
     .from("items")
     .select("*")
-    .eq("id", parseInt(params.itemId, 10))
+    .eq("id", parseInt(itemId, 10))
     .single();
 
   if (!item) {

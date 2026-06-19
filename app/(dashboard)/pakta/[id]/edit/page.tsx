@@ -8,7 +8,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export default async function EditPaktaPage({ params }: { params: { id: string } }) {
-  const pakta = await getPaktaById(params.id);
+  const { id } = await params;
+  const pakta = await getPaktaById(id);
   const rooms = await getRooms();
 
   if (!pakta) {

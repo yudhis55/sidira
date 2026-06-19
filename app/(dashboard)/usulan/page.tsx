@@ -3,7 +3,7 @@ import { getRooms } from "@/lib/auth/rooms";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Lightbulb, Package, TrendingUp } from "lucide-react";
+import { Plus, Lightbulb, Package, TrendingUp, Building2 } from "lucide-react";
 import Link from "next/link";
 
 export default async function UsulanPage() {
@@ -136,9 +136,7 @@ export default async function UsulanPage() {
                       <CardHeader>
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-2">
-                            <span className="text-2xl">
-                              {usulan.rooms?.icon || "🏢"}
-                            </span>
+                            <Building2 className="h-6 w-6" />
                             <div>
                               <CardTitle className="text-lg">
                                 {usulan.rooms?.name || "Unknown Room"}

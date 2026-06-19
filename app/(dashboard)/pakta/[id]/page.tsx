@@ -10,7 +10,8 @@ import { revalidatePath } from "next/cache";
 import { deletePakta } from "@/lib/auth/pakta";
 
 export default async function PaktaDetailPage({ params }: { params: { id: string } }) {
-  const pakta = await getPaktaById(params.id);
+  const { id } = await params;
+  const pakta = await getPaktaById(id);
   const rooms = await getRooms();
 
   if (!pakta) {

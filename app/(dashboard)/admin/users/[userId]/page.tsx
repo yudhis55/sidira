@@ -1,9 +1,14 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getAllUsers } from "@/lib/auth/admin";
-import { UserList } from "@/components/admin/user-list";
+import { getUserById } from "@/lib/auth/admin";
+import { UserDetail } from "@/components/admin/user-detail";
 
-export default async function AdminUsersPage() {
+interface UserDetailPageProps {
+  params: { userId: string };
+}
+
+export default async function UserDetailPage({ params }: UserDetailPageProps) {
+  const { userId } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -22,18 +27,15 @@ export default async function AdminUsersPage() {
     redirect("/");
   }
 
-  const users = await getAllUsers();
+  const targetUser = await getUserById(userId);
+
+  if (!targetUser) {
+    redirect("/admin/users");
+  }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Manajemen User</h1>
-        <p className="text-muted-foreground">
-          Kelola user dan hak akses aplikasi
-        </p>
-      </div>
-
-      <UserList users={users} />
+    <div className="container mx-auto py-6">
+      <UserDetail user={targetUser} />
     </div>
   );
 }

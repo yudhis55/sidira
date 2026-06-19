@@ -27,29 +27,25 @@ export default async function DashboardPage() {
       title: "Total Ruangan",
       value: roomsCount || 0,
       icon: Package,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
+      description: "Ruangan terdaftar",
     },
     {
       title: "Total Barang",
       value: itemsCount || 0,
       icon: ClipboardCheck,
-      color: "text-green-600",
-      bg: "bg-green-50",
+      description: "Barang inventaris",
     },
     {
       title: "Barang Bermasalah",
       value: issuesCount || 0,
       icon: AlertTriangle,
-      color: "text-orange-600",
-      bg: "bg-orange-50",
+      description: "Perlu perhatian",
     },
     {
       title: "Usulan Pending",
       value: usulanCount || 0,
       icon: Lightbulb,
-      color: "text-purple-600",
-      bg: "bg-purple-50",
+      description: "Menunggu approval",
     },
   ];
 
@@ -66,17 +62,22 @@ export default async function DashboardPage() {
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.title}>
+            <Card key={stat.title} aria-label={`${stat.title}: ${stat.value} ${stat.description}`}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   {stat.title}
                 </CardTitle>
-                <div className={`${stat.bg} rounded-lg p-2`}>
-                  <Icon className={`h-5 w-5 ${stat.color}`} />
+                <div className="rounded-lg bg-muted p-2">
+                  <Icon className="h-5 w-5 text-foreground" aria-hidden="true" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
+                <div className="text-2xl font-bold" aria-label={`${stat.value} ${stat.description}`}>
+                  {stat.value}
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {stat.description}
+                </p>
               </CardContent>
             </Card>
           );

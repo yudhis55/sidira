@@ -17,7 +17,7 @@ interface UtilitasDetailPageProps {
 }
 
 export default async function UtilitasDetailPage({ params }: UtilitasDetailPageProps) {
-  const { utilId } = params;
+  const { utilId } = await params;
 
   let utilMeta;
   try {

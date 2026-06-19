@@ -10,7 +10,8 @@ interface EditRoomPageProps {
 }
 
 export default async function EditRoomPage({ params }: EditRoomPageProps) {
-  const room = await getRoomById(params.id);
+  const { id } = await params;
+  const room = await getRoomById(id);
 
   if (!room) {
     return (

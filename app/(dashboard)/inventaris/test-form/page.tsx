@@ -113,7 +113,7 @@ export default async function TestFormPage() {
               href="/inventaris"
               className="block p-3 border rounded hover:bg-muted transition-colors"
             >
-              🏠 Back to inventory list
+              ← Back to inventory list
             </a>
           </div>
         </div>

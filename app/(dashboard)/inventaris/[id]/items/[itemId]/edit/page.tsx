@@ -11,11 +11,12 @@ interface EditItemPageProps {
 }
 
 export default async function EditItemPage({ params }: EditItemPageProps) {
+  const { id, itemId } = await params;
   const supabase = await createClient();
   const { data: item } = await supabase
     .from("items")
     .select("*")
-    .eq("id", params.itemId)
+    .eq("id", parseInt(itemId, 10))
     .single();
 
   if (!item) {

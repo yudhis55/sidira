@@ -8,11 +8,12 @@ interface NewItemPageProps {
   params: { id: string };
 }
 
-export default function NewItemPage({ params }: NewItemPageProps) {
+export default async function NewItemPage({ params }: NewItemPageProps) {
+  const { id } = await params;
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center gap-4">
-        <Link href={`/inventaris/${params.id}`}>
+        <Link href={`/inventaris/${id}`}>
           <Button variant="outline" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -25,7 +26,7 @@ export default function NewItemPage({ params }: NewItemPageProps) {
 
       <Card>
         <CardContent className="pt-6">
-          <ItemForm roomId={params.id} />
+          <ItemForm roomId={id} />
         </CardContent>
       </Card>
     </div>

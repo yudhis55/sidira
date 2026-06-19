@@ -11,7 +11,8 @@ interface EditUsulanPageProps {
 }
 
 export default async function EditUsulanPage({ params }: EditUsulanPageProps) {
-  const usulanId = parseInt(params.id);
+  const { id } = await params;
+  const usulanId = parseInt(id);
 
   if (isNaN(usulanId)) {
     notFound();

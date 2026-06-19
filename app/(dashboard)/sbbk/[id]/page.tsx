@@ -20,7 +20,8 @@ async function handleDelete(formData: FormData) {
 }
 
 export default async function SBBKDetailPage({ params }: SBBKDetailPageProps) {
-  const sbbk = await getSbbkById(params.id);
+  const { id } = await params;
+  const sbbk = await getSbbkById(id);
 
   if (!sbbk) {
     return (
