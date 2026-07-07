@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Achromatic placeholder logo for Puskesmas Baruharjo letterhead -->
+  <!-- Outer ring -->
+  <circle cx="100" cy="100" r="96" fill="none" stroke="#000" stroke-width="3"/>
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#000" stroke-width="1"/>
+  <!-- Medical cross (plus sign) -->
+  <path d="M86 56h28v30h30v28h-30v30H86v-30H56V86h30z" fill="#000"/>
+  <!-- Curved top text: PUSKESMAS -->
+  <defs>
+    <path id="topArc" d="M 100 100 m -76 0 a 76 76 0 1 1 152 0"/>
+    <path id="bottomArc" d="M 100 100 m -68 0 a 68 68 0 1 0 136 0"/>
+  </defs>
+  <text font-family="'Times New Roman', Times, serif" font-size="15" font-weight="bold" fill="#000" letter-spacing="2">
+    <textPath href="#topArc" startOffset="50%" text-anchor="middle">PUSKESMAS BARUHARJO</textPath>
+  </text>
+  <!-- Bottom text -->
+  <text font-family="'Times New Roman', Times, serif" font-size="11" fill="#000" letter-spacing="1">
+    <textPath href="#bottomArc" startOffset="50%" text-anchor="middle">TRENGGALEK</textPath>
+  </text>
+</svg>
