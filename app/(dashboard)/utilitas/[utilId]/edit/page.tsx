@@ -15,7 +15,7 @@ export default async function EditUtilitasPage({ params }: EditUtilitasPageProps
   let utilMeta;
   try {
     utilMeta = await getUtilMetaById(utilId);
-  } catch (error) {
+  } catch {
     notFound();
   }
 

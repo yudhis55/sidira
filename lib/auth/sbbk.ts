@@ -47,6 +47,121 @@ export async function getSbbkList() {
   return data as Omit<Sbbk, "items">[];
 }
 
+/**
+ * Fetch all SBBK including their items JSONB. Used by the list page
+ * which needs item counts and totals for the rekap/total nilai display.
+ */
+export async function getSbbkListFull(): Promise<Sbbk[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("sbbk")
+    .select("id, no, tgl, kepada, jenis, anggaran, ket_umum, items, created_at, updated_at")
+    .order("tgl", { ascending: false });
+
+  if (error) throw error;
+  const rows = (data || []) as Array<Record<string, unknown>>;
+  return rows.map((d) => ({
+    id: d.id as string,
+    no: d.no as string,
+    tgl: d.tgl as string,
+    kepada: d.kepada as string,
+    jenis: (d.jenis as string) ?? undefined,
+    anggaran: (d.anggaran as string) ?? undefined,
+    ket_umum: (d.ket_umum as string) ?? undefined,
+    items: Array.isArray(d.items) ? (d.items as SbbkItem[]) : [],
+    created_at: d.created_at as string,
+    updated_at: d.updated_at as string,
+  })) as Sbbk[];
+}
+
+/**
+ * Build a CSV string of all SBBK (one row per item). Fields are
+ * properly escaped (quoted when they contain commas, quotes, or newlines).
+ * The client triggers the download of the returned string.
+ */
+export async function exportSbbkCSV(): Promise<string> {
+  const list = await getSbbkListFull();
+
+  const header = [
+    "No SBBK",
+    "Tanggal",
+    "Kepada",
+    "Jenis",
+    "Anggaran",
+    "Nama Barang",
+    "Merk",
+    "Qty",
+    "Satuan",
+    "Harga Satuan",
+    "Jumlah",
+    "Keterangan",
+  ];
+
+  const escape = (val: unknown): string => {
+    const s = val == null ? "" : String(val);
+    if (/[",\n\r]/.test(s)) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  };
+
+  const fmtDate = (iso: string): string => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  };
+
+  const rows: string[] = [header.join(",")];
+
+  for (const d of list) {
+    const items = d.items && d.items.length > 0 ? d.items : [];
+    if (items.length === 0) {
+      rows.push(
+        [
+          escape(d.no),
+          escape(fmtDate(d.tgl)),
+          escape(d.kepada),
+          escape(d.jenis),
+          escape(d.anggaran),
+          escape(""),
+          escape(""),
+          escape(0),
+          escape(""),
+          escape(0),
+          escape(0),
+          escape(""),
+        ].join(",")
+      );
+      continue;
+    }
+    for (const it of items) {
+      rows.push(
+        [
+          escape(d.no),
+          escape(fmtDate(d.tgl)),
+          escape(d.kepada),
+          escape(d.jenis),
+          escape(d.anggaran),
+          escape(it.nama),
+          escape(it.merk),
+          escape(it.qty),
+          escape(it.satuan),
+          escape(it.harga),
+          escape(it.total),
+          escape(""),
+        ].join(",")
+      );
+    }
+  }
+
+  return rows.join("\r\n");
+}
+
 export async function getSbbkById(id: string) {
   const supabase = await createClient();
 
@@ -104,7 +219,7 @@ export async function updateSbbk(id: string, sbbkData: Partial<Omit<Sbbk, "id" |
 
   const { items, ...sbbkWithoutItems } = sbbkData;
 
-  const updateData: any = { ...sbbkWithoutItems };
+  const updateData: Record<string, unknown> = { ...sbbkWithoutItems };
   if (items) {
     updateData.items = items; // JSONB, tidak perlu stringify
   }

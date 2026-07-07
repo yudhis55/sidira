@@ -38,7 +38,7 @@ function assert(condition: boolean, message: string) {
   }
 }
 
-function assertEqual(actual: any, expected: any, message: string) {
+function assertEqual(actual: unknown, expected: unknown, message: string) {
   const isEqual = JSON.stringify(actual) === JSON.stringify(expected);
   if (isEqual) {
     passed++;

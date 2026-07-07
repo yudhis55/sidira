@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Edit, Trash2, ArrowLeft, Calendar, Mail, Briefcase } from "lucide-react";
+import { Edit, ArrowLeft, Calendar, Mail, Briefcase } from "lucide-react";
 import Link from "next/link";
 import { DeleteUserButton } from "./delete-button";
 import type { UserProfile } from "@/lib/auth/admin";
@@ -10,12 +10,6 @@ import type { UserProfile } from "@/lib/auth/admin";
 interface UserDetailProps {
   user: UserProfile;
 }
-
-const ROLE_COLORS = {
-  admin: "bg-red-100 text-red-800",
-  editor: "bg-blue-100 text-blue-800",
-  viewer: "bg-green-100 text-green-800",
-};
 
 const ROLE_LABELS = {
   admin: "Admin",
@@ -33,7 +27,7 @@ export function UserDetail({ user }: UserDetailProps) {
           </Button>
         </Link>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold">Detail User</h1>
+          <h1 className="font-mono text-3xl font-bold">Detail User</h1>
           <p className="text-muted-foreground">Informasi lengkap user</p>
         </div>
         <Link href={`/admin/users/${user.id}/edit`}>
@@ -57,9 +51,9 @@ export function UserDetail({ user }: UserDetailProps) {
               </AvatarFallback>
             </Avatar>
             <div>
-              <h2 className="text-2xl font-bold">{user.nama}</h2>
+              <h2 className="font-mono text-2xl font-bold">{user.nama}</h2>
               <p className="text-muted-foreground">@{user.username}</p>
-              <Badge className={`${ROLE_COLORS[user.role]} mt-2`}>
+              <Badge variant="outline" className="mt-2">
                 {ROLE_LABELS[user.role]}
               </Badge>
             </div>
@@ -110,7 +104,7 @@ export function UserDetail({ user }: UserDetailProps) {
           </div>
 
           <div className="pt-4 border-t">
-            <h3 className="font-semibold mb-2">Hak Akses</h3>
+            <h3 className="font-mono font-semibold mb-2">Hak Akses</h3>
             <div className="space-y-2 text-sm">
               {user.role === "admin" && (
                 <>

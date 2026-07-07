@@ -5,7 +5,8 @@ import { LaporanFilter } from "@/components/laporan/laporan-filter";
 import { LaporanSummary } from "@/components/laporan/laporan-summary";
 import { LaporanRoomDetail } from "@/components/laporan/laporan-room-detail";
 import { ExportButtons } from "@/components/laporan/export-buttons";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/shared/page-elements";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface LaporanPageProps {
@@ -55,22 +56,21 @@ export default async function LaporanPage({ searchParams }: LaporanPageProps) {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Laporan Inventaris</h1>
-          <p className="text-muted-foreground">
-            Laporan kondisi inventaris bulan {bulanNames[bulan - 1]} {tahun}
-          </p>
-        </div>
-        <ExportButtons
-          bulan={bulan}
-          tahun={tahun}
-          room_id={room_id}
-          kategori={kategori}
-          summary={summary}
-          rooms={laporanRooms}
-        />
-      </div>
+      <PageHeader
+        icon="📈"
+        title="Laporan Inventaris"
+        subtitle={`Laporan kondisi inventaris bulan ${bulanNames[bulan - 1]} ${tahun}`}
+        actions={
+          <ExportButtons
+            bulan={bulan}
+            tahun={tahun}
+            room_id={room_id}
+            kategori={kategori}
+            summary={summary}
+            rooms={laporanRooms}
+          />
+        }
+      />
 
       <LaporanFilter
         bulan={bulan}

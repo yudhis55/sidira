@@ -33,7 +33,7 @@ export default async function NewUserPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">Tambah User Baru</h1>
+          <h1 className="font-mono text-3xl font-bold">Tambah User Baru</h1>
           <p className="text-muted-foreground">
             Buat akun user baru untuk aplikasi
           </p>

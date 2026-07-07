@@ -1,14 +1,27 @@
 import { getSbbkById, deleteSbbk } from "@/lib/auth/sbbk";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Trash2, Calendar, User, FileText } from "lucide-react";
+import { ArrowLeft, Pencil, Printer, Trash2, FileText } from "lucide-react";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-interface SBBKDetailPageProps {
-  params: { id: string };
+export const dynamic = "force-dynamic";
+
+const BULAN = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+];
+
+function fmtDate(iso: string): string {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${d.getDate()} ${BULAN[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+interface PageProps {
+  params: Promise<{ id: string }>;
 }
 
 async function handleDelete(formData: FormData) {
@@ -19,20 +32,20 @@ async function handleDelete(formData: FormData) {
   redirect("/sbbk");
 }
 
-export default async function SBBKDetailPage({ params }: SBBKDetailPageProps) {
+export default async function SbbkDetailPage({ params }: PageProps) {
   const { id } = await params;
   const sbbk = await getSbbkById(id);
 
   if (!sbbk) {
     return (
-      <div className="container mx-auto py-6">
+      <div className="space-y-6">
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-            <CardTitle className="text-xl mb-2">SBBK Tidak Ditemukan</CardTitle>
+            <FileText className="h-10 w-10 text-muted-foreground/50 mb-3" aria-hidden />
+            <p className="font-mono text-sm font-semibold mb-2">SBBK Tidak Ditemukan</p>
             <Link href="/sbbk">
-              <Button>
-                <ArrowLeft className="h-4 w-4 mr-2" />
+              <Button size="sm" variant="outline">
+                <ArrowLeft className="h-4 w-4 mr-1" />
                 Kembali ke Daftar
               </Button>
             </Link>
@@ -42,155 +55,149 @@ export default async function SBBKDetailPage({ params }: SBBKDetailPageProps) {
     );
   }
 
-  const totalValue = sbbk.items.reduce((sum, item) => sum + item.total, 0);
+  const totalValue = sbbk.items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
           <Link href="/sbbk">
-            <Button variant="outline" size="icon">
+            <Button variant="outline" size="icon" aria-label="Kembali">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{sbbk.no}</h1>
-            <p className="text-muted-foreground">Detail SBBK</p>
+            <h1 className="font-mono text-xl font-bold tracking-tight">{sbbk.no}</h1>
+            <p className="text-xs text-muted-foreground">Detail SBBK</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link href={`/sbbk/${sbbk.id}/edit`}>
-            <Button variant="outline">
-              <Edit className="h-4 w-4 mr-2" />
+            <Button variant="outline" size="sm">
+              <Pencil className="h-4 w-4 mr-1" />
               Edit
+            </Button>
+          </Link>
+          <Link href={`/sbbk/${sbbk.id}/print`} target="_blank" rel="noopener noreferrer">
+            <Button variant="outline" size="sm">
+              <Printer className="h-4 w-4 mr-1" />
+              Cetak
             </Button>
           </Link>
           <form action={handleDelete}>
             <input type="hidden" name="id" value={sbbk.id} />
-            <Button variant="destructive" type="submit">
-              <Trash2 className="h-4 w-4 mr-2" />
+            <Button variant="destructive" size="sm" type="submit">
+              <Trash2 className="h-4 w-4 mr-1" />
               Hapus
             </Button>
           </form>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      {/* Info grid */}
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle>Informasi SBBK</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="font-mono text-sm">Informasi SBBK</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 text-xs">
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Nomor SBBK</label>
-              <p className="text-lg font-semibold">{sbbk.no}</p>
+              <p className="text-[10px] uppercase text-muted-foreground">Nomor SBBK</p>
+              <p className="font-mono font-semibold">{sbbk.no}</p>
             </div>
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Tanggal</label>
-                <p>
-                  {new Date(sbbk.tgl).toLocaleDateString("id-ID", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </p>
-              </div>
+            <div>
+              <p className="text-[10px] uppercase text-muted-foreground">Tanggal</p>
+              <p>{fmtDate(sbbk.tgl)}</p>
             </div>
             {sbbk.anggaran && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Anggaran</label>
-                <Badge variant="outline" className="ml-2">
+                <p className="text-[10px] uppercase text-muted-foreground">Anggaran</p>
+                <span className="inline-flex h-5 items-center px-2 font-mono text-[10px] ring-1 ring-border">
                   {sbbk.anggaran}
-                </Badge>
+                </span>
               </div>
             )}
             {sbbk.jenis && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Jenis</label>
+                <p className="text-[10px] uppercase text-muted-foreground">Jenis</p>
                 <p>{sbbk.jenis}</p>
-              </div>
-            )}
-            {sbbk.ket_umum && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Keterangan Umum</label>
-                <p className="text-sm text-muted-foreground">{sbbk.ket_umum}</p>
               </div>
             )}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Penerima</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="font-mono text-sm">Penerima</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Kepada</label>
-                <p className="font-semibold">{sbbk.kepada}</p>
-              </div>
+          <CardContent className="space-y-3 text-xs">
+            <div>
+              <p className="text-[10px] uppercase text-muted-foreground">Kepada</p>
+              <p className="font-semibold">{sbbk.kepada}</p>
             </div>
+            {sbbk.ket_umum && (
+              <div>
+                <p className="text-[10px] uppercase text-muted-foreground">Keterangan Umum</p>
+                <p className="text-muted-foreground">{sbbk.ket_umum}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
+      {/* Items table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Daftar Barang</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="font-mono text-sm">Daftar Barang</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {sbbk.items.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
+            <p className="py-8 text-center text-xs text-muted-foreground">
               Tidak ada barang dalam SBBK ini
             </p>
           ) : (
-            <div className="space-y-4">
-              <div className="border rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-muted">
-                    <tr>
-                      <th className="text-left p-3 font-semibold">No</th>
-                      <th className="text-left p-3 font-semibold">Nama Barang</th>
-                      <th className="text-left p-3 font-semibold">Merk</th>
-                      <th className="text-right p-3 font-semibold">Jumlah</th>
-                      <th className="text-left p-3 font-semibold">Satuan</th>
-                      <th className="text-right p-3 font-semibold">Harga</th>
-                      <th className="text-right p-3 font-semibold">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sbbk.items.map((item, index) => (
-                      <tr key={index} className="border-t">
-                        <td className="p-3">{index + 1}</td>
-                        <td className="p-3 font-medium">{item.nama}</td>
-                        <td className="p-3 text-muted-foreground">{item.merk || "-"}</td>
-                        <td className="p-3 text-right">{item.qty}</td>
-                        <td className="p-3">{item.satuan}</td>
-                        <td className="p-3 text-right">
-                          Rp {item.harga.toLocaleString("id-ID")}
-                        </td>
-                        <td className="p-3 text-right font-semibold">
-                          Rp {item.total.toLocaleString("id-ID")}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot className="bg-muted border-t-2">
-                    <tr>
-                      <td colSpan={6} className="p-3 text-right font-bold">
-                        Total Nilai:
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="h-9 px-2 text-left font-mono font-medium">No</th>
+                    <th className="h-9 px-2 text-left font-mono font-medium">Nama Barang</th>
+                    <th className="h-9 px-2 text-left font-mono font-medium">Merk</th>
+                    <th className="h-9 px-2 text-right font-mono font-medium">Qty</th>
+                    <th className="h-9 px-2 text-left font-mono font-medium">Satuan</th>
+                    <th className="h-9 px-2 text-right font-mono font-medium">Harga Satuan</th>
+                    <th className="h-9 px-2 text-right font-mono font-medium">Jumlah</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sbbk.items.map((item, index) => (
+                    <tr key={index} className="border-b border-border last:border-0">
+                      <td className="px-2 py-2 font-mono">{index + 1}</td>
+                      <td className="px-2 py-2 font-medium">{item.nama}</td>
+                      <td className="px-2 py-2 text-muted-foreground">{item.merk || "-"}</td>
+                      <td className="px-2 py-2 text-right font-mono">{item.qty}</td>
+                      <td className="px-2 py-2">{item.satuan}</td>
+                      <td className="px-2 py-2 text-right font-mono">
+                        Rp {item.harga.toLocaleString("id-ID")}
                       </td>
-                      <td className="p-3 text-right font-bold text-lg">
-                        Rp {totalValue.toLocaleString("id-ID")}
+                      <td className="px-2 py-2 text-right font-mono font-semibold">
+                        Rp {item.total.toLocaleString("id-ID")}
                       </td>
                     </tr>
-                  </tfoot>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+                <tfoot className="bg-muted/50">
+                  <tr className="border-t-2 border-border">
+                    <td colSpan={6} className="px-2 py-2 text-right font-mono font-bold">
+                      Total Nilai:
+                    </td>
+                    <td className="px-2 py-2 text-right font-mono font-bold">
+                      Rp {totalValue.toLocaleString("id-ID")}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           )}
         </CardContent>

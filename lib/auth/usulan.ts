@@ -3,37 +3,25 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type {
+  Usulan,
+  UsulanItem,
+  UsulanPayload,
+  UsulanStatus,
+} from "@/lib/usulan-types";
+import {
+  USULAN_KATEGORI_LABELS,
+  USULAN_PRIORITAS_LABELS,
+  USULAN_STATUS_LABELS,
+} from "@/lib/usulan-types";
 
-export interface UsulanItem {
-  nama: string;
-  kategori: string;
-  prioritas: "wajib" | "penting" | "pendukung";
-  qty: number;
-  satuan: string;
-  harga: number;
-  total: number;
-  status: "pending" | "approved" | "rejected";
-  keterangan?: string;
-}
+// ══════════════════════════════════════════════════════════════════════
+//  Types & labels live in @/lib/usulan-types (not a "use server" file)
+//  because "use server" modules can only export async functions.
+//  Import types/labels from "@/lib/usulan-types" directly.
+// ══════════════════════════════════════════════════════════════════════
 
-export interface UsulanPayload {
-  items: UsulanItem[];
-}
-
-export interface Usulan {
-  id: number;
-  room_id: string;
-  payload: UsulanPayload;
-  created_at: string;
-  updated_at: string;
-  // Joined data
-  rooms?: {
-    name: string;
-    icon: string;
-  };
-}
-
-export async function getUsulanList() {
+export async function getUsulanList(): Promise<Usulan[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -51,7 +39,7 @@ export async function getUsulanList() {
   return data as Usulan[];
 }
 
-export async function getUsulanById(id: number) {
+export async function getUsulanById(id: number): Promise<Usulan> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -70,12 +58,37 @@ export async function getUsulanById(id: number) {
   return data as Usulan;
 }
 
-export async function getUsulanByRoom(roomId: string) {
+export async function getUsulanByRoom(roomId: string): Promise<Usulan[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("usulan")
     .select("*")
+    .eq("room_id", roomId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data as Usulan[];
+}
+
+/**
+ * Fetch all usulan for a room joined with the room's name & icon.
+ * Used by the inventaris room detail page's per-room usulan section.
+ */
+export async function getUsulanByRoomWithRoomInfo(
+  roomId: string
+): Promise<Usulan[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("usulan")
+    .select(`
+      *,
+      rooms (
+        name,
+        icon
+      )
+    `)
     .eq("room_id", roomId)
     .order("created_at", { ascending: false });
 
@@ -93,7 +106,7 @@ export async function createUsulan(formData: FormData) {
     return { error: "Ruangan dan daftar barang wajib diisi" };
   }
 
-  const items = JSON.parse(itemsJson);
+  const items: UsulanItem[] = JSON.parse(itemsJson);
 
   if (!Array.isArray(items) || items.length === 0) {
     return { error: "Minimal satu barang harus ditambahkan" };
@@ -125,7 +138,7 @@ export async function updateUsulan(id: number, formData: FormData) {
     return { error: "Ruangan dan daftar barang wajib diisi" };
   }
 
-  const items = JSON.parse(itemsJson);
+  const items: UsulanItem[] = JSON.parse(itemsJson);
 
   if (!Array.isArray(items) || items.length === 0) {
     return { error: "Minimal satu barang harus ditambahkan" };
@@ -169,7 +182,7 @@ export async function deleteUsulan(id: number) {
 export async function updateItemStatus(
   usulanId: number,
   itemIndex: number,
-  status: "pending" | "approved" | "rejected"
+  status: UsulanStatus
 ) {
   const supabase = await createClient();
 
@@ -201,4 +214,76 @@ export async function updateItemStatus(
   revalidatePath("/usulan");
   revalidatePath(`/usulan/${usulanId}`);
   return { success: true };
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  CSV export — one row per item, optionally filtered by room.
+// ══════════════════════════════════════════════════════════════════════
+/**
+ * Build a CSV string of usulan (one row per item). Fields are properly
+ * escaped (quoted when they contain commas, quotes, or newlines).
+ * When `roomId` is provided, only usulan for that room are included.
+ */
+export async function exportUsulanCSV(roomId?: string): Promise<string> {
+  const list = roomId
+    ? await getUsulanByRoomWithRoomInfo(roomId)
+    : await getUsulanList();
+
+  const header = [
+    "Ruangan",
+    "Nama Barang",
+    "Kategori",
+    "Jumlah",
+    "Satuan",
+    "Prioritas",
+    "Status",
+    "Harga Satuan",
+    "Total",
+    "Keterangan",
+    "Tgl Diajukan",
+  ];
+
+  const escape = (val: unknown): string => {
+    const s = val == null ? "" : String(val);
+    if (/[",\n\r]/.test(s)) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  };
+
+  const fmtDate = (iso: string): string => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  };
+
+  const rows: string[] = [header.join(",")];
+
+  for (const u of list) {
+    const roomName = u.rooms?.name || u.room_id || "";
+    const items = u.payload?.items || [];
+    for (const it of items) {
+      rows.push(
+        [
+          escape(roomName),
+          escape(it.nama),
+          escape(USULAN_KATEGORI_LABELS[it.kategori] || it.kategori),
+          escape(it.qty),
+          escape(it.satuan),
+          escape(USULAN_PRIORITAS_LABELS[it.prioritas] || it.prioritas),
+          escape(USULAN_STATUS_LABELS[it.status] || it.status),
+          escape(it.harga),
+          escape(it.total),
+          escape(it.keterangan || ""),
+          escape(fmtDate(u.created_at)),
+        ].join(",")
+      );
+    }
+  }
+
+  return rows.join("\r\n");
 }

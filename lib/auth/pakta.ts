@@ -3,41 +3,52 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type {
+  Pakta,
+  PaktaAsetKendaraan,
+  PaktaAsetLaptop,
+  PaktaAsetAlat,
+} from "@/types/database";
 
-export interface PaktaItem {
-  item_id: number;
+/**
+ * Server actions untuk modul Pakta Integritas Pemanfaatan BMD.
+ *
+ * Struktur data mengikuti tabel `pakta` di DB + GAS legacy (3 sub-tabel
+ * lampiran aset: Kendaraan Dinis / Laptop-PC / Alat Penunjang). Tidak ada
+ * kolom `nomor`; nomor urut pada daftar dihitung dari indeks baris (001, 002...).
+ */
+
+/** Tipe payload create/update. aset arrays default ke []. */
+export interface PaktaInput {
+  hari?: string;
+  tgl?: string;
   nama: string;
-  kategori: string;
-  kondisi: string;
-  keterangan?: string;
+  nip?: string;
+  jabatan?: string;
+  alamat?: string;
+  aset_kendaraan?: PaktaAsetKendaraan[];
+  aset_laptop?: PaktaAsetLaptop[];
+  aset_alat?: PaktaAsetAlat[];
 }
 
-export interface Pakta {
-  id: string;
-  nomor: string;
-  tanggal: string;
-  pj_nama: string;
-  pj_jabatan?: string;
-  pj_nip?: string;
-  lokasi?: string;
-  items: PaktaItem[];
-  created_at: string;
-  updated_at: string;
-}
+// Catatan: helper sinkron `countAset` dipindahkan ke lib/pakta-utils.ts
+// karena file "use server" hanya boleh mengekspor async function.
 
-export async function getPaktaList() {
+/** Ambil daftar seluruh pakta, urut tgl terbaru. */
+export async function getPaktaList(): Promise<Pakta[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("pakta")
     .select("*")
-    .order("tanggal", { ascending: false });
+    .order("tgl", { ascending: false });
 
   if (error) throw error;
-  return data as Pakta[];
+  return (data || []) as Pakta[];
 }
 
-export async function getPaktaById(id: string) {
+/** Ambil satu pakta berdasarkan id. */
+export async function getPaktaById(id: string): Promise<Pakta | null> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -46,90 +57,75 @@ export async function getPaktaById(id: string) {
     .eq("id", id)
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === "PGRST116") return null; // tidak ditemukan
+    throw error;
+  }
   return data as Pakta;
 }
 
-export async function createPakta(formData: FormData) {
+/** Buat pakta baru. Aset arrays default ke []. Redirect ke /pakta/[id]. */
+export async function createPakta(data: PaktaInput): Promise<void> {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
 
   const id = `pakta-${Date.now()}`;
-  const nomor = formData.get("nomor") as string;
-  const tanggal = formData.get("tanggal") as string;
-  const pj_nama = formData.get("pj_nama") as string;
-  const pj_jabatan = formData.get("pj_jabatan") as string;
-  const pj_nip = formData.get("pj_nip") as string;
-  const lokasi = formData.get("lokasi") as string;
-  const itemsJson = formData.get("items") as string;
 
-  if (!nomor || !tanggal || !pj_nama || !itemsJson) {
-    return { error: "Nomor, tanggal, penanggung jawab, dan daftar barang wajib diisi" };
+  if (!data.nama || data.nama.trim() === "") {
+    throw new Error("Nama pemegang wajib diisi");
   }
 
-  const items = JSON.parse(itemsJson);
-
-  if (!Array.isArray(items) || items.length === 0) {
-    return { error: "Minimal satu barang harus ditambahkan" };
-  }
-
-  const { error } = await supabase.from("pakta").insert({
-    id,
-    nomor,
-    tanggal,
-    pj_nama,
-    pj_jabatan,
-    pj_nip,
-    lokasi,
-    items,
-  });
+  const { error } = await supabase
+    .from("pakta")
+    .insert({
+      id,
+      hari: data.hari ?? null,
+      tgl: data.tgl ?? null,
+      nama: data.nama.trim(),
+      nip: data.nip?.trim() || null,
+      jabatan: data.jabatan?.trim() || null,
+      alamat: data.alamat?.trim() || null,
+      aset_kendaraan: data.aset_kendaraan ?? [],
+      aset_laptop: data.aset_laptop ?? [],
+      aset_alat: data.aset_alat ?? [],
+    });
 
   if (error) {
     console.error("Error creating pakta:", error);
-    return { error: error.message };
+    throw error;
   }
 
   revalidatePath("/pakta");
   redirect(`/pakta/${id}`);
 }
 
-export async function updatePakta(id: string, formData: FormData) {
+/** Update pakta. Redirect ke /pakta/[id]. */
+export async function updatePakta(
+  id: string,
+  data: Partial<PaktaInput>,
+): Promise<void> {
   const supabase = await createClient();
 
-  const nomor = formData.get("nomor") as string;
-  const tanggal = formData.get("tanggal") as string;
-  const pj_nama = formData.get("pj_nama") as string;
-  const pj_jabatan = formData.get("pj_jabatan") as string;
-  const pj_nip = formData.get("pj_nip") as string;
-  const lokasi = formData.get("lokasi") as string;
-  const itemsJson = formData.get("items") as string;
-
-  if (!nomor || !tanggal || !pj_nama || !itemsJson) {
-    return { error: "Nomor, tanggal, penanggung jawab, dan daftar barang wajib diisi" };
-  }
-
-  const items = JSON.parse(itemsJson);
-
-  if (!Array.isArray(items) || items.length === 0) {
-    return { error: "Minimal satu barang harus ditambahkan" };
-  }
+  const updateData: Record<string, unknown> = {};
+  if (data.hari !== undefined) updateData.hari = data.hari || null;
+  if (data.tgl !== undefined) updateData.tgl = data.tgl || null;
+  if (data.nama !== undefined) updateData.nama = data.nama.trim();
+  if (data.nip !== undefined) updateData.nip = data.nip?.trim() || null;
+  if (data.jabatan !== undefined) updateData.jabatan = data.jabatan?.trim() || null;
+  if (data.alamat !== undefined) updateData.alamat = data.alamat?.trim() || null;
+  if (data.aset_kendaraan !== undefined) updateData.aset_kendaraan = data.aset_kendaraan;
+  if (data.aset_laptop !== undefined) updateData.aset_laptop = data.aset_laptop;
+  if (data.aset_alat !== undefined) updateData.aset_alat = data.aset_alat;
 
   const { error } = await supabase
     .from("pakta")
-    .update({
-      nomor,
-      tanggal,
-      pj_nama,
-      pj_jabatan,
-      pj_nip,
-      lokasi,
-      items,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq("id", id);
 
   if (error) {
     console.error("Error updating pakta:", error);
-    return { error: error.message };
+    throw error;
   }
 
   revalidatePath("/pakta");
@@ -137,43 +133,139 @@ export async function updatePakta(id: string, formData: FormData) {
   redirect(`/pakta/${id}`);
 }
 
-export async function deletePakta(id: string) {
+/** Hapus pakta. Redirect ke /pakta. */
+export async function deletePakta(id: string): Promise<void> {
   const supabase = await createClient();
 
   const { error } = await supabase.from("pakta").delete().eq("id", id);
 
   if (error) {
     console.error("Error deleting pakta:", error);
-    return { error: error.message };
+    throw error;
   }
 
   revalidatePath("/pakta");
   redirect("/pakta");
 }
 
-export async function generatePaktaNumber() {
-  const supabase = await createClient();
+/**
+ * Build CSV string seluruh pakta. Satu baris per aset item.
+ * Kolom: No, Nama, NIP, Jabatan, Tanggal, Hari, Jenis Aset, Merk/Type,
+ * Tahun, No Polisi/Seri, Harga, Keterangan.
+ */
+export async function exportPaktaCSV(): Promise<string> {
+  const list = await getPaktaList();
 
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const BULAN = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+  ];
+  const fmtDate = (iso?: string): string => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return `${d.getDate()} ${BULAN[d.getMonth()]} ${d.getFullYear()}`;
+  };
 
-  // Get last pakta number for this month
-  const { data } = await supabase
-    .from("pakta")
-    .select("nomor")
-    .like("nomor", `PAKTA/${year}/${month}/%`)
-    .order("created_at", { ascending: false })
-    .limit(1);
+  const escape = (val: unknown): string => {
+    const s = val == null ? "" : String(val);
+    if (/[",\n\r]/.test(s)) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  };
 
-  let sequence = 1;
-  if (data && data.length > 0) {
-    const lastNumber = data[0].nomor;
-    const parts = lastNumber.split("/");
-    if (parts.length === 4) {
-      sequence = parseInt(parts[3]) + 1;
+  const header = [
+    "No",
+    "Nama",
+    "NIP",
+    "Jabatan",
+    "Tanggal",
+    "Hari",
+    "Jenis Aset",
+    "Merk/Type",
+    "Tahun",
+    "No Polisi/Seri",
+    "Harga",
+    "Keterangan",
+  ];
+
+  const rows: string[] = [header.join(",")];
+
+  let no = 0;
+  for (const p of list) {
+    const kend = (p.aset_kendaraan || []).filter(
+      (r) => r && (r.merk || r.jenis),
+    );
+    const lapt = (p.aset_laptop || []).filter(
+      (r) => r && (r.merk || r.type),
+    );
+    const alat = (p.aset_alat || []).filter(
+      (r) => r && (r.merk || r.type),
+    );
+    const total = kend.length + lapt.length + alat.length;
+
+    const baseCols = [
+      "",
+      escape(p.nama || ""),
+      escape(p.nip || ""),
+      escape(p.jabatan || ""),
+      escape(fmtDate(p.tgl)),
+      escape(p.hari || ""),
+    ];
+
+    if (total === 0) {
+      no++;
+      rows.push([escape(no), ...baseCols.slice(1), escape(""), escape(""), escape(""), escape(""), escape(""), escape("")].join(","));
+      continue;
+    }
+
+    for (const r of kend) {
+      no++;
+      rows.push(
+        [
+          escape(no),
+          ...baseCols.slice(1),
+          escape("Kendaraan"),
+          escape(r.merk || r.jenis || ""),
+          escape(r.tahun ?? ""),
+          escape(r.nopol || ""),
+          escape(r.harga || ""),
+          escape(r.ket || ""),
+        ].join(","),
+      );
+    }
+    for (const r of lapt) {
+      no++;
+      rows.push(
+        [
+          escape(no),
+          ...baseCols.slice(1),
+          escape("Laptop"),
+          escape([r.merk, r.type].filter(Boolean).join(" ") || ""),
+          escape(r.tahun ?? ""),
+          escape(r.seri || ""),
+          escape(r.harga || ""),
+          escape(r.ket || ""),
+        ].join(","),
+      );
+    }
+    for (const r of alat) {
+      no++;
+      rows.push(
+        [
+          escape(no),
+          ...baseCols.slice(1),
+          escape("Alat"),
+          escape([r.merk, r.type].filter(Boolean).join(" ") || ""),
+          escape(r.tahun ?? ""),
+          escape(r.seri || ""),
+          escape(r.harga || ""),
+          escape(r.ket || ""),
+        ].join(","),
+      );
     }
   }
 
-  return `PAKTA/${year}/${month}/${sequence}`;
+  return rows.join("\r\n");
 }

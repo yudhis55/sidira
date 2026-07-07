@@ -1,5 +1,10 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -8,14 +13,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowRight, Calendar, MapPin } from "lucide-react";
+import { ArrowRight, Calendar, MapPin, Trash2, Download, Loader2 } from "lucide-react";
+import { deleteRiwayat } from "@/lib/auth/riwayat";
 import type { RiwayatPindah } from "@/lib/auth/riwayat";
 
 interface RiwayatListProps {
   riwayat: RiwayatPindah[];
 }
 
-const KATEGORI_LABELS = {
+const KATEGORI_LABELS: Record<string, string> = {
   alkes: "Alat Kesehatan",
   meubelair: "Meubelair",
   elektronik: "Elektronik",
@@ -23,6 +29,53 @@ const KATEGORI_LABELS = {
 };
 
 export function RiwayatList({ riwayat }: RiwayatListProps) {
+  const router = useRouter();
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const handleDelete = async (id: number, nama: string) => {
+    if (!confirm(`Hapus riwayat perpindahan "${nama}"?`)) return;
+    setDeletingId(id);
+    const result = await deleteRiwayat(id);
+    setDeletingId(null);
+    if (result?.error) {
+      toast.error(result.error);
+    } else {
+      toast.success("Riwayat dihapus");
+      router.refresh();
+    }
+  };
+
+  const exportToCSV = () => {
+    const headers = ["Tanggal", "Nama Barang", "Kategori", "Dari", "Ke", "Oleh"];
+    const rows: string[][] = riwayat.map((item) => [
+      new Date(item.ts).toLocaleString("id-ID"),
+      item.nama,
+      KATEGORI_LABELS[item.kat] || item.kat,
+      item.dari_name || "-",
+      item.ke_name || "-",
+      item.user_id ? `User ${item.user_id.slice(0, 8)}` : "-",
+    ]);
+
+    // Escape CSV fields containing commas/quotes
+    const escape = (val: string) =>
+      /[",\n]/.test(val) ? `"${val.replace(/"/g, '""')}"` : val;
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.map(escape).join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `riwayat_perpindahan_${new Date().toISOString().split("T")[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (riwayat.length === 0) {
     return (
       <Card>
@@ -39,11 +92,17 @@ export function RiwayatList({ riwayat }: RiwayatListProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Riwayat Perpindahan Barang</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Total: {riwayat.length} perpindahan
-        </p>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Riwayat Perpindahan Barang</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Total: {riwayat.length} perpindahan
+          </p>
+        </div>
+        <Button variant="outline" onClick={exportToCSV}>
+          <Download className="mr-2 h-4 w-4" />
+          Export CSV
+        </Button>
       </CardHeader>
       <CardContent>
         <Table>
@@ -56,6 +115,7 @@ export function RiwayatList({ riwayat }: RiwayatListProps) {
               <TableHead></TableHead>
               <TableHead>Ke</TableHead>
               <TableHead>Oleh</TableHead>
+              <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -79,9 +139,9 @@ export function RiwayatList({ riwayat }: RiwayatListProps) {
                 </TableCell>
                 <TableCell className="font-medium">{item.nama}</TableCell>
                 <TableCell>
-                  <Badge variant="outline">
-                    {KATEGORI_LABELS[item.kat as keyof typeof KATEGORI_LABELS] || item.kat}
-                  </Badge>
+                  <span className="inline-flex h-5 items-center px-2 font-mono text-[10px] ring-1 ring-border whitespace-nowrap">
+                    {KATEGORI_LABELS[item.kat] || item.kat}
+                  </span>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
@@ -100,6 +160,21 @@ export function RiwayatList({ riwayat }: RiwayatListProps) {
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {item.user_id ? `User ${item.user_id.slice(0, 8)}` : "-"}
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="destructive"
+                    size="icon-sm"
+                    onClick={() => handleDelete(item.id, item.nama)}
+                    disabled={deletingId === item.id}
+                    title="Hapus riwayat"
+                  >
+                    {deletingId === item.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}

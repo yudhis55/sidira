@@ -47,36 +47,40 @@ export function ItemsForm({ utilId, initialItems }: ItemsFormProps) {
   };
 
   return (
-    <Card>
+    <Card className="rounded-none">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Daftar Item/Jadwal</CardTitle>
-        <Button onClick={addItem} size="sm" disabled={loading}>
-          <Plus className="mr-2 h-4 w-4" />
+        <CardTitle className="font-mono">Jadwal — Daftar Item Pemeliharaan</CardTitle>
+        <Button onClick={addItem} size="sm" disabled={loading} className="h-8">
+          <Plus className="mr-1.5 h-4 w-4" />
           Tambah Item
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         {items.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">
-            Belum ada item. Klik "Tambah Item" untuk menambahkan.
+          <p className="py-8 text-center text-muted-foreground">
+            Belum ada item. Klik &quot;Tambah Item&quot; untuk menambahkan.
           </p>
         ) : (
           items.map((item, index) => (
-            <div key={index} className="border rounded-none p-4 space-y-3">
+            <div key={index} className="space-y-3 rounded-none border border-border p-4">
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold">Item #{index + 1}</h4>
+                <h4 className="font-mono text-sm font-semibold">Item #{index + 1}</h4>
                 <Button
                   variant="destructive"
                   size="sm"
                   onClick={() => removeItem(index)}
                   disabled={loading}
+                  className="h-8 w-8 px-0"
+                  aria-label="Hapus item"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor={`nama-${index}`}>Nama Item *</Label>
+                <Label htmlFor={`nama-${index}`} className="font-mono">
+                  Nama Item *
+                </Label>
                 <Input
                   id={`nama-${index}`}
                   value={item.nama}
@@ -87,12 +91,14 @@ export function ItemsForm({ utilId, initialItems }: ItemsFormProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor={`ket-${index}`}>Keterangan</Label>
+                <Label htmlFor={`ket-${index}`} className="font-mono">
+                  Keterangan
+                </Label>
                 <Input
                   id={`ket-${index}`}
                   value={item.ket || ""}
                   onChange={(e) => updateItem(index, "ket", e.target.value)}
-                  placeholder="Keterangan tambahan (opsional)"
+                  placeholder="Frekuensi/keterangan (mis. Harian, Mingguan, Bulanan)"
                   disabled={loading}
                 />
               </div>
@@ -103,12 +109,12 @@ export function ItemsForm({ utilId, initialItems }: ItemsFormProps) {
         {items.length > 0 && (
           <div className="flex justify-end gap-2">
             {success && (
-              <span className="text-foreground text-sm self-center">
+              <span className="self-center font-mono text-xs text-foreground">
                 ✓ Berhasil disimpan
               </span>
             )}
-            <Button onClick={handleSubmit} disabled={loading}>
-              <Save className="mr-2 h-4 w-4" />
+            <Button onClick={handleSubmit} disabled={loading} className="h-8">
+              <Save className="mr-1.5 h-4 w-4" />
               {loading ? "Menyimpan..." : "Simpan Perubahan"}
             </Button>
           </div>

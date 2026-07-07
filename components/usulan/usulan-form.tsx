@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,39 +14,56 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Save } from "lucide-react";
+import { Plus, Trash2, Save, Loader2 } from "lucide-react";
 import { createUsulan, updateUsulan } from "@/lib/auth/usulan";
-import type { Usulan, UsulanItem } from "@/lib/auth/usulan";
-import type { Room } from "@/lib/types";
+import type { Usulan, UsulanItem, UsulanPrioritas } from "@/lib/usulan-types";
+import type { ItemCategory, Room } from "@/types/database";
 
 interface UsulanFormProps {
   rooms: Room[];
   usulan?: Usulan;
+  /** Pre-selected room id (e.g. from ?room= query param on the new page). */
+  defaultRoomId?: string;
 }
 
-export function UsulanForm({ rooms, usulan }: UsulanFormProps) {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
+const KATEGORI_OPTIONS: { value: ItemCategory; label: string }[] = [
+  { value: "alkes", label: "Alat Kesehatan" },
+  { value: "meubelair", label: "Meubelair" },
+  { value: "elektronik", label: "Elektronik" },
+  { value: "lainnya", label: "Lainnya" },
+];
+
+const PRIORITAS_OPTIONS: { value: UsulanPrioritas; label: string }[] = [
+  { value: "mendesak", label: "⚠ Mendesak" },
+  { value: "penting", label: "Penting" },
+  { value: "rencana", label: "Rencana" },
+];
+
+function emptyItem(): UsulanItem {
+  return {
+    nama: "",
+    kategori: "alkes",
+    prioritas: "penting",
+    qty: 1,
+    satuan: "Unit",
+    harga: 0,
+    total: 0,
+    status: "diajukan",
+    keterangan: "",
+  };
+}
+
+export function UsulanForm({ rooms, usulan, defaultRoomId }: UsulanFormProps) {
+  const [pending, startTransition] = useTransition();
   const [selectedRoom, setSelectedRoom] = useState<string>(
-    usulan?.room_id || ""
+    usulan?.room_id || defaultRoomId || ""
   );
-  const [items, setItems] = useState<UsulanItem[]>(usulan?.payload?.items || []);
+  const [items, setItems] = useState<UsulanItem[]>(
+    usulan?.payload?.items?.length ? usulan.payload.items : []
+  );
 
   const addItem = () => {
-    setItems([
-      ...items,
-      {
-        nama: "",
-        kategori: "alkes",
-        prioritas: "penting",
-        qty: 1,
-        satuan: "Unit",
-        harga: 0,
-        total: 0,
-        status: "pending",
-        keterangan: "",
-      },
-    ]);
+    setItems([...items, emptyItem()]);
   };
 
   const removeItem = (index: number) => {
@@ -59,7 +76,7 @@ export function UsulanForm({ rooms, usulan }: UsulanFormProps) {
     value: string | number
   ) => {
     const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: value };
+    newItems[index] = { ...newItems[index], [field]: value } as UsulanItem;
 
     // Recalculate total when qty or harga changes
     if (field === "qty" || field === "harga") {
@@ -69,43 +86,56 @@ export function UsulanForm({ rooms, usulan }: UsulanFormProps) {
     setItems(newItems);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-
-    const formData = new FormData();
-    formData.append("room_id", selectedRoom);
-    formData.append("items", JSON.stringify(items));
-
-    let result;
-    if (usulan?.id) {
-      result = await updateUsulan(usulan.id, formData);
-    } else {
-      result = await createUsulan(formData);
+    if (!selectedRoom) {
+      toast.error("Ruangan wajib dipilih");
+      return;
+    }
+    if (items.length === 0) {
+      toast.error("Minimal satu barang harus ditambahkan");
+      return;
     }
 
-    setLoading(false);
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.append("room_id", selectedRoom);
+      formData.append("items", JSON.stringify(items));
 
-    if (result?.error) {
-      alert(result.error);
-    }
+      let result;
+      if (usulan?.id) {
+        result = await updateUsulan(usulan.id, formData);
+      } else {
+        result = await createUsulan(formData);
+      }
+
+      if (result?.error) {
+        toast.error(result.error);
+      }
+      // On success the server action redirects, so we don't need to do anything.
+    });
   };
 
+  const grandTotal = items.reduce((sum, item) => sum + (item.total || 0), 0);
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Room selector */}
       <Card>
-        <CardHeader>
-          <CardTitle>Informasi Usulan</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="font-mono text-sm">Informasi Usulan</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           <div className="space-y-2">
-            <Label htmlFor="room_id">Ruangan *</Label>
+            <Label htmlFor="room_id" className="font-mono text-xs">
+              Ruangan *
+            </Label>
             <Select
               value={selectedRoom}
               onValueChange={setSelectedRoom}
-              disabled={loading}
+              disabled={pending}
             >
-              <SelectTrigger>
+              <SelectTrigger id="room_id">
                 <SelectValue placeholder="Pilih ruangan" />
               </SelectTrigger>
               <SelectContent>
@@ -120,191 +150,242 @@ export function UsulanForm({ rooms, usulan }: UsulanFormProps) {
         </CardContent>
       </Card>
 
+      {/* Items */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Daftar Barang yang Diusulkan</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardTitle className="font-mono text-sm">
+            Daftar Barang yang Diusulkan
+          </CardTitle>
           <Button
             type="button"
             onClick={addItem}
             size="sm"
-            disabled={loading || !selectedRoom}
+            variant="outline"
+            disabled={pending || !selectedRoom}
           >
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-1 h-3.5 w-3.5" />
             Tambah Barang
           </Button>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           {items.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              Belum ada barang. Klik "Tambah Barang" untuk menambahkan usulan.
+            <p className="text-center text-xs text-muted-foreground py-8">
+              Belum ada barang. Klik &quot;Tambah Barang&quot; untuk menambahkan
+              usulan.
             </p>
           ) : (
             items.map((item, index) => (
-              <Card key={index}>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-lg">Barang #{index + 1}</CardTitle>
+              <div
+                key={index}
+                className="ring-1 ring-foreground/10 bg-card p-3 space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs font-semibold text-muted-foreground">
+                    Barang #{index + 1}
+                  </span>
                   <Button
                     type="button"
                     variant="destructive"
-                    size="sm"
+                    size="icon-sm"
                     onClick={() => removeItem(index)}
-                    disabled={loading}
+                    disabled={pending}
+                    title="Hapus barang ini"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor={`nama-${index}`}>Nama Barang *</Label>
-                      <Input
-                        id={`nama-${index}`}
-                        value={item.nama}
-                        onChange={(e) =>
-                          updateItem(index, "nama", e.target.value)
-                        }
-                        placeholder="Contoh: Stetoskop Digital"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`kategori-${index}`}>Kategori *</Label>
-                      <Select
-                        value={item.kategori}
-                        onValueChange={(value) =>
-                          updateItem(index, "kategori", value)
-                        }
-                        disabled={loading}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="alkes">Alat Kesehatan</SelectItem>
-                          <SelectItem value="meubelair">Meubelair</SelectItem>
-                          <SelectItem value="elektronik">Elektronik</SelectItem>
-                          <SelectItem value="lainnya">Lainnya</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor={`prioritas-${index}`}>Prioritas *</Label>
-                      <Select
-                        value={item.prioritas}
-                        onValueChange={(value: any) =>
-                          updateItem(index, "prioritas", value)
-                        }
-                        disabled={loading}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="wajib">Wajib</SelectItem>
-                          <SelectItem value="penting">Penting</SelectItem>
-                          <SelectItem value="pendukung">Pendukung</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`qty-${index}`}>Jumlah *</Label>
-                      <Input
-                        id={`qty-${index}`}
-                        type="number"
-                        min="1"
-                        value={item.qty}
-                        onChange={(e) =>
-                          updateItem(index, "qty", parseInt(e.target.value))
-                        }
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor={`satuan-${index}`}>Satuan *</Label>
-                      <Input
-                        id={`satuan-${index}`}
-                        value={item.satuan}
-                        onChange={(e) =>
-                          updateItem(index, "satuan", e.target.value)
-                        }
-                        placeholder="Contoh: Unit, Buah, Set"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`harga-${index}`}>
-                        Harga Satuan (Rp) *
-                      </Label>
-                      <Input
-                        id={`harga-${index}`}
-                        type="number"
-                        min="0"
-                        value={item.harga}
-                        onChange={(e) =>
-                          updateItem(index, "harga", parseInt(e.target.value))
-                        }
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Total Harga</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor={`nama-${index}`}
+                      className="font-mono text-xs"
+                    >
+                      Nama Barang *
+                    </Label>
                     <Input
-                      value={`Rp ${item.total.toLocaleString("id-ID")}`}
-                      readOnly
-                      disabled
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor={`keterangan-${index}`}>Keterangan</Label>
-                    <Textarea
-                      id={`keterangan-${index}`}
-                      value={item.keterangan || ""}
+                      id={`nama-${index}`}
+                      value={item.nama}
                       onChange={(e) =>
-                        updateItem(index, "keterangan", e.target.value)
+                        updateItem(index, "nama", e.target.value)
                       }
-                      placeholder="Alasan atau justifikasi pengadaan (opsional)"
-                      disabled={loading}
-                      rows={3}
+                      placeholder="Contoh: Stetoskop Digital"
+                      required
+                      disabled={pending}
                     />
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor={`kategori-${index}`}
+                      className="font-mono text-xs"
+                    >
+                      Kategori *
+                    </Label>
+                    <Select
+                      value={item.kategori}
+                      onValueChange={(value) =>
+                        updateItem(index, "kategori", value)
+                      }
+                      disabled={pending}
+                    >
+                      <SelectTrigger id={`kategori-${index}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {KATEGORI_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor={`prioritas-${index}`}
+                      className="font-mono text-xs"
+                    >
+                      Prioritas *
+                    </Label>
+                    <Select
+                      value={item.prioritas}
+                      onValueChange={(value) =>
+                        updateItem(index, "prioritas", value)
+                      }
+                      disabled={pending}
+                    >
+                      <SelectTrigger id={`prioritas-${index}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PRIORITAS_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor={`qty-${index}`}
+                      className="font-mono text-xs"
+                    >
+                      Jumlah *
+                    </Label>
+                    <Input
+                      id={`qty-${index}`}
+                      type="number"
+                      min="1"
+                      value={item.qty}
+                      onChange={(e) =>
+                        updateItem(index, "qty", parseInt(e.target.value) || 0)
+                      }
+                      required
+                      disabled={pending}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor={`satuan-${index}`}
+                      className="font-mono text-xs"
+                    >
+                      Satuan *
+                    </Label>
+                    <Input
+                      id={`satuan-${index}`}
+                      value={item.satuan}
+                      onChange={(e) =>
+                        updateItem(index, "satuan", e.target.value)
+                      }
+                      placeholder="Contoh: Unit, Buah, Set"
+                      required
+                      disabled={pending}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor={`harga-${index}`}
+                      className="font-mono text-xs"
+                    >
+                      Harga Satuan (Rp) *
+                    </Label>
+                    <Input
+                      id={`harga-${index}`}
+                      type="number"
+                      min="0"
+                      value={item.harga}
+                      onChange={(e) =>
+                        updateItem(
+                          index,
+                          "harga",
+                          parseInt(e.target.value) || 0
+                        )
+                      }
+                      required
+                      disabled={pending}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="font-mono text-xs">Total Harga</Label>
+                  <Input
+                    value={`Rp ${item.total.toLocaleString("id-ID")}`}
+                    readOnly
+                    disabled
+                    className="font-mono font-medium"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor={`keterangan-${index}`}
+                    className="font-mono text-xs"
+                  >
+                    Keterangan / Justifikasi
+                  </Label>
+                  <Textarea
+                    id={`keterangan-${index}`}
+                    value={item.keterangan || ""}
+                    onChange={(e) =>
+                      updateItem(index, "keterangan", e.target.value)
+                    }
+                    placeholder="Alasan atau justifikasi pengadaan (opsional)"
+                    disabled={pending}
+                    rows={2}
+                  />
+                </div>
+              </div>
             ))
           )}
 
           {items.length > 0 && (
-            <div className="flex justify-between items-center pt-4 border-t">
+            <div className="flex flex-wrap justify-between items-center gap-3 pt-3 border-t border-border">
               <div>
-                <p className="text-sm text-muted-foreground">
+                <p className="font-mono text-xs text-muted-foreground">
                   Total: {items.length} barang
                 </p>
-                <p className="text-lg font-bold">
-                  Rp{" "}
-                  {items
-                    .reduce((sum, item) => sum + item.total, 0)
-                    .toLocaleString("id-ID")}
+                <p className="font-mono text-lg font-bold">
+                  Rp {grandTotal.toLocaleString("id-ID")}
                 </p>
               </div>
-              <Button type="submit" disabled={loading || items.length === 0}>
-                <Save className="mr-2 h-4 w-4" />
-                {loading
-                  ? "Menyimpan..."
-                  : usulan?.id
-                  ? "Update Usulan"
-                  : "Simpan Usulan"}
+              <Button
+                type="submit"
+                disabled={pending || items.length === 0}
+              >
+                {pending ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="mr-1.5 h-4 w-4" />
+                )}
+                {usulan?.id ? "Update Usulan" : "Simpan Usulan"}
               </Button>
             </div>
           )}

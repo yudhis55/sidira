@@ -16,26 +16,17 @@ import {
 } from "@/components/ui/select";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
-import type { Item } from "@/lib/types";
+import type { Item } from "@/types/database";
+import {
+  CATEGORIES,
+  CONDITIONS,
+  PRIORITIES,
+} from "./constants";
 
 interface ItemFormProps {
   roomId: string;
   item?: Item;
 }
-
-const CATEGORIES = [
-  { value: "alkes", label: "Alat Kesehatan" },
-  { value: "meubelair", label: "Meubelair" },
-  { value: "elektronik", label: "Elektronik" },
-  { value: "lainnya", label: "Lainnya" },
-];
-
-const CONDITIONS = [
-  { value: "baik", label: "Baik" },
-  { value: "rr", label: "Rusak Ringan" },
-  { value: "rb", label: "Rusak Berat" },
-  { value: "ta", label: "Tidak Ada" },
-];
 
 export function ItemForm({ roomId, item }: ItemFormProps) {
   const router = useRouter();
@@ -43,6 +34,7 @@ export function ItemForm({ roomId, item }: ItemFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState(item?.category || "");
   const [condition, setCondition] = useState(item?.condition || "baik");
+  const [prio, setPrio] = useState(item?.prio || "");
 
   async function handleSubmit(formData: FormData) {
     setLoading(true);
@@ -51,6 +43,7 @@ export function ItemForm({ roomId, item }: ItemFormProps) {
     formData.set("room_id", roomId);
     formData.set("category", category);
     formData.set("condition", condition);
+    formData.set("prio", prio);
 
     const result = item
       ? await updateItem(item.id, formData)
@@ -99,6 +92,18 @@ export function ItemForm({ roomId, item }: ItemFormProps) {
           </Select>
         </div>
       </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="spec">Spesifikasi</Label>
+        <Input
+          id="spec"
+          name="spec"
+          defaultValue={item?.spec}
+          placeholder="Spesifikasi singkat (opsional)"
+          disabled={loading}
+        />
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         <div className="grid gap-2">
           <Label htmlFor="merk">Merk</Label>
@@ -121,6 +126,7 @@ export function ItemForm({ roomId, item }: ItemFormProps) {
           />
         </div>
       </div>
+
       <div className="grid grid-cols-3 gap-4">
         <div className="grid gap-2">
           <Label htmlFor="year">Tahun</Label>
@@ -133,6 +139,31 @@ export function ItemForm({ roomId, item }: ItemFormProps) {
             disabled={loading}
           />
         </div>
+        <div className="grid gap-2">
+          <Label htmlFor="noreg">No. Register</Label>
+          <Input
+            id="noreg"
+            name="noreg"
+            defaultValue={item?.noreg}
+            placeholder="Nomor register"
+            disabled={loading}
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="std">Standar</Label>
+          <Input
+            id="std"
+            name="std"
+            type="number"
+            min="0"
+            defaultValue={item?.std ?? 0}
+            placeholder="0"
+            disabled={loading}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
         <div className="grid gap-2">
           <Label htmlFor="quantity">Jumlah *</Label>
           <Input
@@ -156,12 +187,35 @@ export function ItemForm({ roomId, item }: ItemFormProps) {
             disabled={loading}
           />
         </div>
+        <div className="grid gap-2">
+          <Label htmlFor="prio">Prioritas</Label>
+          <Select
+            value={prio}
+            onValueChange={setPrio}
+            disabled={loading}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Pilih prioritas" />
+            </SelectTrigger>
+            <SelectContent>
+              {PRIORITIES.map((p) => (
+                <SelectItem key={p.value} value={p.value}>
+                  <span className="mr-1">{p.icon}</span>
+                  {p.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
       <div className="grid gap-2">
         <Label htmlFor="condition">Kondisi *</Label>
         <Select
           value={condition}
-          onValueChange={(value) => setCondition(value as "baik" | "rr" | "rb" | "ta")}
+          onValueChange={(value) =>
+            setCondition(value as "baik" | "rr" | "rb" | "ta")
+          }
           disabled={loading}
         >
           <SelectTrigger>
@@ -170,12 +224,14 @@ export function ItemForm({ roomId, item }: ItemFormProps) {
           <SelectContent>
             {CONDITIONS.map((cond) => (
               <SelectItem key={cond.value} value={cond.value}>
+                <span className="mr-1">{cond.icon}</span>
                 {cond.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
+
       <div className="grid gap-2">
         <Label htmlFor="index_in_room">Urutan di Ruangan</Label>
         <Input
@@ -199,7 +255,7 @@ export function ItemForm({ roomId, item }: ItemFormProps) {
         />
       </div>
       {error && (
-        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+        <div className="rounded-none bg-destructive/10 p-3 text-sm text-destructive">
           {error}
         </div>
       )}

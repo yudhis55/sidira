@@ -3,15 +3,17 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserById } from "@/lib/auth/admin";
 import { UserForm } from "@/components/admin/user-form";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
-interface EditUserPageProps {
-  params: { userId: string };
+interface UserEditPageProps {
+  params: Promise<{ userId: string }>;
 }
 
-export default async function EditUserPage({ params }: EditUserPageProps) {
+export default async function UserEditPage({ params }: UserEditPageProps) {
   const { userId } = await params;
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -19,7 +21,7 @@ export default async function EditUserPage({ params }: EditUserPageProps) {
     redirect("/login");
   }
 
-  // Check if user is admin
+  // Admin guard
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
@@ -30,10 +32,18 @@ export default async function EditUserPage({ params }: EditUserPageProps) {
     redirect("/");
   }
 
-  const targetUser = await getUserById(userId);
+  const userData = await getUserById(userId);
 
-  if (!targetUser) {
-    redirect("/admin/users");
+  if (!userData) {
+    return (
+      <div className="container mx-auto py-6">
+        <Card>
+          <CardContent className="py-12">
+            <p className="text-center text-muted-foreground">User tidak ditemukan</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -45,14 +55,14 @@ export default async function EditUserPage({ params }: EditUserPageProps) {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">Edit User</h1>
+          <h1 className="font-mono text-3xl font-bold">Edit User</h1>
           <p className="text-muted-foreground">
-            Ubah informasi user {targetUser.nama}
+            Ubah informasi user {userData.nama}
           </p>
         </div>
       </div>
 
-      <UserForm user={targetUser} />
+      <UserForm user={userData} />
     </div>
   );
 }

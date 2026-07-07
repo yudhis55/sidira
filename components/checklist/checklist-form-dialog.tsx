@@ -14,15 +14,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Check, TriangleAlert, CircleX, Minus } from "lucide-react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { saveChecklistEntry, deleteChecklistEntry } from "@/lib/auth/checklist";
-import type { ChecklistEntry, ChecklistPayload } from "@/lib/auth/checklist";
+  saveChecklistPayload,
+  deleteChecklistEntry,
+  type ChecklistEntry,
+  type ChecklistPayload,
+} from "@/lib/auth/checklist";
+import type { ItemCondition, ItemCategory } from "@/types/database";
+import { toast } from "sonner";
 
 interface ChecklistFormDialogProps {
   open: boolean;
@@ -31,23 +31,28 @@ interface ChecklistFormDialogProps {
   roomId: string;
   itemId: number;
   itemName: string;
-  itemCategory: string;
+  itemCategory: ItemCategory;
   itemIndex: number;
-  checkDate: string;
-  isCreating?: boolean;
-  items?: Array<{
-    id: number;
-    name: string;
-    category: string;
-    index: number;
-  }>;
+  dateKey: string;
 }
 
-const CONDITIONS = [
-  { value: "baik", label: "Baik", color: "bg-green-500" },
-  { value: "rr", label: "Rusak Ringan", color: "bg-yellow-500" },
-  { value: "rb", label: "Rusak Berat", color: "bg-red-500" },
-  { value: "ta", label: "Tidak Ada", color: "bg-gray-500" },
+const CONDITIONS: Array<{
+  value: ItemCondition;
+  label: string;
+  Icon: typeof Check;
+}> = [
+  { value: "baik", label: "Baik", Icon: Check },
+  { value: "rr", label: "Rusak Ringan", Icon: TriangleAlert },
+  { value: "rb", label: "Rusak Berat", Icon: CircleX },
+  { value: "ta", label: "Tidak Ada", Icon: Minus },
+];
+
+const DAY_NAMES = [
+  "Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu",
+];
+const MONTH_NAMES_FULL = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
 ];
 
 export function ChecklistFormDialog({
@@ -59,13 +64,10 @@ export function ChecklistFormDialog({
   itemName,
   itemCategory,
   itemIndex,
-  checkDate,
-  isCreating,
-  items,
+  dateKey,
 }: ChecklistFormDialogProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [selectedItemId, setSelectedItemId] = useState<number>(itemId);
   const [payload, setPayload] = useState<ChecklistPayload>({
     status: entry?.payload?.status || "baik",
     jenis_kerusakan: entry?.payload?.jenis_kerusakan || "",
@@ -76,29 +78,25 @@ export function ChecklistFormDialog({
     no_laporan: entry?.payload?.no_laporan || "",
   });
 
-  const selectedItem = items?.find((i) => i.id === selectedItemId);
+  const showDetailFields = payload.status === "rr" || payload.status === "rb";
 
   const handleSave = async () => {
-    if (isCreating && !selectedItemId) {
-      alert("Pilih barang terlebih dahulu");
-      return;
-    }
-
     setLoading(true);
     try {
-      await saveChecklistEntry({
-        room_id: roomId,
-        item_id: entry?.item_id || selectedItemId,
-        category: entry?.category || selectedItem!.category,
-        item_index: entry?.item_index || selectedItem!.index,
-        date_key: checkDate,
-        payload: payload,
-      });
+      await saveChecklistPayload(
+        roomId,
+        itemId,
+        itemCategory,
+        itemIndex,
+        dateKey,
+        payload
+      );
       onOpenChange(false);
       router.refresh();
+      toast.success("Keterangan checklist disimpan");
     } catch (error) {
       console.error("Failed to save checklist:", error);
-      alert("Gagal menyimpan checklist");
+      toast.error("Gagal menyimpan checklist");
     } finally {
       setLoading(false);
     }
@@ -107,89 +105,72 @@ export function ChecklistFormDialog({
   const handleDelete = async () => {
     if (!entry?.id) return;
     if (!confirm("Hapus checklist ini?")) return;
-
     setLoading(true);
     try {
       await deleteChecklistEntry(entry.id, roomId);
       onOpenChange(false);
       router.refresh();
+      toast.success("Checklist dihapus");
     } catch (error) {
       console.error("Failed to delete checklist:", error);
-      alert("Gagal menghapus checklist");
+      toast.error("Gagal menghapus checklist");
     } finally {
       setLoading(false);
     }
   };
 
+  // Pretty date label
+  const dateLabel = (() => {
+    const [y, m, d] = dateKey.split("-").map(Number);
+    const dow = new Date(dateKey + "T00:00:00").getDay();
+    return `${DAY_NAMES[dow]}, ${d} ${MONTH_NAMES_FULL[m - 1]} ${y}`;
+  })();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-none">
         <DialogHeader>
-          <DialogTitle>
-            {isCreating ? "Tambah Checklist" : "Edit Checklist"} - {itemName}
+          <DialogTitle className="font-mono">
+            Detail Checklist — {itemName}
           </DialogTitle>
-          <DialogDescription>
-            Tanggal: {new Date(checkDate).toLocaleDateString("id-ID", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </DialogDescription>
+          <DialogDescription>{dateLabel}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Item Selector (only when creating) */}
-          {isCreating && items && (
-            <div>
-              <Label htmlFor="item-select">Pilih Barang</Label>
-              <Select
-                value={selectedItemId?.toString()}
-                onValueChange={(value) => setSelectedItemId(parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih barang" />
-                </SelectTrigger>
-                <SelectContent>
-                  {items.map((item) => (
-                    <SelectItem key={item.id} value={item.id.toString()}>
-                      {item.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Status Selection */}
+          {/* Condition picker — achromatic, active via ring + font-weight */}
           <div>
-            <Label>Kondisi</Label>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              {CONDITIONS.map((cond) => (
-                <button
-                  key={cond.value}
-                  onClick={() => setPayload({ ...payload, status: cond.value as any })}
-                  className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                    payload.status === cond.value
-                      ? "border-primary bg-primary/10 font-semibold"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className={`w-4 h-4 rounded-full ${cond.color}`} />
-                    <span>{cond.label}</span>
-                  </div>
-                </button>
-              ))}
+            <Label className="font-mono">Kondisi</Label>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {CONDITIONS.map(({ value, label, Icon }) => {
+                const active = payload.status === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setPayload({ ...payload, status: value })}
+                    className={
+                      "inline-flex h-9 items-center justify-center gap-1.5 rounded-none border px-2 font-mono text-xs transition-colors " +
+                      (active
+                        ? "border-foreground bg-muted font-semibold ring-2 ring-foreground ring-offset-0"
+                        : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground")
+                    }
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Detail Fields (only show if not "baik") */}
-          {payload.status !== "baik" && (
+          {/* Detail fields (only for rr / rb) */}
+          {showDetailFields && (
             <>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="jenis-kerusakan">Jenis Kerusakan</Label>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label htmlFor="jenis-kerusakan" className="font-mono">
+                    Jenis Kerusakan
+                  </Label>
                   <Input
                     id="jenis-kerusakan"
                     value={payload.jenis_kerusakan || ""}
@@ -199,8 +180,10 @@ export function ChecklistFormDialog({
                     placeholder="Contoh: Retak, Patah, dll"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="jenis-tindakan">Jenis Tindakan</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="jenis-tindakan" className="font-mono">
+                    Jenis Tindakan
+                  </Label>
                   <Input
                     id="jenis-tindakan"
                     value={payload.jenis_tindakan || ""}
@@ -212,8 +195,10 @@ export function ChecklistFormDialog({
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="uraian-kerusakan">Uraian Kerusakan</Label>
+              <div className="space-y-1">
+                <Label htmlFor="uraian-kerusakan" className="font-mono">
+                  Uraian Kerusakan
+                </Label>
                 <Textarea
                   id="uraian-kerusakan"
                   value={payload.uraian_kerusakan || ""}
@@ -222,11 +207,14 @@ export function ChecklistFormDialog({
                   }
                   placeholder="Deskripsi detail kerusakan..."
                   rows={2}
+                  className="rounded-none"
                 />
               </div>
 
-              <div>
-                <Label htmlFor="uraian-tindakan">Uraian Tindakan</Label>
+              <div className="space-y-1">
+                <Label htmlFor="uraian-tindakan" className="font-mono">
+                  Uraian Tindakan
+                </Label>
                 <Textarea
                   id="uraian-tindakan"
                   value={payload.uraian_tindakan || ""}
@@ -235,15 +223,18 @@ export function ChecklistFormDialog({
                   }
                   placeholder="Deskripsi tindakan yang diambil..."
                   rows={2}
+                  className="rounded-none"
                 />
               </div>
             </>
           )}
 
-          {/* Petugas dan No Laporan */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="petugas">Petugas</Label>
+          {/* Petugas & No Laporan — always shown */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="petugas" className="font-mono">
+                Petugas
+              </Label>
               <Input
                 id="petugas"
                 value={payload.petugas || ""}
@@ -251,8 +242,10 @@ export function ChecklistFormDialog({
                 placeholder="Nama petugas"
               />
             </div>
-            <div>
-              <Label htmlFor="no-laporan">No. Laporan</Label>
+            <div className="space-y-1">
+              <Label htmlFor="no-laporan" className="font-mono">
+                No. Laporan
+              </Label>
               <Input
                 id="no-laporan"
                 value={payload.no_laporan || ""}
@@ -273,7 +266,7 @@ export function ChecklistFormDialog({
               Hapus
             </Button>
           )}
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Batal
           </Button>
           <Button onClick={handleSave} disabled={loading}>

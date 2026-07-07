@@ -2,8 +2,9 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import type { Room } from "@/types/database";
 
-export async function getRooms() {
+export async function getRooms(): Promise<Room[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("rooms")
@@ -11,10 +12,10 @@ export async function getRooms() {
     .order("name");
 
   if (error) throw error;
-  return data;
+  return data as Room[];
 }
 
-export async function getRoomById(id: string) {
+export async function getRoomById(id: string): Promise<Room> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("rooms")
@@ -23,7 +24,7 @@ export async function getRoomById(id: string) {
     .single();
 
   if (error) throw error;
-  return data;
+  return data as Room;
 }
 
 export async function createRoom(formData: FormData) {
@@ -94,6 +95,55 @@ export async function deleteRoom(id: string) {
     return { error: error.message };
   }
 
+  revalidatePath("/inventaris");
+  revalidatePath(`/inventaris/${id}`);
+  return { success: true };
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  Inline edit actions (Fase 2A)
+// ══════════════════════════════════════════════════════════════════════
+
+/**
+ * Update only the Penanggung Jawab (PJ) name of a room (inline edit).
+ */
+export async function updateRoomPj(roomId: string, pj: string) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("rooms")
+    .update({ pj: pj || null })
+    .eq("id", roomId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/inventaris/${roomId}`);
+  revalidatePath("/inventaris");
+  return { success: true };
+}
+
+/**
+ * Update only the name of a room (inline edit).
+ */
+export async function updateRoomName(roomId: string, name: string) {
+  if (!name.trim()) {
+    return { error: "Nama ruangan tidak boleh kosong" };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("rooms")
+    .update({ name: name.trim() })
+    .eq("id", roomId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/inventaris/${roomId}`);
   revalidatePath("/inventaris");
   return { success: true };
 }

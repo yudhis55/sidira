@@ -24,14 +24,10 @@ import {
   Package,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import type { Room } from "@/types/database";
 
 interface RoomFormProps {
-  room?: {
-    id: string;
-    name: string;
-    description: string;
-    icon: string;
-  };
+  room?: Pick<Room, "id" | "name" | "description" | "icon">;
 }
 
 interface IconOption {

@@ -1,82 +1,75 @@
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ItemsForm } from "@/components/utilitas/items-form";
 import { Checklist } from "@/components/utilitas/checklist";
-import { UtilitasForm } from "@/components/utilitas/utilitas-form";
+import { UtilHeader } from "@/components/utilitas/util-header";
 import {
   getUtilMetaById,
+  getUtilMetaList,
   getUtilItems,
-  getUtilState,
+  getUtilStateForMonth,
 } from "@/lib/auth/utilitas";
-import { ArrowLeft, Edit } from "lucide-react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 interface UtilitasDetailPageProps {
-  params: { utilId: string };
+  params: Promise<{ utilId: string }>;
+  searchParams: Promise<{ year?: string; month?: string }>;
 }
 
-export default async function UtilitasDetailPage({ params }: UtilitasDetailPageProps) {
+export default async function UtilitasDetailPage({
+  params,
+  searchParams,
+}: UtilitasDetailPageProps) {
   const { utilId } = await params;
+  const sp = await searchParams;
 
   let utilMeta;
   try {
     utilMeta = await getUtilMetaById(utilId);
-  } catch (error) {
+  } catch {
     notFound();
   }
 
+  // Resolve year/month (1-based month in URL; default to today).
+  const now = new Date();
+  const year = sp.year
+    ? parseInt(sp.year, 10) || now.getFullYear()
+    : now.getFullYear();
+  const monthParam = sp.month
+    ? parseInt(sp.month, 10)
+    : now.getMonth() + 1;
+  // Clamp month to 1..12 and convert to 0-based.
+  const month = Math.min(Math.max(monthParam, 1), 12) - 1;
+
   const utilItems = await getUtilItems(utilId);
-  const utilStates = await getUtilState(utilId);
+  const stateForMonth = await getUtilStateForMonth(utilId, year, month);
+
+  // Fetch the utilitas list for the unit bar.
+  const utilList = await getUtilMetaList();
+
+  const items = utilItems.items ?? [];
+  const doneCount = stateForMonth.checks.filter(
+    (c) => c.kind === "check"
+  ).length;
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/utilitas">
-            <Button variant="outline" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <span className="text-4xl">{utilMeta.icon}</span>
-              <span>{utilMeta.label}</span>
-            </h1>
-            <p className="text-muted-foreground">ID: {utilMeta.util_id}</p>
-          </div>
-        </div>
-        <Link href={`/utilitas/${utilId}/edit`}>
-          <Button variant="outline">
-            <Edit className="mr-2 h-4 w-4" />
-            Edit
-          </Button>
-        </Link>
-      </div>
+    <div className="container mx-auto space-y-6 py-6">
+      <UtilHeader
+        utilMeta={utilMeta}
+        itemCount={items.length}
+        doneCount={doneCount}
+        utilList={utilList}
+      />
 
-      <Tabs defaultValue="checklist" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="checklist">Checklist Harian</TabsTrigger>
-          <TabsTrigger value="items">Daftar Item</TabsTrigger>
-          <TabsTrigger value="settings">Pengaturan</TabsTrigger>
-        </TabsList>
+      <Checklist
+        key={`${utilId}-${year}-${month}`}
+        utilId={utilId}
+        utilMeta={utilMeta}
+        items={items}
+        month={month}
+        year={year}
+        stateForMonth={stateForMonth}
+      />
 
-        <TabsContent value="checklist">
-          <Checklist
-            utilId={utilId}
-            items={utilItems.items}
-            states={utilStates}
-          />
-        </TabsContent>
-
-        <TabsContent value="items">
-          <ItemsForm utilId={utilId} initialItems={utilItems.items} />
-        </TabsContent>
-
-        <TabsContent value="settings">
-          <UtilitasForm utilitas={utilMeta} />
-        </TabsContent>
-      </Tabs>
+      <ItemsForm utilId={utilId} initialItems={items} />
     </div>
   );
 }

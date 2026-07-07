@@ -22,8 +22,6 @@ interface ExportButtonsProps {
 export function ExportButtons({
   bulan,
   tahun,
-  room_id,
-  kategori,
   summary,
   rooms,
 }: ExportButtonsProps) {

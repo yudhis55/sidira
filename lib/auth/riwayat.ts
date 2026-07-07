@@ -90,6 +90,44 @@ export async function createRiwayat(formData: FormData) {
   return { success: true };
 }
 
+/**
+ * Typed variant of createRiwayat for programmatic use (e.g. moveItem/moveItems).
+ * Records a single asset movement to the riwayat_pindah audit log.
+ */
+export async function createRiwayatRecord(params: {
+  nama: string;
+  kat: string;
+  dari: string;
+  ke: string;
+  dari_name?: string;
+  ke_name?: string;
+  user_id?: string;
+}) {
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = params.user_id || user?.id;
+
+  const { error } = await supabase.from("riwayat_pindah").insert({
+    ts: new Date().toISOString(),
+    nama: params.nama,
+    kat: params.kat,
+    dari: params.dari,
+    ke: params.ke,
+    dari_name: params.dari_name || null,
+    ke_name: params.ke_name || null,
+    user_id: userId || null,
+  });
+
+  if (error) {
+    console.error("Error creating riwayat:", error);
+    return { error: error.message };
+  }
+
+  revalidatePath("/riwayat");
+  return { success: true };
+}
+
 export async function deleteRiwayat(id: number) {
   const supabase = await createClient();
 

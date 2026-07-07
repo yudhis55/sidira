@@ -4,14 +4,14 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { ItemForm } from "@/components/inventaris/item-form";
-import type { Item } from "@/lib/types";
+import type { Item } from "@/types/database";
 
 interface EditItemPageProps {
   params: { id: string; itemId: string };
 }
 
 export default async function EditItemPage({ params }: EditItemPageProps) {
-  const { id, itemId } = await params;
+  const { itemId } = await params;
   const supabase = await createClient();
   const { data: item } = await supabase
     .from("items")

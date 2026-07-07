@@ -33,7 +33,7 @@ export interface Room {
 }
 
 export type ItemCategory = "alkes" | "meubelair" | "elektronik" | "lainnya";
-export type ItemCondition = "baik" | "kb" | "rb";
+export type ItemCondition = "baik" | "rr" | "rb" | "ta";
 
 export interface Item {
   id: number;
@@ -53,6 +53,10 @@ export interface Item {
   kode_barang?: string;
   harga?: number;
   kategori?: string;
+  spec?: string;
+  noreg?: string;
+  std?: number;
+  prio?: "wajib" | "penting" | "pendukung";
   created_at: string;
   updated_at: string;
 }
@@ -100,30 +104,34 @@ export interface SBBK {
   updated_at: string;
 }
 
+// Catatan: field names mengikuti GAS legacy lampiran aset (source of truth).
+// DB kolom aset_kendaraan/aset_laptop/aset_alat adalah JSONB tanpa constraint
+// sehingga bentuk objek bebas. Dipakai oleh form entri & dokumen cetak Pakta.
 export interface PaktaAsetKendaraan {
-  jenis: string;
-  merk: string;
-  tahun: number;
-  no_rangka?: string;
-  no_mesin?: string;
-  no_polisi?: string;
-  kondisi: ItemCondition;
+  jenis?: string; // motor / mobil
+  merk?: string;
+  tahun?: string | number;
+  nopol?: string; // No. Polisi
+  harga?: string; // Harga Perolehan
+  ket?: string; // Keterangan
 }
 
 export interface PaktaAsetLaptop {
-  merk: string;
+  merk?: string;
   type?: string;
-  tahun: number;
-  no_seri?: string;
-  kondisi: ItemCondition;
+  tahun?: string | number;
+  seri?: string; // No. Seri
+  harga?: string; // Harga Perolehan
+  ket?: string; // Keterangan
 }
 
 export interface PaktaAsetAlat {
-  nama: string;
   merk?: string;
   type?: string;
-  tahun: number;
-  kondisi: ItemCondition;
+  tahun?: string | number;
+  seri?: string; // No. Seri
+  harga?: string; // Harga Perolehan
+  ket?: string; // Keterangan
 }
 
 export interface Pakta {
@@ -203,12 +211,12 @@ export interface UtilState {
 export interface UsulanItem {
   nama: string;
   kategori: ItemCategory;
-  prioritas: "wajib" | "penting" | "pendukung";
+  prioritas: "mendesak" | "penting" | "rencana";
   qty: number;
   satuan: string;
   harga: number;
   total: number;
-  status: "pending" | "approved" | "rejected";
+  status: "diajukan" | "disetujui" | "ditolak";
   keterangan?: string;
 }
 
@@ -229,4 +237,34 @@ export interface Log {
   action: string;
   detail?: string;
   created_at: string;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  Rekap Pemegang Inventaris
+// ══════════════════════════════════════════════════════════════════════
+export type PemegangStatus = "PNS" | "PPPK";
+export type AsetPemegangJenis = "kendaraan" | "laptop" | "alat" | "rumah";
+
+export interface PemegangInventaris {
+  id: string;
+  nama: string;
+  nip?: string;
+  jabatan?: string;
+  status: PemegangStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AsetPemegang {
+  id: number;
+  pemegang_id: string;
+  jenis: AsetPemegangJenis;
+  merk?: string;
+  type?: string;
+  tahun?: string;
+  nopol?: string;
+  harga?: string;
+  ket?: string;
+  created_at: string;
+  updated_at: string;
 }

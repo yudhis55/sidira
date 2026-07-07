@@ -159,7 +159,7 @@ function parseRoomFromSheet(sheetName: string): RoomData | null {
   };
 }
 
-function parseItemFromRow(row: any[], rowIndex: number): ItemData | null {
+function parseItemFromRow(row: unknown[], rowIndex: number): ItemData | null {
   // Skip header rows (first ~15 rows typically)
   if (rowIndex < 15) return null;
 
@@ -250,7 +250,7 @@ async function main() {
     let itemCount = 0;
 
     for (let i = 0; i < data.length; i++) {
-      const row = data[i] as any[];
+      const row = data[i] as unknown[];
       const item = parseItemFromRow(row, i);
 
       if (item) {

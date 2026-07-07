@@ -1,15 +1,24 @@
 import { getRooms } from "@/lib/auth/rooms";
 import { UsulanForm } from "@/components/usulan/usulan-form";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-export default async function NewUsulanPage() {
+export const dynamic = "force-dynamic";
+
+interface NewUsulanPageProps {
+  searchParams: Promise<{ room?: string }>;
+}
+
+export default async function NewUsulanPage({
+  searchParams,
+}: NewUsulanPageProps) {
+  const sp = await searchParams;
+  const defaultRoomId = sp.room || undefined;
   const rooms = await getRooms();
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/usulan">
           <Button variant="outline" size="icon">
@@ -17,14 +26,16 @@ export default async function NewUsulanPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">Buat Usulan Baru</h1>
-          <p className="text-muted-foreground">
+          <h1 className="font-mono text-xl font-bold tracking-tight">
+            Buat Usulan Baru
+          </h1>
+          <p className="text-xs text-muted-foreground">
             Ajukan usulan pengadaan barang untuk ruangan
           </p>
         </div>
       </div>
 
-      <UsulanForm rooms={rooms} />
+      <UsulanForm rooms={rooms} defaultRoomId={defaultRoomId} />
     </div>
   );
 }

@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Check, X } from "lucide-react";
+import { Check, X, Loader2 } from "lucide-react";
 import { updateItemStatus } from "@/lib/auth/usulan";
+import type { UsulanStatus } from "@/lib/usulan-types";
+import { USULAN_STATUS_LABELS } from "@/lib/usulan-types";
 
 interface ItemStatusActionsProps {
   usulanId: number;
   itemIndex: number;
-  currentStatus: "pending" | "approved" | "rejected";
+  currentStatus: UsulanStatus;
 }
 
 export function ItemStatusActions({
@@ -18,49 +21,73 @@ export function ItemStatusActions({
   currentStatus,
 }: ItemStatusActionsProps) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [pending, startTransition] = useTransition();
 
-  const handleStatusChange = async (status: "approved" | "rejected") => {
-    setLoading(true);
-
-    const result = await updateItemStatus(usulanId, itemIndex, status);
-
-    setLoading(false);
-
-    if (result?.error) {
-      alert(result.error);
-    } else {
-      router.refresh();
-    }
+  const handleStatusChange = (status: UsulanStatus) => {
+    startTransition(async () => {
+      const result = await updateItemStatus(usulanId, itemIndex, status);
+      if (result?.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("Status barang diperbarui");
+        router.refresh();
+      }
+    });
   };
 
-  if (currentStatus !== "pending") {
+  // Already decided — show status + allow reset
+  if (currentStatus !== "diajukan") {
     return (
-      <div className="text-sm text-muted-foreground">
-        Status: <span className="font-medium">{currentStatus === "approved" ? "Disetujui" : "Ditolak"}</span>
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-xs text-muted-foreground">
+          {USULAN_STATUS_LABELS[currentStatus]}
+        </span>
+        <Button
+          size="xs"
+          variant="outline"
+          onClick={() => handleStatusChange("diajukan")}
+          disabled={pending}
+          title="Set ulang ke Diajukan"
+        >
+          {pending ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            "Reset"
+          )}
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="flex gap-2 pt-2 border-t">
+    <div className="flex items-center gap-1">
       <Button
-        size="sm"
+        size="xs"
         variant="default"
-        onClick={() => handleStatusChange("approved")}
-        disabled={loading}
+        onClick={() => handleStatusChange("disetujui")}
+        disabled={pending}
+        title="Setujui barang ini"
       >
-        <Check className="mr-2 h-4 w-4" />
-        {loading ? "Memproses..." : "Setujui"}
+        {pending ? (
+          <Loader2 className="h-3 w-3 animate-spin" />
+        ) : (
+          <Check className="h-3 w-3" />
+        )}
+        Setujui
       </Button>
       <Button
-        size="sm"
+        size="xs"
         variant="destructive"
-        onClick={() => handleStatusChange("rejected")}
-        disabled={loading}
+        onClick={() => handleStatusChange("ditolak")}
+        disabled={pending}
+        title="Tolak barang ini"
       >
-        <X className="mr-2 h-4 w-4" />
-        {loading ? "Memproses..." : "Tolak"}
+        {pending ? (
+          <Loader2 className="h-3 w-3 animate-spin" />
+        ) : (
+          <X className="h-3 w-3" />
+        )}
+        Tolak
       </Button>
     </div>
   );

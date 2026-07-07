@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Plus, Edit, Trash2, Eye } from "lucide-react";
+import { Plus, Edit, Eye } from "lucide-react";
 import Link from "next/link";
 import { DeleteUserButton } from "./delete-button";
 import type { UserProfile } from "@/lib/auth/admin";
@@ -10,12 +10,6 @@ import type { UserProfile } from "@/lib/auth/admin";
 interface UserListProps {
   users: UserProfile[];
 }
-
-const ROLE_COLORS = {
-  admin: "bg-red-100 text-red-800",
-  editor: "bg-blue-100 text-blue-800",
-  viewer: "bg-green-100 text-green-800",
-};
 
 const ROLE_LABELS = {
   admin: "Admin",
@@ -56,8 +50,8 @@ export function UserList({ users }: UserListProps) {
                     </Avatar>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{user.nama}</h3>
-                        <Badge className={ROLE_COLORS[user.role]}>
+                        <h3 className="font-mono font-semibold">{user.nama}</h3>
+                        <Badge variant="outline">
                           {ROLE_LABELS[user.role]}
                         </Badge>
                       </div>

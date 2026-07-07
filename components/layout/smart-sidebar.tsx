@@ -9,85 +9,54 @@ import {
   Pin,
   PinOff,
   Menu,
-  LayoutDashboard,
-  ClipboardCheck,
-  FileText,
-  ScrollText,
-  Wrench,
-  Lightbulb,
-  BarChart3,
-  History,
-  Ambulance,
-  Zap,
-  Droplets,
+  Plus,
   LogOut,
-  Building2,
-  Stethoscope,
-  Microscope,
-  Pill,
-  Home,
-  BedDouble,
-  Activity,
-  Hospital,
-  Store,
-  School,
-  Warehouse,
-  Factory,
-  Building,
-  Sofa,
-  Armchair,
-  Briefcase,
-  Package,
-  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { addFavorite, removeFavorite, type Favorite } from "@/lib/auth/favorites";
 import { toast } from "sonner";
 import type { Room } from "@/types/database";
+import type { UtilMeta } from "@/lib/auth/utilitas";
 
 // Section keys for collapse state
-type SectionKey = "favorites" | "menu" | "rooms" | "utilitas";
-
-// Room categories for grouping
-const ROOM_CATEGORIES = {
-  pelayanan: "Pelayanan",
-  penunjang: "Penunjang",
-  administrasi: "Administrasi",
-  gudang: "Gudang & Logistik",
-  pustu: "Pustu & Ponkesdes",
-  lain: "Lainnya",
-} as const;
-
-type RoomCategory = keyof typeof ROOM_CATEGORIES;
+type SectionKey =
+  | "favorites"
+  | "ruangan"
+  | "utilitas"
+  | "barangKeluar"
+  | "rekap"
+  | "pakta";
 
 interface SmartSidebarProps {
   rooms: Room[];
   favorites: Favorite[];
+  utilitas: UtilMeta[];
   user: { nama: string; role: string } | null;
   onLogout: () => void;
 }
 
-export function SmartSidebar({ rooms, favorites, user, onLogout }: SmartSidebarProps) {
+export function SmartSidebar({ rooms, favorites, utilitas, user, onLogout }: SmartSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [collapsedSections, setCollapsedSections] = useState<Set<SectionKey>>(new Set());
+  // Lazy init from localStorage to avoid setState-in-effect cascading renders.
+  const [collapsedSections, setCollapsedSections] = useState<Set<SectionKey>>(() => {
+    if (typeof window === "undefined") return new Set();
+    const saved = localStorage.getItem("sidebar-collapsed-sections");
+    if (saved) {
+      try {
+        return new Set(JSON.parse(saved));
+      } catch {
+        return new Set();
+      }
+    }
+    return new Set();
+  });
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
   const hamburgerButtonRef = useRef<HTMLButtonElement>(null);
-
-  // Load collapsed state from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("sidebar-collapsed-sections");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setCollapsedSections(new Set(parsed));
-      } catch {}
-    }
-  }, []);
 
   // Save collapsed state to localStorage
   const toggleSection = useCallback((section: SectionKey) => {
@@ -108,6 +77,7 @@ export function SmartSidebar({ rooms, favorites, user, onLogout }: SmartSidebarP
     if (!isMobileDrawerOpen || !drawerRef.current) return;
 
     const drawer = drawerRef.current;
+    const hamburgerButton = hamburgerButtonRef.current;
     const focusableElements = drawer.querySelectorAll<HTMLElement>(
       'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
     );
@@ -146,7 +116,7 @@ export function SmartSidebar({ rooms, favorites, user, onLogout }: SmartSidebarP
     return () => {
       drawer.removeEventListener("keydown", handleKeyDown);
       setTimeout(() => {
-        hamburgerButtonRef.current?.focus();
+        hamburgerButton?.focus();
       }, 100);
     };
   }, [isMobileDrawerOpen]);
@@ -169,39 +139,15 @@ export function SmartSidebar({ rooms, favorites, user, onLogout }: SmartSidebarP
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Filter rooms by search query
+  // Filter rooms by search query (flat list, not grouped — matches GAS)
   const filteredRooms = useMemo(() => {
     if (!searchQuery.trim()) return rooms;
     const query = searchQuery.toLowerCase();
     return rooms.filter((room) => {
       const roomName = room.name?.toLowerCase() || "";
-      const categoryName = ROOM_CATEGORIES[room.category as RoomCategory]?.toLowerCase() || "";
-      return roomName.includes(query) || categoryName.includes(query);
+      return roomName.includes(query);
     });
   }, [rooms, searchQuery]);
-
-  // Group rooms by category
-  const groupedRooms = useMemo(() => {
-    const groups: Record<RoomCategory, Room[]> = {
-      pelayanan: [],
-      penunjang: [],
-      administrasi: [],
-      gudang: [],
-      pustu: [],
-      lain: [],
-    };
-
-    filteredRooms.forEach((room) => {
-      const category = (room.category as RoomCategory) || "lain";
-      if (groups[category]) {
-        groups[category].push(room);
-      } else {
-        groups.lain.push(room);
-      }
-    });
-
-    return groups;
-  }, [filteredRooms]);
 
   // Get favorite rooms
   const favoriteRooms = useMemo(() => {
@@ -220,7 +166,7 @@ export function SmartSidebar({ rooms, favorites, user, onLogout }: SmartSidebarP
           await addFavorite(roomId);
           toast.success(`Ruangan "${roomName}" ditambahkan ke favorit`);
         }
-      } catch (error) {
+      } catch {
         toast.error("Gagal menyimpan favorit. Coba lagi.");
       }
     },
@@ -242,36 +188,13 @@ export function SmartSidebar({ rooms, favorites, user, onLogout }: SmartSidebarP
     [router]
   );
 
-  // Main navigation items
-  const mainNavItems = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/checklist", label: "Checklist", icon: ClipboardCheck },
-    { href: "/sbbk", label: "SBBK", icon: FileText },
-    { href: "/pakta", label: "Pakta", icon: ScrollText },
-    { href: "/utilitas", label: "Utilitas", icon: Wrench },
-    { href: "/usulan", label: "Usulan", icon: Lightbulb },
-    { href: "/laporan", label: "Laporan", icon: BarChart3 },
-    { href: "/riwayat", label: "Riwayat", icon: History },
-  ];
-
-  // Tambah menu admin jika user adalah admin
-  if (user?.role === "admin") {
-    mainNavItems.push({ href: "/admin/users", label: "Kelola User", icon: Users });
-  }
-
-  // Utilitas items
-  const utilitasItems = [
-    { id: "ambulance", label: "Ambulance", icon: Ambulance },
-    { id: "genset", label: "Genset", icon: Zap },
-    { id: "ipal", label: "IPAL", icon: Droplets },
-  ];
-
   return (
     <>
       {/* Mobile hamburger button */}
       <Button
         variant="ghost"
         size="icon"
+        ref={hamburgerButtonRef}
         className="fixed top-4 left-4 z-40 md:hidden"
         onClick={() => setIsMobileDrawerOpen(true)}
         aria-label="Buka menu navigasi"
@@ -290,6 +213,7 @@ export function SmartSidebar({ rooms, favorites, user, onLogout }: SmartSidebarP
 
       {/* Sidebar */}
       <aside
+        ref={drawerRef}
         className={`
           fixed top-0 left-0 z-50 h-full w-64 bg-background border-r border-border
           transform transition-transform duration-300 ease-out-quart
@@ -357,10 +281,9 @@ export function SmartSidebar({ rooms, favorites, user, onLogout }: SmartSidebarP
               </div>
             </div>
 
-            {/* Favorites section */}
+            {/* Favorites section — useful addition, kept after search */}
             <CollapsibleSection
-              title="FAVORIT"
-              sectionKey="favorites"
+              title="⭐ FAVORIT"
               isCollapsed={collapsedSections.has("favorites")}
               onToggle={() => toggleSection("favorites")}
               defaultExpanded
@@ -390,97 +313,133 @@ export function SmartSidebar({ rooms, favorites, user, onLogout }: SmartSidebarP
               )}
             </CollapsibleSection>
 
-            {/* Main navigation */}
+            {/* ── Seksi 1: Ruangan ── */}
             <CollapsibleSection
-              title="MENU UTAMA"
-              sectionKey="menu"
-              isCollapsed={collapsedSections.has("menu")}
-              onToggle={() => toggleSection("menu")}
-              defaultExpanded
-            >
-              <div className="space-y-0.5">
-                {mainNavItems.map((item) => (
-                  <NavItem
-                    key={item.href}
-                    href={item.href}
-                    label={item.label}
-                    icon={item.icon}
-                    isActive={pathname === item.href}
-                    onClick={() => setIsMobileDrawerOpen(false)}
-                  />
-                ))}
-              </div>
-            </CollapsibleSection>
-
-            {/* Rooms section */}
-            <CollapsibleSection
-              title="RUANGAN"
-              sectionKey="rooms"
-              isCollapsed={collapsedSections.has("rooms")}
-              onToggle={() => toggleSection("rooms")}
+              title="🏥 RUANGAN"
+              isCollapsed={collapsedSections.has("ruangan")}
+              onToggle={() => toggleSection("ruangan")}
               defaultExpanded
             >
               {searchQuery && filteredRooms.length === 0 ? (
                 <div className="px-3 py-4 text-center">
                   <p className="text-xs text-muted-foreground">
-                    Tidak ada ruangan yang cocok dengan "{searchQuery}"
+                    Tidak ada ruangan yang cocok dengan &quot;{searchQuery}&quot;
+                  </p>
+                </div>
+              ) : filteredRooms.length === 0 ? (
+                <div className="px-3 py-4 text-center">
+                  <p className="text-xs text-muted-foreground">
+                    Belum ada ruangan.
                   </p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {Object.entries(groupedRooms).map(([category, categoryRooms]) => {
-                    if (categoryRooms.length === 0) return null;
-                    return (
-                      <div key={category}>
-                        <div className="px-3 py-1.5">
-                          <p className="text-xs font-medium text-muted-foreground">
-                            {ROOM_CATEGORIES[category as RoomCategory]}
-                          </p>
-                        </div>
-                        <div className="space-y-0.5">
-                          {categoryRooms.map((room) => (
-                            <RoomItem
-                              key={room.id}
-                              room={room}
-                              isActive={pathname === `/inventaris/${room.id}`}
-                              isFavorite={isFavorite(room.id)}
-                              onNavigate={() => navigateToRoom(room.id)}
-                              onFavoriteToggle={() =>
-                                handleFavoriteToggle(
-                                  room.id,
-                                  room.name || "Ruangan",
-                                  isFavorite(room.id)
-                                )
-                              }
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="space-y-0.5">
+                  {filteredRooms.map((room) => (
+                    <RoomItem
+                      key={room.id}
+                      room={room}
+                      isActive={pathname === `/inventaris/${room.id}`}
+                      isFavorite={isFavorite(room.id)}
+                      onNavigate={() => navigateToRoom(room.id)}
+                      onFavoriteToggle={() =>
+                        handleFavoriteToggle(
+                          room.id,
+                          room.name || "Ruangan",
+                          isFavorite(room.id)
+                        )
+                      }
+                    />
+                  ))}
                 </div>
               )}
+              <div className="px-1 pt-1">
+                <AddItemLink href="/inventaris/new" label="Tambah Ruangan" onClick={() => setIsMobileDrawerOpen(false)} />
+              </div>
             </CollapsibleSection>
 
-            {/* Utilitas section */}
+            {/* ── Seksi 2: Utilitas ── */}
             <CollapsibleSection
-              title="UTILITAS"
-              sectionKey="utilitas"
+              title="⚙️ UTILITAS"
               isCollapsed={collapsedSections.has("utilitas")}
               onToggle={() => toggleSection("utilitas")}
-              defaultExpanded={false}
+              defaultExpanded
+            >
+              {utilitas.length === 0 ? (
+                <div className="px-3 py-4 text-center">
+                  <p className="text-xs text-muted-foreground">
+                    Belum ada utilitas.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-0.5">
+                  {utilitas.map((util) => (
+                    <EmojiNavItem
+                      key={util.util_id}
+                      href={`/utilitas/${util.util_id}`}
+                      emoji={util.icon}
+                      label={util.label}
+                      isActive={pathname === `/utilitas/${util.util_id}`}
+                      onClick={() => setIsMobileDrawerOpen(false)}
+                    />
+                  ))}
+                </div>
+              )}
+              <div className="px-1 pt-1">
+                <AddItemLink href="/utilitas/new" label="Tambah Utilitas" onClick={() => setIsMobileDrawerOpen(false)} />
+              </div>
+            </CollapsibleSection>
+
+            {/* ── Seksi 3: Barang Keluar ── */}
+            <CollapsibleSection
+              title="📋 BARANG KELUAR"
+              isCollapsed={collapsedSections.has("barangKeluar")}
+              onToggle={() => toggleSection("barangKeluar")}
+              defaultExpanded
             >
               <div className="space-y-0.5">
-                {utilitasItems.map((item) => (
-                  <NavItem
-                    key={item.id}
-                    href={`/utilitas/${item.id}`}
-                    label={item.label}
-                    icon={item.icon}
-                    isActive={pathname === `/utilitas/${item.id}`}
-                    onClick={() => setIsMobileDrawerOpen(false)}
-                  />
-                ))}
+                <EmojiNavItem
+                  href="/sbbk"
+                  emoji="📋"
+                  label="SBBK"
+                  isActive={pathname.startsWith("/sbbk")}
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                />
+              </div>
+            </CollapsibleSection>
+
+            {/* ── Seksi 4: Rekap Inventaris ── */}
+            <CollapsibleSection
+              title="📊 REKAP INVENTARIS"
+              isCollapsed={collapsedSections.has("rekap")}
+              onToggle={() => toggleSection("rekap")}
+              defaultExpanded
+            >
+              <div className="space-y-0.5">
+                <EmojiNavItem
+                  href="/rekap"
+                  emoji="📊"
+                  label="Pemegang Inventaris"
+                  isActive={pathname.startsWith("/rekap")}
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                />
+              </div>
+            </CollapsibleSection>
+
+            {/* ── Seksi 5: Pakta Integritas ── */}
+            <CollapsibleSection
+              title="📜 PAKTA INTEGRITAS"
+              isCollapsed={collapsedSections.has("pakta")}
+              onToggle={() => toggleSection("pakta")}
+              defaultExpanded
+            >
+              <div className="space-y-0.5">
+                <EmojiNavItem
+                  href="/pakta"
+                  emoji="📜"
+                  label="Pakta BMD"
+                  isActive={pathname.startsWith("/pakta")}
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                />
               </div>
             </CollapsibleSection>
           </div>
@@ -493,7 +452,6 @@ export function SmartSidebar({ rooms, favorites, user, onLogout }: SmartSidebarP
 // Collapsible Section Component
 interface CollapsibleSectionProps {
   title: string;
-  sectionKey: SectionKey;
   isCollapsed: boolean;
   onToggle: () => void;
   defaultExpanded: boolean;
@@ -510,12 +468,12 @@ function CollapsibleSection({
     <div className="border-b border-border">
       <button
         onClick={onToggle}
-        className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        className="flex w-full items-center justify-between px-3 py-2 font-mono text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         aria-expanded={!isCollapsed}
       >
         <span>{title}</span>
         <ChevronDown
-          className={`h-3 w-3 transition-transform duration-200 ${
+          className={`h-3 w-3 shrink-0 transition-transform duration-200 ${
             isCollapsed ? "-rotate-90" : "rotate-0"
           }`}
         />
@@ -531,16 +489,16 @@ function CollapsibleSection({
   );
 }
 
-// Navigation Item Component
-interface NavItemProps {
+// Emoji Navigation Item Component (renders an emoji string as the icon)
+interface EmojiNavItemProps {
   href: string;
+  emoji: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
   isActive: boolean;
   onClick: () => void;
 }
 
-function NavItem({ href, label, icon: Icon, isActive, onClick }: NavItemProps) {
+function EmojiNavItem({ href, emoji, label, isActive, onClick }: EmojiNavItemProps) {
   return (
     <a
       href={href}
@@ -555,7 +513,29 @@ function NavItem({ href, label, icon: Icon, isActive, onClick }: NavItemProps) {
       `}
       aria-current={isActive ? "page" : undefined}
     >
-      <Icon className="h-4 w-4" />
+      <span className="flex h-4 w-4 items-center justify-center text-sm leading-none">
+        {emoji}
+      </span>
+      <span className="flex-1">{label}</span>
+    </a>
+  );
+}
+
+// Add Item Link Component (e.g. "＋ Tambah Ruangan")
+interface AddItemLinkProps {
+  href: string;
+  label: string;
+  onClick: () => void;
+}
+
+function AddItemLink({ href, label, onClick }: AddItemLinkProps) {
+  return (
+    <a
+      href={href}
+      onClick={onClick}
+      className="flex items-center gap-2 rounded-sm px-3 py-2 text-sm text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-accent-foreground"
+    >
+      <Plus className="h-4 w-4" />
       <span className="flex-1">{label}</span>
     </a>
   );
@@ -570,25 +550,8 @@ interface RoomItemProps {
   onFavoriteToggle: () => void;
 }
 
-// Map icon IDs to Lucide icons
-const ROOM_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
-  hospital: Hospital,
-  home: Home,
-  building2: Building2,
-  store: Store,
-  school: School,
-  warehouse: Warehouse,
-  factory: Factory,
-  office: Building,
-  sofa: Sofa,
-  armchair: Armchair,
-  briefcase: Briefcase,
-  package: Package,
-};
-
 function RoomItem({ room, isActive, isFavorite, onNavigate, onFavoriteToggle }: RoomItemProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const IconComponent = ROOM_ICON_MAP[room.icon || "hospital"] || Hospital;
 
   return (
     <div
@@ -609,7 +572,9 @@ function RoomItem({ room, isActive, isFavorite, onNavigate, onFavoriteToggle }: 
         role="button"
         aria-current={isActive ? "page" : undefined}
       >
-        <IconComponent className="h-4 w-4" />
+        <span className="flex h-4 w-4 items-center justify-center text-sm leading-none">
+          {room.icon || "🏥"}
+        </span>
         <span className="flex-1 truncate text-left">{room.name || "Ruangan"}</span>
         <button
           onClick={(e) => {

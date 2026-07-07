@@ -3,8 +3,9 @@ import { getRooms } from "@/lib/auth/rooms";
 import { getRiwayatList } from "@/lib/auth/riwayat";
 import { RiwayatFilter } from "@/components/riwayat/riwayat-filter";
 import { RiwayatList } from "@/components/riwayat/riwayat-list";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/shared/page-elements";
 
 interface RiwayatPageProps {
   searchParams: Promise<{
@@ -52,12 +53,12 @@ export default async function RiwayatPage({ searchParams }: RiwayatPageProps) {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Riwayat Perpindahan</h1>
-        <p className="text-muted-foreground">
-          Lihat riwayat perpindahan barang antar ruangan
-        </p>
-      </div>
+      <PageHeader
+        icon="🔁"
+        title="Riwayat Perpindahan"
+        subtitle="Lihat riwayat perpindahan barang antar ruangan"
+        stats={[{ value: riwayat.length, label: "Total Catatan", tone: "teal" }]}
+      />
 
       <RiwayatFilter
         start_date={start_date}

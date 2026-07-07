@@ -109,7 +109,17 @@ async function migrateRooms() {
   const rows = parseCSV(content);
 
   // Group by roomId (karena di GAS, satu room bisa punya multiple rows)
-  const roomsMap = new Map<string, any>();
+  interface RoomImport {
+    id: string;
+    name: string;
+    icon: string;
+    color: string;
+    bg: string;
+    description: string;
+    pj: string;
+    order_index: number;
+  }
+  const roomsMap = new Map<string, RoomImport>();
 
   for (const row of rows) {
     const roomId = row.roomId;

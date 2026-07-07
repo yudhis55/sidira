@@ -7,7 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-sora);
   --font-mono: var(--font-mono);
   --font-heading: var(--font-mono);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -49,72 +49,107 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  /* SIDIRA — teal-based palette, adapted from GAS legacy.
+     GAS hex values converted to oklch to stay native to shadcn v4 tokens. */
+  --background: oklch(0.975 0.005 230);          /* #f4f7fb app bg */
+  --foreground: oklch(0.22 0.03 240);            /* #0f1923 ink */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.22 0.03 240);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.22 0.03 240);
+  --primary: oklch(0.51 0.09 175);               /* #0e7c6b teal */
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  --secondary: oklch(0.96 0.008 230);            /* #f0f4f8 line2 */
+  --secondary-foreground: oklch(0.22 0.03 240);
+  --muted: oklch(0.965 0.006 230);
+  --muted-foreground: oklch(0.48 0.02 245);      /* #5e7080 ink3 */
+  --accent: oklch(0.94 0.03 170);                /* #d4f0eb teal3 */
+  --accent-foreground: oklch(0.51 0.09 175);
+  --destructive: oklch(0.5 0.18 27);             /* #b91c1c red */
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.9 0.008 235);                /* #e2e8ef line */
+  --input: oklch(0.9 0.008 235);
+  --ring: oklch(0.51 0.09 175);                  /* teal ring */
+  --chart-1: oklch(0.51 0.09 175);               /* teal */
+  --chart-2: oklch(0.62 0.14 65);                /* amber */
+  --chart-3: oklch(0.5 0.17 260);                /* blue */
+  --chart-4: oklch(0.5 0.18 27);                 /* red */
+  --chart-5: oklch(0.45 0.16 300);               /* violet */
+  --radius: 0.625rem;                            /* ~10px GAS --r */
+
+  /* Sidebar — GAS uses a dark navy/teal sidebar; keep light for now,
+     primary accent = teal. */
   --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.22 0.03 240);
+  --sidebar-primary: oklch(0.51 0.09 175);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-accent: oklch(0.94 0.03 170);
+  --sidebar-accent-foreground: oklch(0.51 0.09 175);
+  --sidebar-border: oklch(0.9 0.008 235);
+  --sidebar-ring: oklch(0.51 0.09 175);
+
+  /* ── SIDIRA category / status color tokens (from GAS :root) ──
+     Exposed as plain CSS vars so non-shadcn components (badges, swatches,
+     kondisi selects) can reference them directly. */
+  --teal: #0e7c6b;
+  --teal2: #14a98f;
+  --teal3: #d4f0eb;
+  --teal4: #edfaf7;
+  --amber: #b45309;
+  --amber2: #fef3c7;
+  --red: #b91c1c;
+  --red2: #fee2e2;
+  --blue: #1d4ed8;
+  --blue2: #dbeafe;
+  --violet: #6d28d9;
+  --violet2: #ede9fe;
+  --orange: #c2410c;
+  --orange2: #ffedd5;
+  --rose: #be185d;
+  --rose2: #fce7f3;
+  --slate: #475569;
+  --slate2: #f1f5f9;
+  --ink: #0f1923;
+  --ink2: #2d3f50;
+  --ink3: #5e7080;
+  --line: #e2e8ef;
+  --line2: #f0f4f8;
+  --app-bg: #f4f7fb;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  --background: oklch(0.18 0.02 240);
+  --foreground: oklch(0.96 0.005 230);
+  --card: oklch(0.23 0.02 240);
+  --card-foreground: oklch(0.96 0.005 230);
+  --popover: oklch(0.23 0.02 240);
+  --popover-foreground: oklch(0.96 0.005 230);
+  --primary: oklch(0.68 0.11 170);                /* lighter teal for dark */
+  --primary-foreground: oklch(0.18 0.02 240);
+  --secondary: oklch(0.28 0.02 240);
+  --secondary-foreground: oklch(0.96 0.005 230);
+  --muted: oklch(0.28 0.02 240);
+  --muted-foreground: oklch(0.72 0.01 235);
+  --accent: oklch(0.34 0.05 175);
+  --accent-foreground: oklch(0.82 0.08 170);
+  --destructive: oklch(0.65 0.18 27);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.68 0.11 170);
+  --chart-1: oklch(0.68 0.11 170);
+  --chart-2: oklch(0.72 0.14 65);
+  --chart-3: oklch(0.65 0.17 260);
+  --chart-4: oklch(0.65 0.18 27);
+  --chart-5: oklch(0.6 0.16 300);
+  --sidebar: oklch(0.21 0.02 240);
+  --sidebar-foreground: oklch(0.96 0.005 230);
+  --sidebar-primary: oklch(0.68 0.11 170);
+  --sidebar-primary-foreground: oklch(0.18 0.02 240);
+  --sidebar-accent: oklch(0.28 0.02 240);
+  --sidebar-accent-foreground: oklch(0.96 0.005 230);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.68 0.11 170);
 }
 
 @layer base {
@@ -123,10 +158,14 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-color: var(--app-bg);
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   }
   html {
-    @apply font-mono;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   }
+  /* Mono headings — GAS uses JetBrains Mono for numeric/data headings.
+     Apply via .font-mono utility (already mapped to --font-mono). */
 }
 
 @layer utilities {

@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Save, User, UserCircle, Users } from "lucide-react";
+import { Save } from "lucide-react";
 import { createUser, updateUser } from "@/lib/auth/admin";
 import type { UserProfile } from "@/lib/auth/admin";
 
@@ -21,11 +21,7 @@ interface UserFormProps {
   user?: UserProfile;
 }
 
-const AVATAR_OPTIONS = [
-  { id: "user", label: "User", icon: User },
-  { id: "user-circle", label: "User Circle", icon: UserCircle },
-  { id: "users", label: "Users", icon: Users },
-];
+const AVATAR_PRESETS = ["👤", "🛡️", "👩‍⚕️", "👨‍⚕️", "📦", "🔧", "📋", "💉"];
 
 export function UserForm({ user }: UserFormProps) {
   const router = useRouter();
@@ -55,7 +51,7 @@ export function UserForm({ user }: UserFormProps) {
     <form onSubmit={handleSubmit} className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>{user?.id ? "Edit User" : "Tambah User Baru"}</CardTitle>
+          <CardTitle className="font-mono">{user?.id ? "Edit User" : "Tambah User Baru"}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -140,22 +136,30 @@ export function UserForm({ user }: UserFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="avatar">Avatar</Label>
-              <Select name="avatar" defaultValue={user?.avatar || "user"} disabled={loading}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih avatar" />
-                </SelectTrigger>
-                <SelectContent>
-                  {AVATAR_OPTIONS.map((avatar) => (
-                    <SelectItem key={avatar.id} value={avatar.id}>
-                      <div className="flex items-center gap-2">
-                        <avatar.icon className="h-5 w-5" />
-                        <span>{avatar.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="avatar">Avatar (emoji)</Label>
+              <Input
+                id="avatar"
+                name="avatar"
+                defaultValue={user?.avatar || "👤"}
+                placeholder="👤"
+                maxLength={4}
+                disabled={loading}
+              />
+              <div className="flex flex-wrap gap-1">
+                {AVATAR_PRESETS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => {
+                      const input = document.getElementById("avatar") as HTMLInputElement;
+                      if (input) input.value = emoji;
+                    }}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-none border border-border text-lg hover:bg-muted"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 

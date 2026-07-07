@@ -187,7 +187,7 @@ export async function updateUser(userId: string, formData: FormData) {
   }
 
   // Update auth user (email and password if provided)
-  const updateAuthData: any = { email };
+  const updateAuthData: { email: string; password?: string } = { email };
   if (password && password.length >= 6) {
     updateAuthData.password = password;
   }

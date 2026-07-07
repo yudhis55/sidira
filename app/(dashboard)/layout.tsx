@@ -2,7 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { SmartSidebar } from "@/components/layout/smart-sidebar";
+import { GlobalSearchDialog } from "@/components/shared/global-search";
 import { getFavorites } from "@/lib/auth/favorites";
+import { getUtilMetaList } from "@/lib/auth/utilitas";
 
 export default async function DashboardLayout({
   children,
@@ -31,6 +33,15 @@ export default async function DashboardLayout({
   // Fetch user favorites
   const favorites = await getFavorites();
 
+  // Fetch utilitas meta list (graceful fallback on error)
+  let utilitas: Awaited<ReturnType<typeof getUtilMetaList>> = [];
+  try {
+    utilitas = await getUtilMetaList();
+  } catch (error) {
+    console.error("Error fetching utilitas:", error);
+    utilitas = [];
+  }
+
   // Handle logout
   async function handleLogout() {
     "use server";
@@ -44,6 +55,7 @@ export default async function DashboardLayout({
       <SmartSidebar
         rooms={rooms || []}
         favorites={favorites}
+        utilitas={utilitas}
         user={profile}
         onLogout={handleLogout}
       />
@@ -53,6 +65,7 @@ export default async function DashboardLayout({
           {children}
         </main>
       </div>
+      <GlobalSearchDialog />
     </div>
   );
 }

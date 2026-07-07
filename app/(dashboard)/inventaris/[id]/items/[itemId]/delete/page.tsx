@@ -19,7 +19,7 @@ async function handleDelete(formData: FormData) {
 }
 
 export default async function DeleteItemPage({ params }: DeleteItemPageProps) {
-  const { id, itemId } = await params;
+  const { itemId } = await params;
   const supabase = await createClient();
   const { data: item } = await supabase
     .from("items")
@@ -48,7 +48,7 @@ export default async function DeleteItemPage({ params }: DeleteItemPageProps) {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Hapus Barang</h1>
+          <h1 className="font-mono text-3xl font-bold tracking-tight">Hapus Barang</h1>
           <p className="text-muted-foreground">Konfirmasi penghapusan barang</p>
         </div>
       </div>
@@ -56,7 +56,7 @@ export default async function DeleteItemPage({ params }: DeleteItemPageProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Trash2 className="h-5 w-5 text-red-500" />
+            <Trash2 className="h-5 w-5 text-destructive" />
             Hapus Barang?
           </CardTitle>
           <CardDescription>

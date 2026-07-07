@@ -119,7 +119,7 @@ async function getRecentActivity(hours: number = 24) {
 
   // Group by action
   const actionCounts: Record<string, number> = {};
-  logs?.forEach((log: any) => {
+  logs?.forEach((log: { action: string; ts: string }) => {
     actionCounts[log.action] = (actionCounts[log.action] || 0) + 1;
   });
 
@@ -154,10 +154,10 @@ async function getInventoryStats() {
 
   const stats = { baik: 0, rr: 0, rb: 0, ta: 0, total: 0 };
 
-  conditionData?.forEach((item: any) => {
+  conditionData?.forEach((item: { condition: string }) => {
     stats.total++;
-    if (item.condition in stats) {
-      (stats as any)[item.condition]++;
+    if (item.condition in stats && item.condition !== "total") {
+      (stats as Record<string, number>)[item.condition]++;
     }
   });
 
