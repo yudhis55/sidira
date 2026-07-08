@@ -1,5 +1,4 @@
 ﻿import { getMockItems, getMockUsulan } from "@/lib/mock-data";
-import { Card } from "@/components/gas/card";
 
 export default function DashboardPage() {
   const items = getMockItems();
@@ -24,44 +23,41 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Ringkasan inventaris Puskesmas Baruharjo
-        </p>
-      </div>
-
+    <div>
       {/* ── Legend Bar ─────────────────────────────────────────────── */}
       <div
-        className="legend-bar"
         style={{
           display: "flex",
           alignItems: "center",
           gap: "16px",
           flexWrap: "wrap",
           padding: "12px 16px",
-          background: "var(--card)",
+          background: "#fff",
+          border: "1px solid #e5e7eb",
           borderRadius: "var(--radius)",
-          border: "1px solid hsl(var(--border))",
-          fontSize: "0.875rem",
+          marginBottom: "20px",
+          fontSize: "11.5px",
         }}
       >
-        <span style={{ fontWeight: 600 }}>Keterangan:</span>
+        <span style={{ fontWeight: 700, color: "#64748b", marginRight: "4px" }}>
+          Keterangan:
+        </span>
         {[
           { color: "#0e7c6b", label: "Alat Kesehatan" },
           { color: "#b45309", label: "Meubelair" },
           { color: "#1d4ed8", label: "Elektronik" },
           { color: "#475569", label: "Lainnya" },
         ].map((leg) => (
-          <span key={leg.label} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          <span
+            key={leg.label}
+            style={{ display: "flex", alignItems: "center", gap: "5px", color: "#94a3b8" }}
+          >
             <span
               style={{
                 width: "10px",
                 height: "10px",
                 borderRadius: "50%",
                 background: leg.color,
-                display: "inline-block",
               }}
             />
             {leg.label}
@@ -70,35 +66,47 @@ export default function DashboardPage() {
         <span style={{ marginLeft: "auto", display: "flex", gap: "8px", alignItems: "center" }}>
           <span
             style={{
-              padding: "2px 10px",
-              borderRadius: "9999px",
-              fontSize: "0.75rem",
-              fontWeight: 500,
-              background: "#dcfce7",
-              color: "#166534",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              padding: "3px 9px",
+              borderRadius: "20px",
+              fontSize: "10.5px",
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+              background: "#fef3c7",
+              color: "#92400e",
             }}
           >
             Wajib
           </span>
           <span
             style={{
-              padding: "2px 10px",
-              borderRadius: "9999px",
-              fontSize: "0.75rem",
-              fontWeight: 500,
-              background: "#fef3c7",
-              color: "#92400e",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              padding: "3px 9px",
+              borderRadius: "20px",
+              fontSize: "10.5px",
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+              background: "#dbeafe",
+              color: "#1d4ed8",
             }}
           >
             Penting
           </span>
           <span
             style={{
-              padding: "2px 10px",
-              borderRadius: "9999px",
-              fontSize: "0.75rem",
-              fontWeight: 500,
-              background: "#f1f5f9",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              padding: "3px 9px",
+              borderRadius: "20px",
+              fontSize: "10.5px",
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+              background: "#e2e8f0",
               color: "#475569",
             }}
           >
@@ -109,66 +117,93 @@ export default function DashboardPage() {
 
       {/* ── GStats ────────────────────────────────────────────────── */}
       <div
-        className="gstats"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
           gap: "12px",
+          marginBottom: "20px",
         }}
       >
         {stats.map((stat) => (
-          <Card key={stat.label}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div
+            key={stat.label}
+            style={{
+              background: "#fff",
+              border: "1px solid #e5e7eb",
+              borderRadius: "var(--radius)",
+              padding: "16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+            }}
+          >
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "10px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "20px",
+                flexShrink: 0,
+                background: stat.bg,
+              }}
+            >
+              {stat.emoji}
+            </div>
+            <div>
               <div
                 style={{
-                  width: "40px",
-                  height: "40px",
-                  borderRadius: "50%",
-                  background: stat.bg,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "1.25rem",
-                  flexShrink: 0,
+                  fontSize: "22px",
+                  fontWeight: 800,
+                  fontFamily: '"JetBrains Mono", monospace',
+                  color: stat.color,
+                  lineHeight: 1.2,
                 }}
-                aria-hidden="true"
               >
-                {stat.emoji}
+                {stat.value}
               </div>
-              <div>
-                <div
-                  style={{
-                    fontSize: "1.5rem",
-                    fontWeight: 700,
-                    color: stat.color,
-                    lineHeight: 1.2,
-                  }}
-                >
-                  {stat.value}
-                </div>
-                <div style={{ fontSize: "0.75rem", color: "hsl(var(--muted-foreground))" }}>
-                  {stat.label}
-                </div>
+              <div
+                style={{
+                  fontSize: "10.5px",
+                  color: "#94a3b8",
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.3px",
+                }}
+              >
+                {stat.label}
               </div>
             </div>
-          </Card>
+          </div>
         ))}
       </div>
+
       {/* ── Page Actions ──────────────────────────────────────────── */}
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          justifyContent: "flex-end",
+          marginTop: "28px",
+          paddingTop: "20px",
+          borderTop: "1px solid #e5e7eb",
+        }}
+      >
         <a
           href="/laporan"
           style={{
             display: "inline-flex",
             alignItems: "center",
             gap: "8px",
-            padding: "8px 20px",
+            padding: "10px 22px",
             borderRadius: "var(--radius)",
-            border: "1px solid hsl(var(--border))",
-            background: "var(--card)",
+            border: "1px solid #e5e7eb",
+            background: "#fff",
             fontSize: "0.875rem",
-            fontWeight: 500,
-            color: "hsl(var(--foreground))",
+            fontWeight: 600,
+            color: "#1e293b",
             textDecoration: "none",
             cursor: "pointer",
           }}
