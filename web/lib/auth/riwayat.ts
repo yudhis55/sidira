@@ -7,12 +7,12 @@ export interface RiwayatPindah {
   id: number;
   ts: string;
   nama: string;
-  kat: string;
-  dari: string;
-  ke: string;
-  dari_name: string;
-  ke_name: string;
-  user_id: string;
+  kat?: string;
+  dari?: string;
+  ke?: string;
+  dari_name?: string;
+  ke_name?: string;
+  user_id?: string;
   created_at: string;
 }
 

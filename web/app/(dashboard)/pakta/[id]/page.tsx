@@ -1,8 +1,8 @@
-import { getPaktaById, deletePakta } from "@/lib/auth/pakta";
+import { deletePakta } from "@/lib/auth/pakta";
+import { getMockPaktaById } from "@/lib/mock-data";
 import { countAset } from "@/lib/pakta-utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Pencil, Printer, Trash2 } from "lucide-react";
+import { Card } from "@/components/gas/card";
+import { Button } from "@/components/gas/button";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -41,7 +41,7 @@ async function handleDelete(formData: FormData) {
 
 export default async function PaktaDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const pakta = await getPaktaById(id);
+  const pakta = getMockPaktaById(id);
 
   if (!pakta) {
     notFound();
@@ -58,8 +58,8 @@ export default async function PaktaDetailPage({ params }: PageProps) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Link href="/pakta">
-            <Button variant="outline" size="icon" aria-label="Kembali">
-              <ArrowLeft className="h-4 w-4" />
+            <Button variant="ghost" className="h-9 w-9 p-0" aria-label="Kembali">
+              ⬅️
             </Button>
           </Link>
           <div>
@@ -71,22 +71,19 @@ export default async function PaktaDetailPage({ params }: PageProps) {
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href={`/pakta/${pakta.id}/edit`}>
-            <Button variant="outline" size="sm">
-              <Pencil className="h-4 w-4 mr-1" />
-              Edit
+            <Button variant="ghost" className="text-xs px-3 py-1.5">
+              ✏️ Edit
             </Button>
           </Link>
           <Link href={`/pakta/${pakta.id}/print`} target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm">
-              <Printer className="h-4 w-4 mr-1" />
-              Cetak
+            <Button variant="ghost" className="text-xs px-3 py-1.5">
+              🖨️ Cetak
             </Button>
           </Link>
           <form action={handleDelete}>
             <input type="hidden" name="id" value={pakta.id} />
-            <Button variant="destructive" size="sm" type="submit">
-              <Trash2 className="h-4 w-4 mr-1" />
-              Hapus
+            <Button variant="primary" className="text-xs px-3 py-1.5 bg-red-600 hover:bg-red-700" type="submit">
+              🗑️ Hapus
             </Button>
           </form>
         </div>
@@ -95,10 +92,10 @@ export default async function PaktaDetailPage({ params }: PageProps) {
       {/* Info pemegang */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="font-mono text-sm">Identitas Pemegang</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-xs">
+          <div className="pb-3">
+            <p className="font-mono text-sm font-bold">Identitas Pemegang</p>
+          </div>
+          <div className="space-y-3 text-xs">
             <div>
               <p className="text-[10px] uppercase text-muted-foreground">Nama</p>
               <p className="font-mono font-semibold">{pakta.nama || "-"}</p>
@@ -121,14 +118,14 @@ export default async function PaktaDetailPage({ params }: PageProps) {
                 <p className="text-muted-foreground">{pakta.alamat}</p>
               </div>
             )}
-          </CardContent>
+          </div>
         </Card>
 
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="font-mono text-sm">Tanggal Pakta</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-xs">
+          <div className="pb-3">
+            <p className="font-mono text-sm font-bold">Tanggal Pakta</p>
+          </div>
+          <div className="space-y-3 text-xs">
             <div>
               <p className="text-[10px] uppercase text-muted-foreground">Hari</p>
               <p>{pakta.hari || "-"}</p>
@@ -143,16 +140,16 @@ export default async function PaktaDetailPage({ params }: PageProps) {
                 {asetCount} aset
               </span>
             </div>
-          </CardContent>
+          </div>
         </Card>
       </div>
 
       {/* Lampiran Aset: Kendaraan */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="font-mono text-sm">🚗 Kendaraan Dinas</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
+        <div className="pb-3">
+          <p className="font-mono text-sm font-bold">🚗 Kendaraan Dinas</p>
+        </div>
+        <div className="p-0">
           {kendaraan.length === 0 ? (
             <p className="py-6 text-center text-xs text-muted-foreground">
               Tidak ada data aset kendaraan
@@ -187,15 +184,15 @@ export default async function PaktaDetailPage({ params }: PageProps) {
               </table>
             </div>
           )}
-        </CardContent>
+        </div>
       </Card>
 
       {/* Lampiran Aset: Laptop */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="font-mono text-sm">💻 Laptop / Personal Komputer</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
+        <div className="pb-3">
+          <p className="font-mono text-sm font-bold">💻 Laptop / Personal Komputer</p>
+        </div>
+        <div className="p-0">
           {laptop.length === 0 ? (
             <p className="py-6 text-center text-xs text-muted-foreground">
               Tidak ada data aset laptop/PC
@@ -230,17 +227,17 @@ export default async function PaktaDetailPage({ params }: PageProps) {
               </table>
             </div>
           )}
-        </CardContent>
+        </div>
       </Card>
 
       {/* Lampiran Aset: Alat Penunjang */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="font-mono text-sm">
+        <div className="pb-3">
+          <p className="font-mono text-sm font-bold">
             📱 Alat Penunjang (Tablet, Handphone, Handy Talky, External Hardisk)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
+          </p>
+        </div>
+        <div className="p-0">
           {alat.length === 0 ? (
             <p className="py-6 text-center text-xs text-muted-foreground">
               Tidak ada data aset alat penunjang
@@ -275,7 +272,7 @@ export default async function PaktaDetailPage({ params }: PageProps) {
               </table>
             </div>
           )}
-        </CardContent>
+        </div>
       </Card>
     </div>
   );

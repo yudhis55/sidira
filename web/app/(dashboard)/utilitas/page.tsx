@@ -1,14 +1,13 @@
-import { Plus } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/gas/button";
+import { Card } from "@/components/gas/card";
 import { PageHeader } from "@/components/shared/page-elements";
-import { getUtilSummaries } from "@/lib/auth/utilitas-summary";
+import { getMockUtilitasSummary } from "@/lib/mock-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function UtilitasPage() {
-  const summaries = await getUtilSummaries();
+  const summaries = getMockUtilitasSummary();
   const totalItems = summaries.reduce((s, x) => s + x.itemCount, 0);
   const totalDone = summaries.reduce((s, x) => s + x.doneThisMonth, 0);
 
@@ -26,7 +25,7 @@ export default async function UtilitasPage() {
         actions={
           <Link href="/utilitas/new">
             <Button>
-              <Plus className="h-4 w-4" />
+              <span aria-hidden className="mr-1">➕</span>
               Tambah Utilitas
             </Button>
           </Link>
@@ -35,11 +34,11 @@ export default async function UtilitasPage() {
 
       {summaries.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center py-12">
             <p className="text-center text-muted-foreground">
               Belum ada utilitas. Klik &quot;Tambah Utilitas&quot; untuk menambahkan.
             </p>
-          </CardContent>
+          </div>
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -57,7 +56,7 @@ export default async function UtilitasPage() {
                     className="h-1.5 w-full"
                     style={{ background: meta.warna || "var(--teal)" }}
                   />
-                  <CardContent className="space-y-3 p-5">
+                  <div className="space-y-3 p-5">
                     <div className="flex items-start gap-3">
                       <div
                         className="flex size-12 items-center justify-center rounded-none text-2xl leading-none"
@@ -105,7 +104,7 @@ export default async function UtilitasPage() {
                         </div>
                       </div>
                     )}
-                  </CardContent>
+                  </div>
                 </Card>
               </Link>
             );

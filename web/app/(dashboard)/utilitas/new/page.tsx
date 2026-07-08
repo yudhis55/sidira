@@ -1,6 +1,5 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/gas/button";
 import { UtilitasForm } from "@/components/utilitas/utilitas-form";
-import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 export default function NewUtilitasPage() {
@@ -8,8 +7,8 @@ export default function NewUtilitasPage() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/utilitas">
-          <Button variant="outline" size="icon">
-            <ArrowLeft className="h-4 w-4" />
+          <Button variant="ghost">
+            <span className="h-4 w-4">←</span>
           </Button>
         </Link>
         <div>

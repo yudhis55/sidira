@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 
 export interface SbbkItem {
   nama: string;
-  merk: string;
+  merk?: string;
   qty: number;
   satuan: string;
   harga: number;

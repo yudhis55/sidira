@@ -1,10 +1,9 @@
 import { Suspense } from "react";
-import { getRooms } from "@/lib/auth/rooms";
-import { getRiwayatList } from "@/lib/auth/riwayat";
+import { getMockRooms } from "@/lib/mock-data";
+import { getMockRiwayat } from "@/lib/mock-data";
 import { RiwayatFilter } from "@/components/riwayat/riwayat-filter";
 import { RiwayatList } from "@/components/riwayat/riwayat-list";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from "@/components/gas/card";
 import { PageHeader } from "@/components/shared/page-elements";
 
 interface RiwayatPageProps {
@@ -20,16 +19,12 @@ function RiwayatLoading() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-48" />
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-          </div>
-        </CardContent>
+        <div className="h-6 w-48 bg-line2 animate-pulse"></div>
+        <div className="mt-4 space-y-4">
+          <div className="h-16 w-full bg-line2 animate-pulse"></div>
+          <div className="h-16 w-full bg-line2 animate-pulse"></div>
+          <div className="h-16 w-full bg-line2 animate-pulse"></div>
+        </div>
       </Card>
     </div>
   );
@@ -43,13 +38,8 @@ export default async function RiwayatPage({ searchParams }: RiwayatPageProps) {
   const room_id = params.room_id;
   const kategori = params.kategori;
 
-  const rooms = await getRooms();
-  const riwayat = await getRiwayatList({
-    start_date,
-    end_date,
-    room_id,
-    kategori,
-  });
+  const rooms = getMockRooms();
+  const riwayat = getMockRiwayat();
 
   return (
     <div className="container mx-auto py-6 space-y-6">

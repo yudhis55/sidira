@@ -50,7 +50,7 @@ export function RiwayatList({ riwayat }: RiwayatListProps) {
     const rows: string[][] = riwayat.map((item) => [
       new Date(item.ts).toLocaleString("id-ID"),
       item.nama,
-      KATEGORI_LABELS[item.kat] || item.kat,
+      (item.kat ? KATEGORI_LABELS[item.kat] || item.kat : "-"),
       item.dari_name || "-",
       item.ke_name || "-",
       item.user_id ? `User ${item.user_id.slice(0, 8)}` : "-",
@@ -140,7 +140,7 @@ export function RiwayatList({ riwayat }: RiwayatListProps) {
                 <TableCell className="font-medium">{item.nama}</TableCell>
                 <TableCell>
                   <span className="inline-flex h-5 items-center px-2 font-mono text-[10px] ring-1 ring-border whitespace-nowrap">
-                    {KATEGORI_LABELS[item.kat] || item.kat}
+                    {(item.kat ? KATEGORI_LABELS[item.kat] : undefined) || item.kat || "-"}
                   </span>
                 </TableCell>
                 <TableCell>

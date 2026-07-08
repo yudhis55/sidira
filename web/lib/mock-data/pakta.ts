@@ -92,3 +92,7 @@ const paktaList: Pakta[] = [
 export function getMockPakta(): Pakta[] {
   return paktaList;
 }
+
+export function getMockPaktaById(id: string): Pakta | undefined {
+  return paktaList.find((p) => p.id === id);
+}

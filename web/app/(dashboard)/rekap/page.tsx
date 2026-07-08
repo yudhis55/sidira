@@ -1,18 +1,14 @@
 import {
-  getPemegangList,
-  getAllAsetGrouped,
-  getPaktaStatusMap,
-  buatPaktaSemuaBelum,
-} from "@/lib/auth/rekap";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+  getMockPemegang,
+  getMockAsetPemegang,
+} from "@/lib/mock-data";
+import { Card } from "@/components/gas/card";
+import { Button } from "@/components/gas/button";
 import { RekapTable } from "@/components/rekap/rekap-table";
 import { PemegangFormDialog } from "@/components/rekap/pemegang-form-dialog";
 import { PageHeader } from "@/components/shared/page-elements";
-import { BarChart3, Plus, ScrollText, Search, Users } from "lucide-react";
 import Link from "next/link";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import type { AsetPemegang } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
@@ -28,27 +24,31 @@ const FILTER_CHIPS = [
   { key: "belum", label: "⚠ Belum Pakta" },
 ] as const;
 
-/** Server action: buat pakta untuk semua pemegang yang belum. */
-async function handleBuatSemuaBelum() {
-  "use server";
-  await buatPaktaSemuaBelum();
-  revalidatePath("/rekap");
-  redirect("/rekap");
-}
-
 export default async function RekapPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const search = (sp.search || "").trim().toLowerCase();
   const filter = sp.filter || "all";
 
-  // Fetch semua data sekali (3 query paralel)
-  const [pemegangList, asetGrouped, paktaStatusMap] = await Promise.all([
-    getPemegangList(),
-    getAllAsetGrouped(),
-    getPaktaStatusMap(),
-  ]);
+  // Fetch data from mock
+  const pemegangList = getMockPemegang();
+  const allAset = getMockAsetPemegang();
 
-  // Bangun baris dengan aset + status pakta
+  // Group aset by pemegang_id
+  const asetGrouped: Record<string, AsetPemegang[]> = {};
+  for (const aset of allAset) {
+    if (!asetGrouped[aset.pemegang_id]) {
+      asetGrouped[aset.pemegang_id] = [];
+    }
+    asetGrouped[aset.pemegang_id].push(aset);
+  }
+
+  // Mock pakta status (all false for mock)
+  const paktaStatusMap: Record<string, { hasPakta: boolean; paktaId: string | null }> = {};
+  for (const p of pemegangList) {
+    paktaStatusMap[p.id] = { hasPakta: false, paktaId: null };
+  }
+
+  // Build rows
   let rows = pemegangList.map((pemegang) => {
     const asetList = asetGrouped[pemegang.id] || [];
     const status = paktaStatusMap[pemegang.id] || {
@@ -63,7 +63,7 @@ export default async function RekapPage({ searchParams }: PageProps) {
     };
   });
 
-  // Filter: search (nama / jabatan)
+  // Filter: search
   if (search) {
     rows = rows.filter((r) => {
       if ((r.pemegang.nama || "").toLowerCase().includes(search)) return true;
@@ -72,7 +72,7 @@ export default async function RekapPage({ searchParams }: PageProps) {
     });
   }
 
-  // Filter: chips (all / PNS / PPPK / sudah / belum)
+  // Filter: chips
   if (filter !== "all") {
     rows = rows.filter((r) => {
       if (filter === "PNS") return r.pemegang.status === "PNS";
@@ -83,7 +83,7 @@ export default async function RekapPage({ searchParams }: PageProps) {
     });
   }
 
-  // Stats (atas SEMUA pemegang, buat hasil filter)
+  // Stats
   const totalPemegang = pemegangList.length;
   const totalItem = pemegangList.reduce(
     (s, p) => s + (asetGrouped[p.id]?.length || 0),
@@ -93,8 +93,6 @@ export default async function RekapPage({ searchParams }: PageProps) {
     (p) => paktaStatusMap[p.id]?.hasPakta,
   ).length;
   const belumPakta = totalPemegang - sudahPakta;
-
-  // Wrapper server action untuk RekapTable (client)
 
   return (
     <div className="space-y-6">
@@ -111,8 +109,8 @@ export default async function RekapPage({ searchParams }: PageProps) {
         actions={
           <PemegangFormDialog
             trigger={
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-1" />
+              <Button>
+                <span className="h-4 w-4 mr-1">➕</span>
                 Tambah Pemegang
               </Button>
             }
@@ -122,12 +120,10 @@ export default async function RekapPage({ searchParams }: PageProps) {
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
-        <form action={handleBuatSemuaBelum}>
-          <Button type="submit" size="sm" variant="outline" disabled={belumPakta === 0}>
-            <ScrollText className="h-4 w-4 mr-1" />
-            Buat Pakta Semua Belum{belumPakta > 0 ? ` (${belumPakta})` : ""}
-          </Button>
-        </form>
+        <Button variant="ghost" disabled={belumPakta === 0}>
+          <span className="h-4 w-4 mr-1">📋</span>
+          Buat Pakta Semua Belum{belumPakta > 0 ? ` (${belumPakta})` : ""}
+        </Button>
       </div>
 
       {/* Filter bar */}
@@ -153,10 +149,12 @@ export default async function RekapPage({ searchParams }: PageProps) {
         })}
         <form className="ml-auto flex items-center" role="search">
           <div className="relative">
-            <Search
-              className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+            <span
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground"
               aria-hidden
-            />
+            >
+              🔍
+            </span>
             <input
               type="search"
               name="search"
@@ -166,20 +164,22 @@ export default async function RekapPage({ searchParams }: PageProps) {
             />
           </div>
           <input type="hidden" name="filter" value={filter} />
-          <Button type="submit" size="sm" variant="outline" className="ml-1 h-7">
+          <Button type="submit" variant="ghost" className="ml-1 h-7">
             Cari
           </Button>
         </form>
       </div>
 
-      {/* Tabel */}
+      {/* Table */}
       {pemegangList.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Users
-              className="mb-3 h-10 w-10 text-muted-foreground/50"
+          <div className="flex flex-col items-center justify-center py-12">
+            <span
+              className="mb-3 text-4xl text-muted-foreground/50"
               aria-hidden
-            />
+            >
+              👥
+            </span>
             <p className="mb-1 font-mono text-sm font-semibold">
               Belum ada data pemegang
             </p>
@@ -189,34 +189,36 @@ export default async function RekapPage({ searchParams }: PageProps) {
             </p>
             <PemegangFormDialog
               trigger={
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-1" />
+                <Button>
+                  <span className="h-4 w-4 mr-1">➕</span>
                   Tambah Pemegang
                 </Button>
               }
             />
-          </CardContent>
+          </div>
         </Card>
       ) : rows.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <BarChart3
-              className="mb-3 h-10 w-10 text-muted-foreground/50"
+          <div className="flex flex-col items-center justify-center py-12">
+            <span
+              className="mb-3 text-4xl text-muted-foreground/50"
               aria-hidden
-            />
+            >
+              📊
+            </span>
             <p className="font-mono text-sm font-semibold">
               Tidak ada data yang cocok
             </p>
             <p className="text-xs text-muted-foreground">
               Ubah filter atau kata kunci pencarian.
             </p>
-          </CardContent>
+          </div>
         </Card>
       ) : (
         <Card>
-          <CardContent className="p-0">
+          <div className="p-0">
             <RekapTable rows={rows} />
-          </CardContent>
+          </div>
         </Card>
       )}
     </div>

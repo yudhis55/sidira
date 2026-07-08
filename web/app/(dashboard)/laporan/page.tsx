@@ -1,13 +1,12 @@
 import { Suspense } from "react";
-import { getRooms } from "@/lib/auth/rooms";
-import { getLaporanSummary, getLaporanPerRoom } from "@/lib/auth/laporan";
+import { getMockRooms } from "@/lib/mock-data";
+import { getMockLaporanSummary, getMockLaporanRooms } from "@/lib/mock-data";
 import { LaporanFilter } from "@/components/laporan/laporan-filter";
 import { LaporanSummary } from "@/components/laporan/laporan-summary";
 import { LaporanRoomDetail } from "@/components/laporan/laporan-room-detail";
 import { ExportButtons } from "@/components/laporan/export-buttons";
 import { PageHeader } from "@/components/shared/page-elements";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from "@/components/gas/card";
 
 interface LaporanPageProps {
   searchParams: Promise<{
@@ -22,15 +21,11 @@ function LaporanLoading() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-48" />
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-32 w-full" />
-          </div>
-        </CardContent>
+        <div className="h-6 w-48 bg-line2 animate-pulse"></div>
+        <div className="mt-4 space-y-4">
+          <div className="h-32 w-full bg-line2 animate-pulse"></div>
+          <div className="h-32 w-full bg-line2 animate-pulse"></div>
+        </div>
       </Card>
     </div>
   );
@@ -45,9 +40,9 @@ export default async function LaporanPage({ searchParams }: LaporanPageProps) {
   const room_id = params.room_id;
   const kategori = params.kategori;
 
-  const rooms = await getRooms();
-  const summary = await getLaporanSummary({ bulan, tahun, room_id, kategori });
-  const laporanRooms = await getLaporanPerRoom({ bulan, tahun, room_id, kategori });
+  const rooms = getMockRooms();
+  const summary = getMockLaporanSummary();
+  const laporanRooms = getMockLaporanRooms();
 
   const bulanNames = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",

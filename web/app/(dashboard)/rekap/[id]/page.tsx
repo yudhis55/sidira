@@ -1,17 +1,12 @@
 import {
-  getPemegangById,
-  getAsetByPemegang,
-  deletePemegang,
-  getPaktaStatusMap,
-} from "@/lib/auth/rekap";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+  getMockPemegang,
+  getMockAsetByPemegang,
+} from "@/lib/mock-data";
+import { Card } from "@/components/gas/card";
+import { Button } from "@/components/gas/button";
 import { AsetManager } from "@/components/rekap/aset-manager";
 import { PemegangFormDialog } from "@/components/rekap/pemegang-form-dialog";
-import { ArrowLeft, Pencil, Trash2, ScrollText, ExternalLink } from "lucide-react";
 import Link from "next/link";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -20,31 +15,19 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-async function handleDelete(formData: FormData) {
-  "use server";
-  const id = formData.get("id") as string;
-  await deletePemegang(id);
-  revalidatePath("/rekap");
-  redirect("/rekap");
-}
-
 export default async function RekapDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const pemegang = await getPemegangById(id);
+  const pemegangList = getMockPemegang();
+  const pemegang = pemegangList.find((p) => p.id === id);
 
   if (!pemegang) {
     notFound();
   }
 
-  const [asetList, paktaStatusMap] = await Promise.all([
-    getAsetByPemegang(pemegang.id),
-    getPaktaStatusMap(),
-  ]);
+  const asetList = getMockAsetByPemegang(pemegang.id);
 
-  const status = paktaStatusMap[pemegang.id] || {
-    hasPakta: false,
-    paktaId: null,
-  };
+  // Mock pakta status
+  const status = { hasPakta: false, paktaId: null };
 
   const totalItem = asetList.length;
 
@@ -54,8 +37,8 @@ export default async function RekapDetailPage({ params }: PageProps) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Link href="/rekap">
-            <Button variant="outline" size="icon" aria-label="Kembali">
-              <ArrowLeft className="h-4 w-4" />
+            <Button variant="ghost" aria-label="Kembali">
+              <span className="h-4 w-4">←</span>
             </Button>
           </Link>
           <div>
@@ -71,40 +54,37 @@ export default async function RekapDetailPage({ params }: PageProps) {
           <PemegangFormDialog
             pemegang={pemegang}
             trigger={
-              <Button variant="outline" size="sm">
-                <Pencil className="h-4 w-4 mr-1" />
+              <Button variant="ghost">
+                <span className="h-4 w-4 mr-1">✏️</span>
                 Edit
               </Button>
             }
           />
           {status.hasPakta && status.paktaId ? (
             <Link href={`/pakta/${status.paktaId}`}>
-              <Button variant="outline" size="sm">
-                <ScrollText className="h-4 w-4 mr-1" />
+              <Button variant="ghost">
+                <span className="h-4 w-4 mr-1">📋</span>
                 Buka Pakta
-                <ExternalLink className="ml-1 h-3 w-3 text-muted-foreground" />
+                <span className="ml-1 h-3 w-3 text-muted-foreground">↗</span>
               </Button>
             </Link>
           ) : null}
-          <form action={handleDelete}>
-            <input type="hidden" name="id" value={pemegang.id} />
-            <Button variant="destructive" size="sm" type="submit">
-              <Trash2 className="h-4 w-4 mr-1" />
-              Hapus
-            </Button>
-          </form>
+          <Button variant="ghost" type="button">
+            <span className="h-4 w-4 mr-1">🗑️</span>
+            Hapus
+          </Button>
         </div>
       </div>
 
       {/* Info pemegang */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="font-mono text-sm">
+          <div className="pb-3">
+            <h3 className="font-mono text-sm font-semibold">
               Identitas Pemegang
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-xs">
+            </h3>
+          </div>
+          <div className="space-y-3 text-xs">
             <div>
               <p className="text-[10px] uppercase text-muted-foreground">Nama</p>
               <p className="font-mono font-semibold">{pemegang.nama || "-"}</p>
@@ -133,14 +113,14 @@ export default async function RekapDetailPage({ params }: PageProps) {
                 {pemegang.status}
               </span>
             </div>
-          </CardContent>
+          </div>
         </Card>
 
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="font-mono text-sm">Status Pakta</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-xs">
+          <div className="pb-3">
+            <h3 className="font-mono text-sm font-semibold">Status Pakta</h3>
+          </div>
+          <div className="space-y-3 text-xs">
             {status.hasPakta ? (
               <>
                 <div>
@@ -157,7 +137,7 @@ export default async function RekapDetailPage({ params }: PageProps) {
                       href={`/pakta/${status.paktaId}`}
                       className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-foreground"
                     >
-                      <ScrollText className="h-3 w-3" />
+                      <span className="h-3 w-3">📋</span>
                       Buka lampiran pakta
                     </Link>
                   </div>
@@ -187,24 +167,24 @@ export default async function RekapDetailPage({ params }: PageProps) {
                 {totalItem} aset
               </span>
             </div>
-          </CardContent>
+          </div>
         </Card>
       </div>
 
-      {/* Manajemen aset (CRUD per jenis) */}
+      {/* Manajemen aset */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="font-mono text-sm">
+        <div className="pb-3">
+          <h3 className="font-mono text-sm font-semibold">
             Inventaris yang Dipegang
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+          </h3>
+        </div>
+        <div>
           <AsetManager
             pemegangId={pemegang.id}
             asetList={asetList}
             readOnly={false}
           />
-        </CardContent>
+        </div>
       </Card>
     </div>
   );

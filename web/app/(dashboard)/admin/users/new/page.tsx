@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { UserForm } from "@/components/admin/user-form";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/gas/button";
 import Link from "next/link";
 
 export default async function NewUserPage() {
@@ -28,8 +27,8 @@ export default async function NewUserPage() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/admin/users">
-          <Button variant="outline" size="icon">
-            <ArrowLeft className="h-4 w-4" />
+          <Button variant="ghost" size="icon">
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
           </Button>
         </Link>
         <div>

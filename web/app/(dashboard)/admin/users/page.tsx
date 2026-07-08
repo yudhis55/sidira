@@ -1,28 +1,8 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { getAllUsers } from "@/lib/auth/admin";
+import { getMockUsers } from "@/lib/mock-data/users";
 import { UserList } from "@/components/admin/user-list";
 
 export default async function AdminUsersPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  // Check if user is admin
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "admin") {
-    redirect("/");
-  }
-
-  const users = await getAllUsers();
+  const users = getMockUsers() as any;
 
   return (
     <div className="container mx-auto py-6 space-y-6">

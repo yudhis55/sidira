@@ -3,10 +3,17 @@ import { cn } from "@/lib/utils"
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "ghost" | "modal-cancel" | "modal-ok"
+  size?: "default" | "sm" | "lg" | "icon"
+}
+
+const sizeClasses: Record<string, string> = {
+  sm: "text-[11px] px-[10px] py-[4px]",
+  lg: "text-[15px] px-[22px] py-[12px]",
+  icon: "h-9 w-9 p-0",
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "primary", ...props }, ref) => {
+  ({ className, variant = "primary", size, ...props }, ref) => {
     return (
       <button
         ref={ref}
