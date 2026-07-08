@@ -1,9 +1,21 @@
+import React from "react";
 import { getSbbkById, deleteSbbk } from "@/lib/auth/sbbk";
 import { Card } from "@/components/gas/card";
 import { Button } from "@/components/gas/button";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+
+
+function CardHeader({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={className}>{children}</div>;
+}
+function CardTitle({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <h3 className={className}>{children}</h3>;
+}
+function CardContent({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={className}>{children}</div>;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -40,11 +52,11 @@ export default async function SbbkDetailPage({ params }: PageProps) {
       <div className="space-y-6">
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <FileText className="h-10 w-10 text-muted-foreground/50 mb-3" aria-hidden />
+            <span className="text-3xl mb-3" aria-hidden>📄</span>
             <p className="font-mono text-sm font-semibold mb-2">SBBK Tidak Ditemukan</p>
             <Link href="/sbbk">
-              <Button size="sm" variant="outline">
-                <ArrowLeft className="h-4 w-4 mr-1" />
+              <Button size="sm" variant="ghost">
+                ← 
                 Kembali ke Daftar
               </Button>
             </Link>
@@ -62,8 +74,8 @@ export default async function SbbkDetailPage({ params }: PageProps) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Link href="/sbbk">
-            <Button variant="outline" size="icon" aria-label="Kembali">
-              <ArrowLeft className="h-4 w-4" />
+            <Button variant="ghost" size="icon" aria-label="Kembali">
+              ←
             </Button>
           </Link>
           <div>
@@ -73,21 +85,20 @@ export default async function SbbkDetailPage({ params }: PageProps) {
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href={`/sbbk/${sbbk.id}/edit`}>
-            <Button variant="outline" size="sm">
-              <Pencil className="h-4 w-4 mr-1" />
+            <Button variant="ghost" size="sm">
+              <span aria-hidden>✏️</span>
               Edit
             </Button>
           </Link>
           <Link href={`/sbbk/${sbbk.id}/print`} target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm">
-              <Printer className="h-4 w-4 mr-1" />
-              Cetak
+            <Button variant="ghost" size="sm">
+              🖨️ Cetak
             </Button>
           </Link>
           <form action={handleDelete}>
             <input type="hidden" name="id" value={sbbk.id} />
-            <Button variant="destructive" size="sm" type="submit">
-              <Trash2 className="h-4 w-4 mr-1" />
+            <Button variant="ghost" size="sm" type="submit" className="text-red border-red/30 hover:bg-red2">
+              🗑️
               Hapus
             </Button>
           </form>

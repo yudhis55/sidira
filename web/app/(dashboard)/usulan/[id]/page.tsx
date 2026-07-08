@@ -1,8 +1,8 @@
+import React from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Lightbulb } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/gas/button";
+import { Card } from "@/components/gas/card";
 import { getUsulanById } from "@/lib/auth/usulan";
 import { USULAN_KATEGORI_LABELS } from "@/lib/usulan-types";
 import type { UsulanItem } from "@/lib/usulan-types";
@@ -11,6 +11,16 @@ import { DeleteUsulanButton } from "@/components/usulan/delete-button";
 import { UsulanCsvExport } from "@/components/usulan/usulan-csv-export";
 import { UsulanDetailFilters } from "@/components/usulan/usulan-detail-filters";
 import { PrioritasBadge, StatusBadge } from "@/components/usulan/usulan-badges";
+
+function CardHeader({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={className}>{children}</div>;
+}
+function CardTitle({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <h3 className={className}>{children}</h3>;
+}
+function CardContent({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={className}>{children}</div>;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -80,8 +90,8 @@ export default async function UsulanDetailPage({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Link href="/usulan">
-            <Button variant="outline" size="icon" aria-label="Kembali">
-              <ArrowLeft className="h-4 w-4" />
+            <Button variant="ghost" size="icon" aria-label="Kembali">
+              ←
             </Button>
           </Link>
           <div>
@@ -95,8 +105,8 @@ export default async function UsulanDetailPage({
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href={`/usulan/${usulan.id}/edit`}>
-            <Button variant="outline" size="sm">
-              <Pencil className="h-3.5 w-3.5" />
+            <Button variant="ghost" size="sm">
+              ✏️
               Edit
             </Button>
           </Link>
@@ -172,7 +182,7 @@ export default async function UsulanDetailPage({
         <CardContent className="p-0">
           {filteredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10">
-              <Lightbulb className="h-10 w-10 text-muted-foreground/50 mb-3" aria-hidden />
+              💡
               <p className="font-mono text-sm font-semibold mb-1">
                 Tidak ada barang
               </p>

@@ -1,11 +1,14 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Lightbulb } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/gas/button";
+import { Card } from "@/components/gas/card";
 import { getUsulanById } from "@/lib/auth/usulan";
 import { getRooms } from "@/lib/auth/rooms";
 import { UsulanForm } from "@/components/usulan/usulan-form";
+
+function CardContent({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={className}>{children}</div>;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -31,8 +34,8 @@ export default async function EditUsulanPage({ params }: PageProps) {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Link href={`/usulan/${usulan.id}`}>
-          <Button variant="outline" size="icon" aria-label="Kembali">
-            <ArrowLeft className="h-4 w-4" />
+          <Button variant="ghost" size="icon" aria-label="Kembali">
+            ←
           </Button>
         </Link>
         <div>
@@ -49,7 +52,7 @@ export default async function EditUsulanPage({ params }: PageProps) {
       {usulan.payload?.items?.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Lightbulb className="h-10 w-10 text-muted-foreground/50 mb-3" aria-hidden />
+            💡
             <p className="font-mono text-sm font-semibold mb-1">
               Usulan kosong
             </p>

@@ -5,6 +5,7 @@ import { SbbkCsvExport } from "@/components/sbbk/sbbk-csv-export";
 import { PageHeader } from "@/components/shared/page-elements";
 import Link from "next/link";
 
+
 function CardContent({ children, className }: { children: React.ReactNode; className?: string }) {
   return <div className={className}>{children}</div>;
 }
@@ -52,20 +53,12 @@ interface PageProps {
   searchParams: Promise<{ filter?: string; q?: string }>;
 }
 
-async function handleDelete(formData: FormData) {
-  "use server";
-  const id = formData.get("id") as string;
-  await deleteSbbk(id);
-  revalidatePath("/sbbk");
-  redirect("/sbbk");
-}
-
 export default async function SbbkPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const filter = sp.filter || "all";
   const q = (sp.q || "").trim().toLowerCase();
 
-  const all = await getSbbkListFull();
+  const all = getMockSbbk();
 
   // Filter: matches jenis OR anggaran (case-insensitive, exact-ish on known chips)
   let filtered = all;
@@ -159,7 +152,7 @@ export default async function SbbkPage({ searchParams }: PageProps) {
             />
           </div>
           <input type="hidden" name="filter" value={filter} />
-          <Button type="submit" size="sm" variant="outline" className="ml-1 h-7">
+          <Button type="submit" size="sm" variant="ghost" className="ml-1 h-7">
             Cari
           </Button>
         </form>
@@ -290,17 +283,14 @@ export default async function SbbkPage({ searchParams }: PageProps) {
                               <span className="text-xs" aria-hidden>🖨️</span>
                               <span className="sr-only">Cetak</span>
                             </Link>
-                            <form action={handleDelete}>
-                              <input type="hidden" name="id" value={sbbk.id} />
-                              <button
-                                type="submit"
+                            <button
+                                type="button"
                                 className="inline-flex h-6 w-6 items-center justify-center bg-destructive/10 text-destructive ring-1 ring-destructive/20 hover:bg-destructive/20"
                                 title="Hapus"
                               >
                                 <span className="text-xs" aria-hidden>🗑️</span>
                                 <span className="sr-only">Hapus</span>
                               </button>
-                            </form>
                           </div>
                         </td>
                       </tr>

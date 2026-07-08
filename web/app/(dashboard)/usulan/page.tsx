@@ -1,14 +1,23 @@
 import { getUsulanList } from "@/lib/auth/usulan";
 import type { Usulan, UsulanItem } from "@/lib/usulan-types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Plus, Lightbulb, Package, TrendingUp, Building2 } from "lucide-react";
+import { Card } from "@/components/gas/card";
+import { Button } from "@/components/gas/button";
 import Link from "next/link";
 import { UsulanCsvExport } from "@/components/usulan/usulan-csv-export";
 import { UsulanListFilters } from "@/components/usulan/usulan-list-filters";
 import { StatusBadge } from "@/components/usulan/usulan-badges";
 import { PageHeader } from "@/components/shared/page-elements";
 import { Suspense } from "react";
+
+function CardHeader({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={className}>{children}</div>;
+}
+function CardTitle({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <h3 className={className}>{children}</h3>;
+}
+function CardContent({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={className}>{children}</div>;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -91,8 +100,7 @@ export default async function UsulanPage({ searchParams }: PageProps) {
           <>
             <Link href="/usulan/new">
               <Button size="sm">
-                <Plus className="h-4 w-4" />
-                Buat Usulan
+                ➕ Buat Usulan
               </Button>
             </Link>
             <UsulanCsvExport />
@@ -107,7 +115,7 @@ export default async function UsulanPage({ searchParams }: PageProps) {
             <CardTitle className="font-mono text-xs font-medium">
               Total Usulan
             </CardTitle>
-            <Lightbulb className="h-4 w-4 text-muted-foreground" />
+            💡
           </CardHeader>
           <CardContent>
             <div className="font-mono text-2xl font-bold">
@@ -124,7 +132,7 @@ export default async function UsulanPage({ searchParams }: PageProps) {
             <CardTitle className="font-mono text-xs font-medium">
               Total Nilai
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            📈
           </CardHeader>
           <CardContent>
             <div className="font-mono text-2xl font-bold">
@@ -141,7 +149,7 @@ export default async function UsulanPage({ searchParams }: PageProps) {
             <CardTitle className="font-mono text-xs font-medium">
               Diajukan
             </CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            📦
           </CardHeader>
           <CardContent>
             <div className="font-mono text-2xl font-bold">{diajukanCount}</div>
@@ -170,10 +178,7 @@ export default async function UsulanPage({ searchParams }: PageProps) {
         <CardContent className="p-0">
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Lightbulb
-                className="h-10 w-10 text-muted-foreground/50 mb-3"
-                aria-hidden
-              />
+              💡
               <h3 className="font-mono text-sm font-semibold mb-1">
                 {usulanList.length === 0
                   ? "Belum Ada Usulan"
@@ -187,8 +192,7 @@ export default async function UsulanPage({ searchParams }: PageProps) {
               {usulanList.length === 0 && (
                 <Link href="/usulan/new">
                   <Button size="sm">
-                    <Plus className="h-4 w-4" />
-                    Buat Usulan Pertama
+                    ➕ Buat Usulan Pertama
                   </Button>
                 </Link>
               )}
@@ -220,7 +224,7 @@ export default async function UsulanPage({ searchParams }: PageProps) {
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3 px-3 py-3">
                       <div className="flex items-center gap-2 min-w-0">
-                        <Building2 className="h-5 w-5 shrink-0 text-muted-foreground" />
+                        🏥
                         <div className="min-w-0">
                           <div className="font-mono text-sm font-semibold truncate">
                             {usulan.rooms?.icon || "📦"}{" "}
