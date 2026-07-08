@@ -4,7 +4,6 @@ import { PageHeader } from "@/components/shared/page-elements";
 import { Card } from "@/components/gas/card";
 import { StatCard } from "@/components/gas/stat-card";
 import { Table, type TableColumn } from "@/components/gas/table";
-import { Badge } from "@/components/gas/badge";
 import { Select } from "@/components/gas/select";
 import { Button } from "@/components/gas/button";
 
