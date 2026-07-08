@@ -1,51 +1,26 @@
-﻿import { createClient } from "@/lib/supabase/server";
+﻿import { getMockItems, getMockUsulan } from "@/lib/mock-data";
 import { Card } from "@/components/gas/card";
 
-export default async function DashboardPage() {
-  const supabase = await createClient();
+export default function DashboardPage() {
+  const items = getMockItems();
+  const usulan = getMockUsulan();
 
-  const { count: roomsCount } = await supabase
-    .from("rooms")
-    .select("*", { count: "exact", head: true });
-
-  const { count: itemsCount } = await supabase
-    .from("items")
-    .select("*", { count: "exact", head: true });
-
-  const { count: issuesCount } = await supabase
-    .from("items")
-    .select("*", { count: "exact", head: true })
-    .in("condition", ["rr", "rb", "ta"]);
-
-  const { count: usulanCount } = await supabase
-    .from("usulan")
-    .select("*", { count: "exact", head: true });
+  const totalItems = items.length;
+  const alkes = items.filter((i) => i.category === "alkes").length;
+  const meubelair = items.filter((i) => i.category === "meubelair").length;
+  const elektronik = items.filter((i) => i.category === "elektronik").length;
+  const perluPerhatian = items.filter((i) =>
+    ["rr", "rb", "ta"].includes(i.condition),
+  ).length;
+  const usulanAktif = usulan.length;
 
   const stats = [
-    {
-      title: "Total Ruangan",
-      value: roomsCount || 0,
-      icon: "📦",
-      description: "Ruangan terdaftar",
-    },
-    {
-      title: "Total Barang",
-      value: itemsCount || 0,
-      icon: "📋",
-      description: "Barang inventaris",
-    },
-    {
-      title: "Barang Bermasalah",
-      value: issuesCount || 0,
-      icon: "⚠️",
-      description: "Perlu perhatian",
-    },
-    {
-      title: "Usulan Pending",
-      value: usulanCount || 0,
-      icon: "💡",
-      description: "Menunggu approval",
-    },
+    { emoji: "📦", value: totalItems, label: "Total Item", bg: "#ccfbf1", color: "#0e7c6b" },
+    { emoji: "🩺", value: alkes, label: "Alat Kesehatan", bg: "#ccfbf1", color: "#0e7c6b" },
+    { emoji: "🪑", value: meubelair, label: "Meubelair", bg: "#fef3c7", color: "#b45309" },
+    { emoji: "💻", value: elektronik, label: "Elektronik", bg: "#dbeafe", color: "#1d4ed8" },
+    { emoji: "🔴", value: perluPerhatian, label: "Perlu Perhatian", bg: "#fee2e2", color: "#b91c1c" },
+    { emoji: "📋", value: usulanAktif, label: "Usulan Aktif", bg: "#f5f3ff", color: "#7c3aed" },
   ];
 
   return (
@@ -57,43 +32,150 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* ── Legend Bar ─────────────────────────────────────────────── */}
+      <div
+        className="legend-bar"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "16px",
+          flexWrap: "wrap",
+          padding: "12px 16px",
+          background: "var(--card)",
+          borderRadius: "var(--radius)",
+          border: "1px solid hsl(var(--border))",
+          fontSize: "0.875rem",
+        }}
+      >
+        <span style={{ fontWeight: 600 }}>Keterangan:</span>
+        {[
+          { color: "#0e7c6b", label: "Alat Kesehatan" },
+          { color: "#b45309", label: "Meubelair" },
+          { color: "#1d4ed8", label: "Elektronik" },
+          { color: "#475569", label: "Lainnya" },
+        ].map((leg) => (
+          <span key={leg.label} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <span
+              style={{
+                width: "10px",
+                height: "10px",
+                borderRadius: "50%",
+                background: leg.color,
+                display: "inline-block",
+              }}
+            />
+            {leg.label}
+          </span>
+        ))}
+        <span style={{ marginLeft: "auto", display: "flex", gap: "8px", alignItems: "center" }}>
+          <span
+            style={{
+              padding: "2px 10px",
+              borderRadius: "9999px",
+              fontSize: "0.75rem",
+              fontWeight: 500,
+              background: "#dcfce7",
+              color: "#166534",
+            }}
+          >
+            Wajib
+          </span>
+          <span
+            style={{
+              padding: "2px 10px",
+              borderRadius: "9999px",
+              fontSize: "0.75rem",
+              fontWeight: 500,
+              background: "#fef3c7",
+              color: "#92400e",
+            }}
+          >
+            Penting
+          </span>
+          <span
+            style={{
+              padding: "2px 10px",
+              borderRadius: "9999px",
+              fontSize: "0.75rem",
+              fontWeight: 500,
+              background: "#f1f5f9",
+              color: "#475569",
+            }}
+          >
+            Pendukung
+          </span>
+        </span>
+      </div>
+
+      {/* ── GStats ────────────────────────────────────────────────── */}
+      <div
+        className="gstats"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+          gap: "12px",
+        }}
+      >
         {stats.map((stat) => (
-          <Card key={stat.title} aria-label={`${stat.title}: ${stat.value} ${stat.description}`}>
-            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <h3 className="text-sm font-medium">
-                {stat.title}
-              </h3>
-              <div className="rounded-none bg-muted p-2">
-                <span className="text-lg" aria-hidden="true">{stat.icon}</span>
+          <Card key={stat.label}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "50%",
+                  background: stat.bg,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "1.25rem",
+                  flexShrink: 0,
+                }}
+                aria-hidden="true"
+              >
+                {stat.emoji}
               </div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold" aria-label={`${stat.value} ${stat.description}`}>
-                {stat.value}
+              <div>
+                <div
+                  style={{
+                    fontSize: "1.5rem",
+                    fontWeight: 700,
+                    color: stat.color,
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {stat.value}
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "hsl(var(--muted-foreground))" }}>
+                  {stat.label}
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                {stat.description}
-              </p>
             </div>
           </Card>
         ))}
       </div>
-
-      <Card>
-        <div className="pb-3">
-          <h3 className="font-mono text-sm font-semibold">Selamat Datang</h3>
-          <p className="text-xs text-muted-foreground">
-            Aplikasi SIDIRA v4.0 — Sistem Digital Inventaris Ruangan untuk Puskesmas Baruharjo
-          </p>
-        </div>
-        <div className="space-y-2 text-sm text-muted-foreground">
-          <p>• Terintegrasi dengan Supabase (PostgreSQL + Real-time Sync)</p>
-          <p>• Cross-browser synchronization otomatis</p>
-          <p>• Role-based access control (Admin, Editor, Viewer)</p>
-          <p>• Modern UI dengan GAS Design System</p>
-        </div>
-      </Card>
+      {/* ── Page Actions ──────────────────────────────────────────── */}
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <a
+          href="/laporan"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "8px 20px",
+            borderRadius: "var(--radius)",
+            border: "1px solid hsl(var(--border))",
+            background: "var(--card)",
+            fontSize: "0.875rem",
+            fontWeight: 500,
+            color: "hsl(var(--foreground))",
+            textDecoration: "none",
+            cursor: "pointer",
+          }}
+        >
+          📄 Laporan Monitoring
+        </a>
+      </div>
     </div>
   );
 }
