@@ -3,7 +3,7 @@ import { MainContent } from "./main-content";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[240px_1fr] min-h-screen">
+    <div className="flex flex-1 min-h-0">
       <RoomNav />
       <MainContent>{children}</MainContent>
     </div>

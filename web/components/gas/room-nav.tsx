@@ -2,106 +2,251 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { getMockRooms, getMockItems } from "@/lib/mock-data";
+import { getMockRooms, getMockUtilitasMeta } from "@/lib/mock-data";
 
 export function RoomNav() {
   const pathname = usePathname();
   const rooms = getMockRooms();
-  const allItems = getMockItems();
+  const utilitas = getMockUtilitasMeta();
+
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+
+  const tabStyle = (active: boolean) => ({
+    color: active ? "#4eebd0" : "rgba(255,255,255,0.55)",
+    borderLeft: active ? "3px solid #4eebd0" : "3px solid transparent",
+    background: active ? "rgba(78,235,208,0.1)" : "transparent",
+  });
+
+  const iconStyle = (active: boolean) => ({
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 11,
+    flexShrink: 0,
+    background: active ? "rgba(78,235,208,0.18)" : "rgba(255,255,255,0.1)",
+  });
+
+  const tabHover = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const el = e.currentTarget;
+    if (!el.classList.contains("active")) {
+      el.style.color = "rgba(255,255,255,0.9)";
+      el.style.background = "rgba(255,255,255,0.07)";
+    }
+  };
+
+  const tabLeave = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const el = e.currentTarget;
+    if (!el.classList.contains("active")) {
+      el.style.color = "rgba(255,255,255,0.55)";
+      el.style.background = "transparent";
+    }
+  };
+
+  const makeTab = (href: string, icon: string, label: string, active?: boolean) => {
+    const act = active ?? isActive(href);
+    return (
+      <Link
+        key={href}
+        href={href}
+        className={act ? "active" : ""}
+        onMouseEnter={tabHover}
+        onMouseLeave={tabLeave}
+        style={{
+          ...tabStyle(act),
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "8px 10px",
+          fontSize: "11.5px",
+          fontWeight: 600,
+          borderRadius: 7,
+          transition: "all 0.15s",
+          whiteSpace: "nowrap",
+          textAlign: "left",
+          textDecoration: "none",
+          width: "100%",
+        }}
+      >
+        <span style={iconStyle(act)}>{icon}</span>
+        <span>{label}</span>
+      </Link>
+    );
+  };
 
   return (
-    <aside className="w-[220px] flex-shrink-0 sticky top-14 h-[calc(100vh-56px)] overflow-hidden hover:overflow-y-auto flex flex-col"
-      style={{ background: "#0a3d32", borderRight: "1px solid rgba(255,255,255,0.1)" }}>
-
-      {/* Section label */}
-      <div className="px-3 pt-2.5 pb-1 text-[9px] font-extrabold tracking-[0.12em] uppercase"
-        style={{ color: "rgba(255,255,255,0.35)" }}>
-        Ruangan
+    <aside
+      style={{
+        width: 220,
+        flexShrink: 0,
+        background: "#0a3d32",
+        borderRight: "1px solid rgba(255,255,255,0.1)",
+        display: "flex",
+        flexDirection: "column",
+        position: "sticky",
+        top: 0,
+        height: "calc(100vh - 80px)",
+        overflow: "hidden",
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.overflowY = "auto"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.overflowY = "hidden"; }}
+    >
+      {/* ═══ Seksi Ruangan ═══ */}
+      <div
+        style={{
+          padding: "10px 12px 4px",
+          fontSize: 9,
+          fontWeight: 800,
+          letterSpacing: "0.12em",
+          color: "rgba(255,255,255,0.35)",
+          textTransform: "uppercase",
+        }}
+      >
+        🏥 Ruangan
       </div>
 
-      {/* Room tabs */}
-      <div className="flex flex-col gap-px px-2 pb-2">
-        {rooms.map((room) => {
-          const href = `/inventaris/${room.id}`;
-          const isActive = pathname === href;
+      <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
+        {rooms.map((room) => makeTab(`/inventaris/${room.id}`, room.icon, room.name))}
+      </div>
 
-          const roomItems = allItems.filter((i) => i.room_id === room.id);
-          const totalJenis = roomItems.length;
-          const totalUnit = roomItems.reduce((s, i) => s + i.quantity, 0);
+      <Link
+        href="/admin/ruangan"
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = "rgba(255,255,255,0.9)";
+          e.currentTarget.style.background = "rgba(255,255,255,0.07)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.color = "rgba(255,255,255,0.35)";
+          e.currentTarget.style.background = "transparent";
+        }}
+        style={{
+          display: "block",
+          padding: "8px 10px",
+          margin: "0 8px",
+          fontSize: "11.5px",
+          fontWeight: 600,
+          borderRadius: 7,
+          color: "rgba(255,255,255,0.35)",
+          textDecoration: "none",
+          transition: "all 0.15s",
+          whiteSpace: "nowrap",
+          borderLeft: "3px solid transparent",
+        }}
+      >
+        ＋ Tambah Ruangan
+      </Link>
 
-          return (
-            <Link
-              key={room.id}
-              href={href}
-              className="flex items-start gap-2 px-2.5 py-2 rounded-[7px] transition-all duration-150"
-              style={{
-                borderLeft: isActive ? "3px solid #4eebd0" : "3px solid transparent",
-                background: isActive
-                  ? "rgba(78,235,208,0.1)"
-                  : "transparent",
-                color: isActive
-                  ? "#4eebd0"
-                  : "rgba(255,255,255,0.55)",
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.color = "rgba(255,255,255,0.9)";
-                  e.currentTarget.style.background = "rgba(255,255,255,0.07)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.color = "rgba(255,255,255,0.55)";
-                  e.currentTarget.style.background = "transparent";
-                }
-              }}
-            >
-              {/* Icon */}
-              <div
-                className="w-5 h-5 rounded-[5px] flex items-center justify-center text-[11px] flex-shrink-0"
-                style={{
-                  background: isActive
-                    ? "rgba(78,235,208,0.18)"
-                    : "rgba(255,255,255,0.1)",
-                }}
-              >
-                {room.icon}
-              </div>
+      {/* ═══ Divider ═══ */}
+      <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "6px 12px" }} />
 
-              {/* Info + stats */}
-              <div className="flex flex-col flex-1 min-w-0">
-                <span className="text-[11.5px] font-semibold truncate leading-tight">
-                  {room.name}
-                </span>
-                {/* Stats row */}
-                <div className="flex gap-1.5 mt-1">
-                  <div className="text-center rounded px-1.5 py-0.5"
-                    style={{ background: "rgba(255,255,255,0.07)" }}>
-                    <div className="text-[11px] font-extrabold font-mono"
-                      style={{ color: "#4eebd0" }}>
-                      {totalJenis}
-                    </div>
-                    <div className="text-[8px] font-semibold uppercase tracking-wide"
-                      style={{ color: "rgba(255,255,255,0.35)" }}>
-                      Item
-                    </div>
-                  </div>
-                  <div className="text-center rounded px-1.5 py-0.5"
-                    style={{ background: "rgba(255,255,255,0.07)" }}>
-                    <div className="text-[11px] font-extrabold font-mono"
-                      style={{ color: "#4eebd0" }}>
-                      {totalUnit}
-                    </div>
-                    <div className="text-[8px] font-semibold uppercase tracking-wide"
-                      style={{ color: "rgba(255,255,255,0.35)" }}>
-                      Unit
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          );
-        })}
+      {/* ═══ Seksi Utilitas ═══ */}
+      <div
+        style={{
+          padding: "10px 12px 4px",
+          fontSize: 9,
+          fontWeight: 800,
+          letterSpacing: "0.12em",
+          color: "rgba(255,255,255,0.35)",
+          textTransform: "uppercase",
+        }}
+      >
+        ⚙️ Utilitas
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
+        {utilitas.map((u) => makeTab(`/utilitas/${u.util_id}`, u.icon, u.label))}
+      </div>
+
+      <Link
+        href="/admin/utilitas"
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = "rgba(255,255,255,0.9)";
+          e.currentTarget.style.background = "rgba(255,255,255,0.07)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.color = "rgba(255,255,255,0.35)";
+          e.currentTarget.style.background = "transparent";
+        }}
+        style={{
+          display: "block",
+          padding: "8px 10px",
+          margin: "0 8px",
+          fontSize: "11.5px",
+          fontWeight: 600,
+          borderRadius: 7,
+          color: "rgba(255,255,255,0.35)",
+          textDecoration: "none",
+          transition: "all 0.15s",
+          whiteSpace: "nowrap",
+          borderLeft: "3px solid transparent",
+        }}
+      >
+        ＋ Tambah Utilitas
+      </Link>
+
+      {/* ═══ Divider ═══ */}
+      <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "6px 12px" }} />
+
+      {/* ═══ Seksi Barang Keluar (SBBK) ═══ */}
+      <div
+        style={{
+          padding: "10px 12px 4px",
+          fontSize: 9,
+          fontWeight: 800,
+          letterSpacing: "0.12em",
+          color: "rgba(255,255,255,0.35)",
+          textTransform: "uppercase",
+        }}
+      >
+        📋 Barang Keluar
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
+        {makeTab("/sbbk", "📤", "SBBK")}
+      </div>
+
+      {/* ═══ Divider ═══ */}
+      <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "6px 12px" }} />
+
+      {/* ═══ Seksi Rekap Inventaris ═══ */}
+      <div
+        style={{
+          padding: "10px 12px 4px",
+          fontSize: 9,
+          fontWeight: 800,
+          letterSpacing: "0.12em",
+          color: "rgba(255,255,255,0.35)",
+          textTransform: "uppercase",
+        }}
+      >
+        📊 Rekap Inventaris
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
+        {makeTab("/rekap", "📊", "Rekap")}
+      </div>
+
+      {/* ═══ Divider ═══ */}
+      <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "6px 12px" }} />
+
+      {/* ═══ Seksi Pakta Integritas ═══ */}
+      <div
+        style={{
+          padding: "10px 12px 4px",
+          fontSize: 9,
+          fontWeight: 800,
+          letterSpacing: "0.12em",
+          color: "rgba(255,255,255,0.35)",
+          textTransform: "uppercase",
+        }}
+      >
+        📝 Pakta Integritas
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
+        {makeTab("/pakta", "📝", "Pakta")}
       </div>
     </aside>
   );

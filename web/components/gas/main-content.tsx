@@ -1,6 +1,6 @@
 export function MainContent({ children }: { children: React.ReactNode }) {
   return (
-    <main className="p-6 md:p-7 bg-background min-h-[calc(100vh-56px)]">
+    <main className="flex-1 min-w-0 overflow-y-auto bg-background" style={{ padding: "24px 28px 60px" }}>
       {children}
     </main>
   );
