@@ -1,10 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { getRoomById, getRooms } from "@/lib/auth/rooms";
-import { getItems } from "@/lib/auth/items";
-import { getUsulanByRoomWithRoomInfo } from "@/lib/auth/usulan";
+import { Button } from "@/components/gas/button";
+import { getMockRooms } from "@/lib/mock-data/rooms";
+import { getMockItemsByRoom } from "@/lib/mock-data/items";
+import { getMockUsulan } from "@/lib/mock-data/usulan";
 import { RoomDetailClient } from "@/components/inventaris/room-detail-client";
 import { ItemTable } from "@/components/inventaris/item-table";
 import { RoomUsulanSection } from "@/components/inventaris/room-usulan-section";
@@ -18,19 +17,16 @@ interface RoomDetailPageProps {
 export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
   const { id } = await params;
 
-  let room;
-  try {
-    room = await getRoomById(id);
-  } catch {
+  const rooms = getMockRooms();
+  const room = rooms.find((r) => r.id === id);
+
+  if (!room) {
     notFound();
   }
 
   // Fetch items, room list (for move dialogs), and usulan for this room.
-  const [items, rooms, usulanList] = await Promise.all([
-    getItems(id),
-    getRooms(),
-    getUsulanByRoomWithRoomInfo(id),
-  ]);
+  const items = getMockItemsByRoom(id);
+  const usulanList = getMockUsulan(id);
 
   // Group items by category.
   const grouped: Record<ItemCategory, Item[]> = {
@@ -52,15 +48,27 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/inventaris">
-          <Button variant="outline" size="icon">
-            <ArrowLeft className="h-4 w-4" />
+          <Button variant="ghost" className="h-9 w-9 p-0">
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
           </Button>
         </Link>
         <div>
           <h1 className="font-mono text-2xl font-bold tracking-tight">
             Detail Ruangan
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-ink3">
             Inventaris barang per kategori
           </p>
         </div>

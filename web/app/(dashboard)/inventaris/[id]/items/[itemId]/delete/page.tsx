@@ -1,8 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
-import { deleteItem } from "@/lib/auth/items";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { getMockItems } from "@/lib/mock-data";
+import { Card } from "@/components/gas/card";
+import { Button } from "@/components/gas/button";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -12,28 +10,19 @@ interface DeleteItemPageProps {
 
 async function handleDelete(formData: FormData) {
   "use server";
-  const itemId = formData.get("itemId") as string;
   const roomId = formData.get("roomId") as string;
-  await deleteItem(parseInt(itemId, 10), roomId);
   redirect(`/inventaris/${roomId}`);
 }
 
 export default async function DeleteItemPage({ params }: DeleteItemPageProps) {
-  const { itemId } = await params;
-  const supabase = await createClient();
-  const { data: item } = await supabase
-    .from("items")
-    .select("*")
-    .eq("id", parseInt(itemId, 10))
-    .single();
+  const { itemId, id } = await params;
+  const item = getMockItems().find((i) => i.id === parseInt(itemId, 10));
 
   if (!item) {
     return (
       <div className="container mx-auto py-6">
         <Card>
-          <CardContent className="py-12">
-            <p className="text-center text-muted-foreground">Barang tidak ditemukan</p>
-          </CardContent>
+          <p className="text-center py-12 text-ink3">Barang tidak ditemukan</p>
         </Card>
       </div>
     );
@@ -42,47 +31,49 @@ export default async function DeleteItemPage({ params }: DeleteItemPageProps) {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center gap-4">
-        <Link href={`/inventaris/${params.id}`}>
-          <Button variant="outline" size="icon">
-            <ArrowLeft className="h-4 w-4" />
+        <Link href={`/inventaris/${id}`}>
+          <Button variant="ghost">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
           </Button>
         </Link>
         <div>
           <h1 className="font-mono text-3xl font-bold tracking-tight">Hapus Barang</h1>
-          <p className="text-muted-foreground">Konfirmasi penghapusan barang</p>
+          <p className="text-sm text-ink3">Konfirmasi penghapusan barang</p>
         </div>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trash2 className="h-5 w-5 text-destructive" />
-            Hapus Barang?
-          </CardTitle>
-          <CardDescription>
+        <div className="p-4 space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🗑️</span>
+            <h2 className="text-lg font-bold text-ink">Hapus Barang?</h2>
+          </div>
+          <p className="text-sm text-ink3">
             Apakah Anda yakin ingin menghapus barang ini? Tindakan ini tidak dapat dibatalkan.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="bg-muted p-4 rounded-lg">
-            <p className="font-semibold">{item.name}</p>
-            <p className="text-sm text-muted-foreground">
+          </p>
+
+          <div className="bg-line2 p-4 rounded-lg">
+            <p className="font-semibold text-ink">{item.name}</p>
+            <p className="text-sm text-ink3">
               Kategori: {item.category} | Jumlah: {item.quantity}
             </p>
           </div>
+
           <form action={handleDelete} className="flex gap-2">
-            <input type="hidden" name="itemId" value={params.itemId} />
-            <input type="hidden" name="roomId" value={params.id} />
-            <Link href={`/inventaris/${params.id}`}>
-              <Button variant="outline" type="button">
+            <input type="hidden" name="itemId" value={itemId} />
+            <input type="hidden" name="roomId" value={id} />
+            <Link href={`/inventaris/${id}`}>
+              <Button variant="ghost" type="button">
                 Batal
               </Button>
             </Link>
-            <Button type="submit" variant="destructive">
+            <Button type="submit" className="bg-red text-white hover:opacity-90">
               Ya, Hapus Barang
             </Button>
           </form>
-        </CardContent>
+        </div>
       </Card>
     </div>
   );

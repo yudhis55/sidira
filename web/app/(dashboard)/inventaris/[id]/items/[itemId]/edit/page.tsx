@@ -1,31 +1,22 @@
-import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { getMockItems } from "@/lib/mock-data";
+import { Card } from "@/components/gas/card";
+import { Button } from "@/components/gas/button";
 import Link from "next/link";
 import { ItemForm } from "@/components/inventaris/item-form";
-import type { Item } from "@/types/database";
 
 interface EditItemPageProps {
   params: { id: string; itemId: string };
 }
 
 export default async function EditItemPage({ params }: EditItemPageProps) {
-  const { itemId } = await params;
-  const supabase = await createClient();
-  const { data: item } = await supabase
-    .from("items")
-    .select("*")
-    .eq("id", parseInt(itemId, 10))
-    .single();
+  const { itemId, id } = await params;
+  const item = getMockItems().find((i) => i.id === parseInt(itemId, 10));
 
   if (!item) {
     return (
       <div className="container mx-auto py-6">
         <Card>
-          <CardContent className="py-12">
-            <p className="text-center text-muted-foreground">Barang tidak ditemukan</p>
-          </CardContent>
+          <p className="text-center py-12 text-ink3">Barang tidak ditemukan</p>
         </Card>
       </div>
     );
@@ -34,21 +25,23 @@ export default async function EditItemPage({ params }: EditItemPageProps) {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center gap-4">
-        <Link href={`/inventaris/${params.id}`}>
-          <Button variant="outline" size="icon">
-            <ArrowLeft className="h-4 w-4" />
+        <Link href={`/inventaris/${id}`}>
+          <Button variant="ghost" className="h-9 w-9 p-0">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
           </Button>
         </Link>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Edit Barang</h1>
-          <p className="text-muted-foreground">Ubah informasi barang</p>
+          <p className="text-ink3">Ubah informasi barang</p>
         </div>
       </div>
 
       <Card>
-        <CardContent className="pt-6">
-          <ItemForm roomId={params.id} item={item as Item} />
-        </CardContent>
+        <div className="pt-6 p-4">
+          <ItemForm roomId={id} item={item} />
+        </div>
       </Card>
     </div>
   );
