@@ -1,13 +1,19 @@
-import { getSbbkListFull } from "@/lib/auth/sbbk";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { getMockSbbk } from "@/lib/mock-data";
+import { Card } from "@/components/gas/card";
+import { Button } from "@/components/gas/button";
 import { SbbkCsvExport } from "@/components/sbbk/sbbk-csv-export";
 import { PageHeader } from "@/components/shared/page-elements";
-import { Plus, FileText, Printer, Pencil, Trash2, Search } from "lucide-react";
 import Link from "next/link";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { deleteSbbk } from "@/lib/auth/sbbk";
+
+function CardContent({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={className}>{children}</div>;
+}
+function CardHeader({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={className}>{children}</div>;
+}
+function CardTitle({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <h3 className={className}>{children}</h3>;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -110,7 +116,7 @@ export default async function SbbkPage({ searchParams }: PageProps) {
         actions={
           <Link href="/sbbk/new">
             <Button size="sm">
-              <Plus className="h-4 w-4 mr-1" />
+              <span className="text-sm mr-1">➕</span>
               Entri SBBK Baru
             </Button>
           </Link>
@@ -143,7 +149,7 @@ export default async function SbbkPage({ searchParams }: PageProps) {
         })}
         <form className="ml-auto flex items-center" role="search">
           <div className="relative">
-            <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground" aria-hidden>🔍</span>
             <input
               type="search"
               name="q"
@@ -196,7 +202,7 @@ export default async function SbbkPage({ searchParams }: PageProps) {
       {filtered.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <FileText className="h-10 w-10 text-muted-foreground/50 mb-3" aria-hidden />
+            <span className="text-2xl mb-3">📄</span>
             <p className="font-mono text-sm font-semibold mb-1">Belum ada SBBK</p>
             <p className="text-xs text-muted-foreground text-center mb-4">
               {all.length === 0
@@ -206,7 +212,7 @@ export default async function SbbkPage({ searchParams }: PageProps) {
             {all.length === 0 && (
               <Link href="/sbbk/new">
                 <Button size="sm">
-                  <Plus className="h-4 w-4 mr-1" />
+                  <span className="text-sm mr-1">➕</span>
                   Entri SBBK Baru
                 </Button>
               </Link>
@@ -271,7 +277,7 @@ export default async function SbbkPage({ searchParams }: PageProps) {
                               className="inline-flex h-6 w-6 items-center justify-center ring-1 ring-border hover:bg-muted"
                               title="Edit"
                             >
-                              <Pencil className="h-3 w-3" aria-hidden />
+                              <span className="text-xs" aria-hidden>✏️</span>
                               <span className="sr-only">Edit</span>
                             </Link>
                             <Link
@@ -281,7 +287,7 @@ export default async function SbbkPage({ searchParams }: PageProps) {
                               className="inline-flex h-6 w-6 items-center justify-center ring-1 ring-border hover:bg-muted"
                               title="Cetak"
                             >
-                              <Printer className="h-3 w-3" aria-hidden />
+                              <span className="text-xs" aria-hidden>🖨️</span>
                               <span className="sr-only">Cetak</span>
                             </Link>
                             <form action={handleDelete}>
@@ -291,7 +297,7 @@ export default async function SbbkPage({ searchParams }: PageProps) {
                                 className="inline-flex h-6 w-6 items-center justify-center bg-destructive/10 text-destructive ring-1 ring-destructive/20 hover:bg-destructive/20"
                                 title="Hapus"
                               >
-                                <Trash2 className="h-3 w-3" aria-hidden />
+                                <span className="text-xs" aria-hidden>🗑️</span>
                                 <span className="sr-only">Hapus</span>
                               </button>
                             </form>

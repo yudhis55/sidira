@@ -1,7 +1,6 @@
 import { getSbbkById, deleteSbbk } from "@/lib/auth/sbbk";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Pencil, Printer, Trash2, FileText } from "lucide-react";
+import { Card } from "@/components/gas/card";
+import { Button } from "@/components/gas/button";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";

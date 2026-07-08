@@ -1,12 +1,20 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { getRooms } from "@/lib/auth/rooms";
-import { getItems } from "@/lib/auth/items";
-import { getChecklistEntries } from "@/lib/auth/checklist";
+import { Card } from "@/components/gas/card";
+import { Button } from "@/components/gas/button";
+import { getMockRooms, getMockItemsByRoom } from "@/lib/mock-data";
 import { ChecklistCalendar } from "@/components/checklist/checklist-calendar";
-import { ClipboardCheck, Plus } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import React from "react";
+
+const CardHeader = ({ children, ...p }: React.HTMLAttributes<HTMLDivElement>) => <div {...p}>{children}</div>;
+const CardTitle = ({ children, ...p }: React.HTMLAttributes<HTMLHeadingElement>) => <h3 className="font-mono font-bold" {...p}>{children}</h3>;
+const CardDescription = ({ children, ...p }: React.HTMLAttributes<HTMLParagraphElement>) => <p className="text-sm text-ink3" {...p}>{children}</p>;
+const CardContent = ({ children, ...p }: React.HTMLAttributes<HTMLDivElement>) => <div {...p}>{children}</div>;
+
+// Stub: no mock for checklist entries yet
+function getChecklistEntries(_roomId: string, _start: string, _end: string) {
+  return [];
+}
 
 interface ChecklistPageProps {
   searchParams: Promise<{ room?: string; year?: string; month?: string }>;
@@ -18,22 +26,21 @@ function pad2(n: number) {
 
 export default async function ChecklistPage({ searchParams }: ChecklistPageProps) {
   const params = await searchParams;
-  const rooms = await getRooms();
+  const rooms = getMockRooms();
 
   if (rooms.length === 0) {
     return (
       <div className="container mx-auto py-6">
         <Card className="rounded-none">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <ClipboardCheck className="mb-4 h-12 w-12 text-muted-foreground/50" />
+            <span className="text-4xl">📋</span>
             <CardTitle className="mb-2 text-xl font-mono">Belum ada ruangan</CardTitle>
             <CardDescription className="mb-4 text-center">
               Tambahkan ruangan terlebih dahulu untuk mulai checklist
             </CardDescription>
             <Link href="/inventaris/new">
               <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Tambah Ruangan
+                ➕ Tambah Ruangan
               </Button>
             </Link>
           </CardContent>
@@ -54,7 +61,7 @@ export default async function ChecklistPage({ searchParams }: ChecklistPageProps
   const month = Math.min(Math.max(monthParam, 1), 12) - 1;
 
   // Fetch items for the selected room.
-  const items = await getItems(selectedRoom.id);
+  const items = getMockItemsByRoom(selectedRoom.id);
 
   // Fetch checklist entries for the SELECTED year/month (fixes the
   // "only fetches current month" bug).
@@ -114,7 +121,7 @@ export default async function ChecklistPage({ searchParams }: ChecklistPageProps
               <div className="mt-4">
                 <Link href={`/inventaris/${selectedRoom.id}/items/new`}>
                   <Button>
-                    <Plus className="mr-2 h-4 w-4" />
+                    ➕
                     Tambah Barang
                   </Button>
                 </Link>
