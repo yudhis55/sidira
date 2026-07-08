@@ -1,13 +1,9 @@
-import { deletePakta } from "@/lib/auth/pakta";
 import { getMockPakta } from "@/lib/mock-data";
 import { countAset } from "@/lib/pakta-utils";
 import { Card } from "@/components/gas/card";
 import { Button } from "@/components/gas/button";
-import { PaktaCsvExport } from "@/components/pakta/pakta-csv-export";
 import { PageHeader } from "@/components/shared/page-elements";
 import Link from "next/link";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -23,15 +19,7 @@ function fmtDate(iso?: string): string {
   return `${d.getDate()} ${BULAN[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-async function handleDelete(formData: FormData) {
-  "use server";
-  const id = formData.get("id") as string;
-  await deletePakta(id);
-  revalidatePath("/pakta");
-  redirect("/pakta");
-}
-
-export default async function PaktaPage() {
+export default function PaktaPage() {
   const paktaList = getMockPakta();
   const total = paktaList.length;
 
@@ -45,7 +33,7 @@ export default async function PaktaPage() {
         actions={
           <Link href="/pakta/new">
             <Button className="text-xs px-3 py-1.5">
-              ➕ Entri Pakta Baru
+              ＋ Entri Pakta Integritas Baru
             </Button>
           </Link>
         }
@@ -53,7 +41,9 @@ export default async function PaktaPage() {
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
-        <PaktaCsvExport />
+        <Button variant="ghost" className="text-xs px-3 py-1.5">
+          📥 Export CSV
+        </Button>
       </div>
 
       {/* List */}
@@ -63,11 +53,11 @@ export default async function PaktaPage() {
             <div className="mb-3 text-3xl" aria-hidden>📜</div>
             <p className="mb-1 font-mono text-sm font-semibold">Belum ada data Pakta Integritas</p>
             <p className="mb-4 text-center text-xs text-muted-foreground">
-              Klik &quot;Entri Pakta Integritas Baru&quot; untuk menambahkan
+              Klik &quot;+ Entri Pakta Integritas Baru&quot; untuk menambahkan
             </p>
             <Link href="/pakta/new">
               <Button className="text-xs px-3 py-1.5">
-                ➕ Entri Pakta Integritas Baru
+                ＋ Entri Pakta Integritas Baru
               </Button>
             </Link>
           </div>
@@ -77,89 +67,84 @@ export default async function PaktaPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-border bg-muted/50">
+                <tr className="border-b border-line bg-[var(--bg)]">
                   <th className="h-9 px-2 text-left font-mono font-medium whitespace-nowrap w-16">No.</th>
                   <th className="h-9 px-2 text-left font-mono font-medium whitespace-nowrap">Nama / NIP</th>
                   <th className="h-9 px-2 text-left font-mono font-medium whitespace-nowrap">Jabatan</th>
                   <th className="h-9 px-2 text-left font-mono font-medium whitespace-nowrap">Tanggal</th>
                   <th className="h-9 px-2 text-center font-mono font-medium whitespace-nowrap w-20">Aset</th>
-                  <th className="h-9 px-2 text-center font-mono font-medium whitespace-nowrap">Aksi</th>
+                  <th className="h-9 px-2 text-center font-mono font-medium whitespace-nowrap min-w-[220px]">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 {paktaList.map((pakta, i) => {
                   const asetCount = countAset(pakta);
                   return (
-                    <tr key={pakta.id} className="border-b border-border last:border-0 hover:bg-muted/40">
+                    <tr key={pakta.id} className="border-b border-line last:border-0 hover:bg-[var(--bg)]">
                       <td className="px-2 py-2 align-top">
-                        <span className="inline-flex h-5 items-center px-1.5 font-mono text-[10px] ring-1 ring-border">
+                        <span className="inline-flex h-5 items-center px-1.5 font-mono text-[10px] ring-1 ring-line">
                           {String(i + 1).padStart(3, "0")}
                         </span>
                       </td>
                       <td className="px-2 py-2 align-top">
                         <Link
                           href={`/pakta/${pakta.id}`}
-                          className="font-medium hover:underline"
+                          className="font-semibold hover:underline"
+                          style={{ color: "var(--ink)" }}
                         >
                           {pakta.nama || "-"}
                         </Link>
-                        <div className="text-[10px] text-muted-foreground">
+                        <div className="text-[10px]" style={{ color: "var(--ink2)" }}>
                           {pakta.nip ? `NIP. ${pakta.nip}` : "NIP. —"}
                         </div>
                       </td>
-                      <td className="px-2 py-2 align-top font-medium">
-                        {pakta.jabatan || "-"}
+                      <td className="px-2 py-2 align-top">
+                        <div className="font-semibold" style={{ color: "var(--ink)" }}>
+                          {pakta.jabatan || "-"}
+                        </div>
                       </td>
                       <td className="px-2 py-2 align-top">
-                        <div className="text-muted-foreground">{fmtDate(pakta.tgl)}</div>
-                        <div className="text-[10px] text-muted-foreground">{pakta.hari || "-"}</div>
+                        <div style={{ color: "var(--ink2)" }}>{fmtDate(pakta.tgl)}</div>
+                        <div className="text-[10px]" style={{ color: "var(--ink2)" }}>{pakta.hari || "-"}</div>
                       </td>
                       <td className="px-2 py-2 text-center align-top">
-                        <span className="inline-flex h-5 items-center px-2 font-mono text-[10px] font-semibold ring-1 ring-border">
+                        <span className="inline-flex items-center px-[9px] py-[2px] text-[11px] font-bold" style={{ borderRadius: "10px", background: "#dbeafe", color: "#1e40af" }}>
                           {asetCount} aset
                         </span>
                       </td>
                       <td className="px-2 py-2 align-top">
-                        <div className="flex items-center justify-center gap-1">
+                        <div className="flex items-center justify-center flex-wrap gap-1">
                           <Link
                             href={`/pakta/${pakta.id}/edit`}
-                            className="inline-flex h-6 w-6 items-center justify-center ring-1 ring-border hover:bg-muted"
-                            title="Edit"
+                            className="inline-flex items-center px-[7px] py-[3px] text-[10px] hover:opacity-80"
+                            style={{ border: "1px solid var(--line)", borderRadius: "4px", color: "var(--ink2)", background: "var(--bg2)" }}
                           >
-                            ✏️
-                            <span className="sr-only">Edit</span>
+                            ✏️ Edit
                           </Link>
                           <Link
                             href={`/pakta/${pakta.id}/print?lampiran=1`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex h-6 w-6 items-center justify-center ring-1 ring-[var(--blue)]/30 text-[var(--blue)] hover:bg-[var(--blue2)]"
-                            title="Lampiran BMD"
+                            className="inline-flex items-center px-[7px] py-[3px] text-[10px] hover:opacity-80"
+                            style={{ border: "1px solid #bfdbfe", borderRadius: "4px", color: "#1e40af" }}
                           >
-                            📋
-                            <span className="sr-only">Lampiran BMD</span>
+                            📋 Lampiran
                           </Link>
                           <Link
                             href={`/pakta/${pakta.id}/print`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex h-6 w-6 items-center justify-center ring-1 ring-border hover:bg-muted"
-                            title="Cetak"
+                            className="inline-flex items-center px-[7px] py-[3px] text-[10px] hover:opacity-80"
+                            style={{ border: "1px solid var(--line)", borderRadius: "4px", color: "var(--ink2)" }}
                           >
-                            🖨️
-                            <span className="sr-only">Cetak</span>
+                            🖨️ Cetak
                           </Link>
-                          <form action={handleDelete}>
-                            <input type="hidden" name="id" value={pakta.id} />
-                            <button
-                              type="submit"
-                              className="inline-flex h-6 w-6 items-center justify-center bg-destructive/10 text-destructive ring-1 ring-destructive/20 hover:bg-destructive/20"
-                              title="Hapus"
-                            >
-                              🗑️
-                              <span className="sr-only">Hapus</span>
-                            </button>
-                          </form>
+                          <span
+                            className="inline-flex items-center px-[7px] py-[3px] text-[10px] opacity-50 cursor-not-allowed"
+                            style={{ border: "1px solid var(--line)", borderRadius: "4px", color: "var(--red)" }}
+                          >
+                            ✕
+                          </span>
                         </div>
                       </td>
                     </tr>
