@@ -11,8 +11,8 @@ const FILTER_CHIPS = [
   { key: "all", label: "Semua" },
   { key: "Puskesmas", label: "\u{1F3E5} Puskesmas" },
   { key: "Posyandu", label: "\u{1F476} Posyandu" },
-  { key: "BLUD TH 2025", label: "BLUD TH 2025" },
-  { key: "APBD 2025", label: "APBD 2025" },
+  { key: "BLUD TH 2025", label: "BLUD" },
+  { key: "APBD 2025", label: "APBD" },
 ];
 
 function sumTotalNilai(items: { total: number }[]): number {
@@ -21,6 +21,13 @@ function sumTotalNilai(items: { total: number }[]): number {
 
 function rpFull(n: number): string {
   return "Rp " + n.toLocaleString("id-ID");
+}
+
+function rpShort(n: number): string {
+  if (n >= 1_000_000_000) return "Rp " + (n / 1_000_000_000).toFixed(1) + " M";
+  if (n >= 1_000_000) return "Rp " + (n / 1_000_000).toFixed(1) + " Jt";
+  if (n >= 1_000) return "Rp " + (n / 1_000).toFixed(0) + " Rb";
+  return "Rp " + n;
 }
 
 function fmtDateShort(iso: string): string {
@@ -81,33 +88,24 @@ export default async function SbbkPage({ searchParams }: PageProps) {
   }
 
   const totalSbbk = all.length;
+  const totalItem = all.reduce((s, d) => s + d.items.length, 0);
   const totalNilaiAll = all.reduce(
     (s, d) => s + sumTotalNilai(d.items),
     0,
   );
 
   const columns: TableColumn[] = [
-    { key: "no_seq", label: "No", width: "50px", align: "center" },
-    { key: "tanggal", label: "Tanggal", width: "120px" },
-    { key: "no_sbbk", label: "No SBBK", width: "160px" },
-    { key: "kepada", label: "Kepada", width: "180px" },
-    { key: "jenis", label: "Jenis", width: "100px" },
+    { key: "no_sbbk", label: "No. SBBK", width: "140px" },
+    { key: "kepada", label: "Ditujukan Kepada", width: "200px" },
     { key: "anggaran", label: "Anggaran", width: "130px" },
+    { key: "item", label: "Item", width: "80px", align: "center" },
     { key: "total_nilai", label: "Total Nilai", width: "150px", align: "right" },
-    { key: "actions", label: "Actions", width: "260px" },
+    { key: "aksi", label: "Aksi", width: "200px" },
   ];
 
-  const rows = filtered.map((sbbk, i) => {
+  const rows = filtered.map((sbbk) => {
     const nilai = sumTotalNilai(sbbk.items);
     return {
-      no_seq: (
-        <span className="font-mono text-[11px] font-bold text-ink2">
-          {i + 1}
-        </span>
-      ),
-      tanggal: (
-        <span className="text-[12px] text-ink2">{fmtDateShort(sbbk.tgl)}</span>
-      ),
       no_sbbk: (
         <Link href={`/sbbk/${sbbk.id}`}>
           <span className="inline-block rounded bg-violet-100 px-2 py-0.5 font-mono text-[11px] font-extrabold text-violet-700">
@@ -116,22 +114,29 @@ export default async function SbbkPage({ searchParams }: PageProps) {
         </Link>
       ),
       kepada: (
-        <span className="font-semibold text-ink">{sbbk.kepada || "-"}</span>
-      ),
-      jenis: (
-        <span className="text-[12px] text-ink2">{sbbk.jenis || "-"}</span>
+        <div>
+          <div className="font-semibold text-ink">{sbbk.kepada || "-"}</div>
+          <div className="text-[11px] text-ink3">
+            {sbbk.jenis || ""} · {fmtDateShort(sbbk.tgl)}
+          </div>
+        </div>
       ),
       anggaran: anggaranBadge(sbbk.anggaran),
+      item: (
+        <span className="inline-block rounded-full bg-line px-2 py-0.5 text-[11px] font-bold text-ink2">
+          {sbbk.items.length} item
+        </span>
+      ),
       total_nilai: (
         <span className="font-mono font-bold text-emerald-600">
           {rpFull(nilai)}
         </span>
       ),
-      actions: (
+      aksi: (
         <div className="flex items-center gap-1">
-          <Link href={`/sbbk/${sbbk.id}`}>
+          <Link href={`/sbbk/${sbbk.id}/edit`}>
             <Button variant="ghost" size="sm">
-              {"\u{1F4C4}"} Detail
+              {"\u270F\uFE0F"} Edit
             </Button>
           </Link>
           <Link
@@ -140,12 +145,7 @@ export default async function SbbkPage({ searchParams }: PageProps) {
             rel="noopener noreferrer"
           >
             <Button variant="ghost" size="sm">
-              {"\u{1F5A8}\uFE0F"} Print
-            </Button>
-          </Link>
-          <Link href={`/sbbk/${sbbk.id}/edit`}>
-            <Button variant="ghost" size="sm">
-              {"\u270F\uFE0F"} Edit
+              {"\u{1F5A8}\uFE0F"} Cetak
             </Button>
           </Link>
           <Button
@@ -153,7 +153,7 @@ export default async function SbbkPage({ searchParams }: PageProps) {
             size="sm"
             className="text-red hover:bg-red-50"
           >
-            {"\u{1F5D1}\uFE0F"} Hapus
+            {"\u2715"}
           </Button>
         </div>
       ),
@@ -185,8 +185,16 @@ export default async function SbbkPage({ searchParams }: PageProps) {
             </div>
           </div>
           <div className="text-center">
+            <div className="font-mono text-xl font-bold text-violet-700">
+              {totalItem}
+            </div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-ink3">
+              Total Item
+            </div>
+          </div>
+          <div className="text-center">
             <div className="font-mono text-sm font-bold text-emerald-600">
-              {rpFull(totalNilaiAll)}
+              {rpShort(totalNilaiAll)}
             </div>
             <div className="text-[10px] font-semibold uppercase tracking-wide text-ink3">
               Total Nilai
@@ -195,13 +203,16 @@ export default async function SbbkPage({ searchParams }: PageProps) {
         </div>
       </Card>
 
-      {/* ── Toolbar: Buat SBBK Baru at top right ── */}
+      {/* ── Toolbar: Entri SBBK Baru + Export CSV ── */}
       <div className="flex items-center justify-end gap-2">
         <Link href="/sbbk/new">
           <Button variant="primary" size="default">
-            {"\uFF0B"} Buat SBBK Baru
+            {"\uFF0B"} Entri SBBK Baru
           </Button>
         </Link>
+        <Button variant="ghost" size="sm" className="text-[12px]">
+          {"\u{1F4E5}"} Export CSV
+        </Button>
       </div>
 
       {/* ── Filter chips + Search ── */}
@@ -237,7 +248,7 @@ export default async function SbbkPage({ searchParams }: PageProps) {
               type="search"
               name="q"
               defaultValue={sp.q || ""}
-              placeholder="Cari no/kepada/item nama..."
+              placeholder="\u{1F50D} Cari no/tujuan/barang..."
               className="h-8 w-52 rounded-full border-[1.5px] border-line bg-white pl-8 pr-3 text-xs outline-none focus:border-violet-600"
             />
           </div>
@@ -260,7 +271,7 @@ export default async function SbbkPage({ searchParams }: PageProps) {
           </p>
           <p className="text-xs text-ink3">
             {all.length === 0
-              ? 'Klik "Buat SBBK Baru" untuk menambahkan surat bukti barang keluar'
+              ? 'Klik "+ Entri SBBK Baru" untuk menambahkan surat bukti barang keluar'
               : "Tidak ada SBBK yang cocok dengan filter/pencarian."}
           </p>
         </Card>
@@ -287,7 +298,7 @@ export default async function SbbkPage({ searchParams }: PageProps) {
               Total Nilai Seluruh
             </div>
             <div className="mt-1 font-mono text-sm font-bold text-emerald-600">
-              {rpFull(totalNilaiAll)}
+              {rpShort(totalNilaiAll)}
             </div>
             <div className="text-[10px] text-ink3">
               {totalSbbk} surat SBBK
@@ -298,7 +309,7 @@ export default async function SbbkPage({ searchParams }: PageProps) {
               BLUD
             </div>
             <div className="mt-1 font-mono text-sm font-bold text-amber-700">
-              {rpFull(
+              {rpShort(
                 all
                   .filter((d) =>
                     (d.anggaran || "").toUpperCase().includes("BLUD"),
@@ -313,7 +324,7 @@ export default async function SbbkPage({ searchParams }: PageProps) {
               APBD
             </div>
             <div className="mt-1 font-mono text-sm font-bold text-blue-700">
-              {rpFull(
+              {rpShort(
                 all
                   .filter((d) =>
                     (d.anggaran || "").toUpperCase().includes("APBD"),
