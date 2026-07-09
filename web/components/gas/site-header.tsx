@@ -1,17 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-
-const NAV_LINKS = [
-  { href: "/utilitas", label: "Utilitas" },
-  { href: "/sbbk", label: "SBBK" },
-  { href: "/pakta", label: "Pakta" },
-  { href: "/rekap", label: "Rekap" },
-  { href: "/riwayat", label: "Riwayat" },
-  { href: "/laporan", label: "Laporan" },
-  { href: "/admin/users", label: "Users" },
-] as const;
+import { useRouter } from "next/navigation";
 
 const ACRONYM_CHIPS = [
   { letter: "S", word: "Sistem" },
@@ -26,7 +16,6 @@ const TAGLINE_WORDS = ["Sistem", "Digital", "Inventaris", "Ruangan", "Aset"];
 
 export function SiteHeader() {
   const router = useRouter();
-  const pathname = usePathname();
 
   return (
     <header
@@ -358,55 +347,6 @@ export function SiteHeader() {
             ⏻ Keluar
           </button>
         </div>
-      </div>
-
-      {/* ── Nav row ── */}
-      <div
-        style={{
-          maxWidth: "1140px",
-          margin: "0 auto",
-          padding: "0 36px 8px",
-          position: "relative",
-          zIndex: 1,
-        }}
-      >
-        <nav
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-            flexWrap: "wrap",
-          }}
-          aria-label="Navigasi utama"
-        >
-          {NAV_LINKS.map((link) => {
-            const isActive =
-              link.href === "/admin/users"
-                ? pathname.startsWith("/admin/users")
-                : pathname === link.href ||
-                  pathname.startsWith(`${link.href}/`);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                style={{
-                  fontSize: "13px",
-                  padding: "5px 12px",
-                  borderRadius: "6px",
-                  textDecoration: "none",
-                  transition: "all 0.15s",
-                  fontWeight: isActive ? 600 : 500,
-                  background: isActive ? "rgba(255,255,255,0.15)" : "transparent",
-                  color: isActive
-                    ? "white"
-                    : "rgba(255,255,255,0.8)",
-                }}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
       </div>
 
       {/* ── 5. Wave SVG bottom ── */}
