@@ -1,14 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ChevronDown, Plus, Lightbulb } from "lucide-react";
-import type { Usulan, UsulanItem } from "@/lib/usulan-types";
-import { USULAN_KATEGORI_LABELS } from "@/lib/usulan-types";
-import { PrioritasBadge, StatusBadge } from "@/components/usulan/usulan-badges";
-import { UsulanCsvExport } from "@/components/usulan/usulan-csv-export";
-import { cn } from "@/lib/utils";
+import { useState, useMemo, useCallback } from "react";
+import type { Usulan, UsulanItem, UsulanPrioritas } from "@/lib/usulan-types";
+import type { ItemCategory } from "@/types/database";
 
 interface RoomUsulanSectionProps {
   roomId: string;
@@ -16,19 +10,36 @@ interface RoomUsulanSectionProps {
   usulanList: Usulan[];
 }
 
-const PRIORITAS_FILTERS: { key: string; label: string }[] = [
+type FilterKey =
+  | "all"
+  | "mendesak"
+  | "penting"
+  | "rencana"
+  | "diajukan"
+  | "disetujui";
+
+const FILTER_BUTTONS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "Semua" },
-  { key: "mendesak", label: "⚠ Mendesak" },
-  { key: "penting", label: "Penting" },
-  { key: "rencana", label: "Rencana" },
+  { key: "mendesak", label: "🔴 Mendesak" },
+  { key: "penting", label: "🟡 Penting" },
+  { key: "rencana", label: "🔵 Rencana" },
+  { key: "diajukan", label: "Diajukan" },
+  { key: "disetujui", label: "✅ Disetujui" },
 ];
 
-const STATUS_FILTERS: { key: string; label: string }[] = [
-  { key: "all", label: "Semua" },
-  { key: "diajukan", label: "Diajukan" },
-  { key: "disetujui", label: "Disetujui" },
-  { key: "ditolak", label: "Ditolak" },
-];
+const KAT_ICONS: Record<ItemCategory, string> = {
+  alkes: "🩺",
+  meubelair: "🪑",
+  elektronik: "💻",
+  lainnya: "📦",
+};
+
+const KAT_LABELS: Record<ItemCategory, string> = {
+  alkes: "Alkes",
+  meubelair: "Meubelair",
+  elektronik: "Elektronik",
+  lainnya: "Lainnya",
+};
 
 function fmtDate(iso: string): string {
   if (!iso) return "-";
@@ -41,21 +52,188 @@ function fmtDate(iso: string): string {
   });
 }
 
-/**
- * Per-room usulan section rendered inside the inventaris room detail page.
- * Collapsible, with summary stats, filter chips, CSV export, and a table
- * of usulan items. Follows the GAS legacy per-room usulan pattern.
- */
+/* ── GAS-exact badge components ── */
+
+function PrioBadge({ prio }: { prio: UsulanPrioritas }) {
+  const styles: Record<
+    UsulanPrioritas,
+    { bg: string; color: string; border: string; label: string }
+  > = {
+    mendesak: {
+      bg: "#fee2e2",
+      color: "#b91c1c",
+      border: "#fca5a5",
+      label: "🔴 Mendesak",
+    },
+    penting: {
+      bg: "#fef3c7",
+      color: "#92400e",
+      border: "#fcd34d",
+      label: "🟡 Penting",
+    },
+    rencana: {
+      bg: "#dbeafe",
+      color: "#1e40af",
+      border: "#93c5fd",
+      label: "🔵 Rencana",
+    },
+  };
+  const s = styles[prio] || styles.penting;
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        padding: "2px 9px",
+        borderRadius: 10,
+        fontSize: "10.5px",
+        fontWeight: 700,
+        whiteSpace: "nowrap",
+        background: s.bg,
+        color: s.color,
+        border: `1px solid ${s.border}`,
+      }}
+    >
+      {s.label}
+    </span>
+  );
+}
+
+function UStatusBadge({ status }: { status: string }) {
+  const styles: Record<
+    string,
+    { bg: string; color: string; border: string; label: string }
+  > = {
+    diajukan: {
+      bg: "#fef9c3",
+      color: "#854d0e",
+      border: "#fde047",
+      label: "📤 Diajukan",
+    },
+    disetujui: {
+      bg: "#dcfce7",
+      color: "#166534",
+      border: "#86efac",
+      label: "✅ Disetujui",
+    },
+    ditolak: {
+      bg: "#fee2e2",
+      color: "#b91c1c",
+      border: "#fca5a5",
+      label: "❌ Ditolak",
+    },
+    proses: {
+      bg: "#e0f2fe",
+      color: "#0369a1",
+      border: "#7dd3fc",
+      label: "🔄 Diproses",
+    },
+    selesai: {
+      bg: "#d4f0eb",
+      color: "#0e7c6b",
+      border: "#6ee7b7",
+      label: "🎉 Selesai",
+    },
+  };
+  const s = styles[status] || styles.diajukan;
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        padding: "2px 9px",
+        borderRadius: 10,
+        fontSize: "10.5px",
+        fontWeight: 700,
+        background: s.bg,
+        color: s.color,
+        border: `1px solid ${s.border}`,
+      }}
+    >
+      {s.label}
+    </span>
+  );
+}
+
+function UKatBadge({ kat }: { kat: ItemCategory }) {
+  const styles: Record<
+    ItemCategory,
+    { bg: string; color: string }
+  > = {
+    alkes: { bg: "#d4f0eb", color: "#0e7c6b" },
+    meubelair: { bg: "#fef3c7", color: "#92400e" },
+    elektronik: { bg: "#dbeafe", color: "#1e40af" },
+    lainnya: { bg: "#f1f5f9", color: "#475569" },
+  };
+  const s = styles[kat] || styles.lainnya;
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        padding: "2px 8px",
+        borderRadius: 8,
+        fontSize: "10.5px",
+        fontWeight: 600,
+        background: s.bg,
+        color: s.color,
+      }}
+    >
+      {KAT_ICONS[kat]} {KAT_LABELS[kat]}
+    </span>
+  );
+}
+
+/* ── CSV export helper ── */
+
+function buildCsv(
+  items: { item: UsulanItem; usulanDate: string }[],
+  roomName: string
+) {
+  const headers = [
+    "No",
+    "Nama Barang",
+    "Kategori",
+    "Jumlah",
+    "Satuan",
+    "Prioritas",
+    "Status",
+    "Keterangan",
+    "Tgl Diajukan",
+  ];
+  const rows = items.map(({ item, usulanDate }, i) =>
+    [
+      i + 1,
+      item.nama,
+      KAT_LABELS[item.kategori] || item.kategori,
+      item.qty,
+      item.satuan,
+      item.prioritas,
+      item.status,
+      item.keterangan || "",
+      fmtDate(usulanDate),
+    ]
+      .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+      .join(",")
+  );
+  const csv = [headers.join(","), ...rows].join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Usulan_${roomName.replace(/\s+/g, "_")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ── Main component ── */
+
 export function RoomUsulanSection({
   roomId,
   roomName,
   usulanList,
 }: RoomUsulanSectionProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const [prioritasFilter, setPrioritasFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
 
-  // Flatten all items across usulan for this room
+  // Flatten all usulan items for this room
   const allItems = useMemo(() => {
     const flat: { item: UsulanItem; usulanId: number; usulanDate: string }[] =
       [];
@@ -68,247 +246,447 @@ export function RoomUsulanSection({
   }, [usulanList]);
 
   const totalItems = allItems.length;
-  const totalValue = allItems.reduce(
-    (sum, { item }) => sum + (item.total || 0),
-    0
-  );
   const mendesakCount = allItems.filter(
     ({ item }) => item.prioritas === "mendesak"
   ).length;
 
-  const filteredItems = allItems.filter(({ item }) => {
-    if (prioritasFilter !== "all" && item.prioritas !== prioritasFilter)
-      return false;
-    if (statusFilter !== "all" && item.status !== statusFilter) return false;
-    return true;
-  });
+  // Filter logic: priority filters match on item.prioritas, status filters match on item.status
+  const filteredItems = useMemo(() => {
+    if (activeFilter === "all") return allItems;
+    const prioFilters = ["mendesak", "penting", "rencana"];
+    if (prioFilters.includes(activeFilter)) {
+      return allItems.filter(({ item }) => item.prioritas === activeFilter);
+    }
+    return allItems.filter(({ item }) => item.status === activeFilter);
+  }, [allItems, activeFilter]);
+
+  const handleExport = useCallback(() => {
+    buildCsv(filteredItems, roomName);
+  }, [filteredItems, roomName]);
 
   return (
-    <div className="ring-1 ring-foreground/10 bg-card">
-      {/* Section header (collapsible) */}
-      <button
-        type="button"
+    <div
+      style={{
+        marginTop: 28,
+        borderRadius: "var(--r, 10px)",
+        border: "2px solid #7c3aed22",
+        overflow: "hidden",
+      }}
+    >
+      {/* ── Header (GAS .usulan-header) ── */}
+      <div
         onClick={() => setCollapsed((c) => !c)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted/40"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "11px 18px",
+          background: "linear-gradient(135deg, #4c1d9510, #7c3aed15)",
+          borderBottom: collapsed ? "none" : "1px solid #7c3aed22",
+          cursor: "pointer",
+          userSelect: "none",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background =
+            "linear-gradient(135deg, #4c1d9518, #7c3aed22)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background =
+            "linear-gradient(135deg, #4c1d9510, #7c3aed15)";
+        }}
       >
-        <span className="size-2 bg-foreground" aria-hidden />
-        <span className="font-mono text-sm font-semibold">
-          💡 Usulan Sarana Prasarana &amp; Alkes
+        {/* Purple dot */}
+        <span
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            background: "#7c3aed",
+            flexShrink: 0,
+          }}
+        />
+
+        {/* Label */}
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.8px",
+            color: "#7c3aed",
+          }}
+        >
+          📋 Usulan Sarana Prasarana &amp; Alkes
         </span>
-        <span className="font-mono text-xs text-muted-foreground">
-          {totalItems} barang · Rp {totalValue.toLocaleString("id-ID")}
+
+        {/* Total badge */}
+        <span
+          style={{
+            fontSize: 11,
+            color: "#6d28d9",
+            padding: "2px 9px",
+            borderRadius: 10,
+            background: "#ede9fe",
+            fontWeight: 700,
+            marginLeft: 6,
+          }}
+        >
+          {totalItems} usulan
         </span>
+
+        {/* Mendesak badge (ml-auto) */}
         {mendesakCount > 0 && (
-          <span className="font-mono text-xs text-muted-foreground">
-            · {mendesakCount} mendesak
+          <span
+            style={{
+              marginLeft: "auto",
+              fontSize: 11,
+              fontWeight: 700,
+              padding: "2px 10px",
+              borderRadius: 20,
+              background: "#7c3aed",
+              color: "#fff",
+            }}
+          >
+            {mendesakCount} mendesak
           </span>
         )}
-        <ChevronDown
-          className={cn(
-            "ml-auto h-4 w-4 text-muted-foreground transition-transform",
-            collapsed && "-rotate-90"
-          )}
-        />
-      </button>
 
-      {/* Body */}
+        {/* If no mendesak, still need spacer for chevron */}
+        {mendesakCount === 0 && <span style={{ marginLeft: "auto" }} />}
+
+        {/* Chevron */}
+        <span
+          style={{
+            fontSize: 11,
+            color: "#7c3aed",
+            marginLeft: 6,
+            transition: "transform 0.2s",
+            transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)",
+            display: "inline-block",
+          }}
+        >
+          ▼
+        </span>
+      </div>
+
+      {/* ── Body (GAS .usulan-body) ── */}
       {!collapsed && (
-        <div className="border-t border-border space-y-3 p-3">
+        <div style={{ background: "#fff", padding: "16px 18px" }}>
           {totalItems === 0 ? (
-            <div className="flex flex-col items-center justify-center py-6">
-              <Lightbulb
-                className="h-8 w-8 text-muted-foreground/50 mb-2"
-                aria-hidden
-              />
-              <p className="font-mono text-xs font-semibold mb-1">
-                Belum ada usulan
-              </p>
-              <p className="text-xs text-muted-foreground text-center mb-3">
-                Belum ada usulan pengadaan untuk ruangan {roomName}.
-              </p>
-              <Link href={`/usulan/new?room=${encodeURIComponent(roomId)}`}>
-                <Button size="sm" variant="outline">
-                  <Plus className="h-3.5 w-3.5" />
-                  Tambah Usulan Baru
-                </Button>
-              </Link>
+            /* Empty state (GAS .usulan-empty) */
+            <div
+              style={{
+                textAlign: "center",
+                padding: "32px 0",
+                color: "#9ca3af",
+              }}
+            >
+              <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
+              <div>Belum ada usulan untuk ruangan ini.</div>
             </div>
           ) : (
             <>
-              {/* Toolbar */}
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-mono text-[10px] text-muted-foreground">
-                      Prioritas:
-                    </span>
-                    {PRIORITAS_FILTERS.map((chip) => {
-                      const active = prioritasFilter === chip.key;
-                      return (
-                        <button
-                          key={chip.key}
-                          type="button"
-                          onClick={() => setPrioritasFilter(chip.key)}
-                          className={cn(
-                            "inline-flex h-6 items-center px-2 font-mono text-[10px] ring-1 transition-colors",
-                            active
-                              ? "bg-primary text-primary-foreground ring-primary"
-                              : "bg-background text-foreground ring-border hover:bg-muted"
-                          )}
-                        >
-                          {chip.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-mono text-[10px] text-muted-foreground">
-                      Status:
-                    </span>
-                    {STATUS_FILTERS.map((chip) => {
-                      const active = statusFilter === chip.key;
-                      return (
-                        <button
-                          key={chip.key}
-                          type="button"
-                          onClick={() => setStatusFilter(chip.key)}
-                          className={cn(
-                            "inline-flex h-6 items-center px-2 font-mono text-[10px] ring-1 transition-colors",
-                            active
-                              ? "bg-primary text-primary-foreground ring-primary"
-                              : "bg-background text-foreground ring-border hover:bg-muted"
-                          )}
-                        >
-                          {chip.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <UsulanCsvExport
-                    roomId={roomId}
-                    size="xs"
-                    filename={`Usulan_${roomName.replace(/\s+/g, "_")}`}
-                  />
-                  <Link href={`/usulan/new?room=${encodeURIComponent(roomId)}`}>
-                    <Button size="xs" variant="outline">
-                      <Plus className="h-3 w-3" />
-                      Tambah
-                    </Button>
-                  </Link>
-                </div>
+              {/* ── Toolbar (GAS .usulan-toolbar) ── */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  flexWrap: "wrap",
+                  marginBottom: 14,
+                }}
+              >
+                {FILTER_BUTTONS.map((btn) => {
+                  const isActive = activeFilter === btn.key;
+                  return (
+                    <button
+                      key={btn.key}
+                      type="button"
+                      onClick={() => setActiveFilter(btn.key)}
+                      style={{
+                        padding: "5px 13px",
+                        borderRadius: 20,
+                        border: `1.5px solid ${isActive ? "#7c3aed" : "#e5e7eb"}`,
+                        background: isActive ? "#7c3aed" : "#fff",
+                        color: isActive ? "#fff" : "#374151",
+                        fontSize: "11.5px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        transition: "0.15s",
+                      }}
+                    >
+                      {btn.label}
+                    </button>
+                  );
+                })}
+
+                {/* Export CSV button (GAS .usulan-export-btn) */}
+                <button
+                  type="button"
+                  onClick={handleExport}
+                  style={{
+                    marginLeft: "auto",
+                    padding: "5px 13px",
+                    borderRadius: 8,
+                    border: "1.5px solid #7c3aed44",
+                    background: "#ede9fe",
+                    color: "#6d28d9",
+                    fontSize: "11.5px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    transition: "0.15s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#7c3aed";
+                    e.currentTarget.style.color = "#fff";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#ede9fe";
+                    e.currentTarget.style.color = "#6d28d9";
+                  }}
+                >
+                  ⬇ Export CSV
+                </button>
               </div>
 
-              {/* Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+              {/* ── Table (GAS .usulan-tbl) ── */}
+              <div
+                style={{
+                  overflowX: "auto",
+                  borderRadius: "var(--r2, 8px)",
+                  border: "1px solid #e5e7eb",
+                  marginBottom: 12,
+                }}
+              >
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: 13,
+                  }}
+                >
                   <thead>
-                    <tr className="border-b border-border bg-muted/50">
-                      <th className="h-9 px-2 text-left font-mono font-medium whitespace-nowrap">
-                        No
-                      </th>
-                      <th className="h-9 px-2 text-left font-mono font-medium whitespace-nowrap">
-                        Nama Barang
-                      </th>
-                      <th className="h-9 px-2 text-left font-mono font-medium whitespace-nowrap">
-                        Kategori
-                      </th>
-                      <th className="h-9 px-2 text-right font-mono font-medium whitespace-nowrap">
-                        Jml
-                      </th>
-                      <th className="h-9 px-2 text-left font-mono font-medium whitespace-nowrap">
-                        Satuan
-                      </th>
-                      <th className="h-9 px-2 text-left font-mono font-medium whitespace-nowrap">
-                        Prioritas
-                      </th>
-                      <th className="h-9 px-2 text-left font-mono font-medium whitespace-nowrap">
-                        Status
-                      </th>
-                      <th className="h-9 px-2 text-right font-mono font-medium whitespace-nowrap">
-                        Total
-                      </th>
-                      <th className="h-9 px-2 text-left font-mono font-medium whitespace-nowrap">
-                        Tgl
-                      </th>
+                    <tr style={{ background: "#f5f3ff" }}>
+                      {(
+                        [
+                          ["No", 34, "center"],
+                          ["Nama Barang / Sarana", 180, "left"],
+                          ["Kategori", 100, "left"],
+                          ["Jumlah Diusulkan", 90, "center"],
+                          ["Satuan", 110, "left"],
+                          ["Prioritas", 110, "left"],
+                          ["Status", 110, "left"],
+                          ["Alasan / Justifikasi", 200, "left"],
+                          ["Keterangan Tambahan", 150, "left"],
+                          ["Tgl Diajukan", 110, "left"],
+                          ["", 36, "center"],
+                        ] as [string, number, string][]
+                      ).map(([label, minW, align]) => (
+                        <th
+                          key={label || "action"}
+                          style={{
+                            padding: "9px 10px",
+                            textAlign: align as React.CSSProperties["textAlign"],
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: "#6d28d9",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px",
+                            borderBottom: "2px solid #ddd6fe",
+                            whiteSpace: "nowrap",
+                            minWidth: minW,
+                          }}
+                        >
+                          {label}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredItems.map(({ item, usulanId, usulanDate }, idx) => (
+                    {filteredItems.map(({ item, usulanDate }, idx) => (
                       <tr
-                        key={idx}
-                        className="border-b border-border last:border-0 hover:bg-muted/40"
+                        key={`${item.nama}-${idx}`}
+                        style={{ transition: "background 0.1s" }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget
+                            .querySelectorAll("td")
+                            .forEach((td) => {
+                              (td as HTMLElement).style.background = "#faf5ff";
+                            });
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget
+                            .querySelectorAll("td")
+                            .forEach((td) => {
+                              (td as HTMLElement).style.background = "";
+                            });
+                        }}
                       >
-                        <td className="px-2 py-2 font-mono text-muted-foreground">
+                        {/* No */}
+                        <td
+                          style={{
+                            padding: "8px 10px",
+                            borderBottom: "1px solid #f3f4f6",
+                            textAlign: "center",
+                            fontWeight: 700,
+                            color: "#7c3aed",
+                            fontSize: 12,
+                          }}
+                        >
                           {idx + 1}
                         </td>
-                        <td className="px-2 py-2 font-medium">
-                          <Link
-                            href={`/usulan/${usulanId}`}
-                            className="hover:underline"
-                          >
-                            {item.nama}
-                          </Link>
+
+                        {/* Nama Barang */}
+                        <td
+                          style={{
+                            padding: "8px 10px",
+                            borderBottom: "1px solid #f3f4f6",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {item.nama}
                         </td>
-                        <td className="px-2 py-2 text-muted-foreground">
-                          {USULAN_KATEGORI_LABELS[item.kategori] ||
-                            item.kategori}
+
+                        {/* Kategori */}
+                        <td
+                          style={{
+                            padding: "8px 10px",
+                            borderBottom: "1px solid #f3f4f6",
+                          }}
+                        >
+                          <UKatBadge kat={item.kategori} />
                         </td>
-                        <td className="px-2 py-2 text-right font-mono">
+
+                        {/* Jumlah */}
+                        <td
+                          style={{
+                            padding: "8px 10px",
+                            borderBottom: "1px solid #f3f4f6",
+                            textAlign: "center",
+                            fontWeight: 700,
+                          }}
+                        >
                           {item.qty}
                         </td>
-                        <td className="px-2 py-2">{item.satuan}</td>
-                        <td className="px-2 py-2">
-                          <PrioritasBadge prioritas={item.prioritas} />
+
+                        {/* Satuan */}
+                        <td
+                          style={{
+                            padding: "8px 10px",
+                            borderBottom: "1px solid #f3f4f6",
+                          }}
+                        >
+                          {item.satuan}
                         </td>
-                        <td className="px-2 py-2">
-                          <StatusBadge status={item.status} />
+
+                        {/* Prioritas */}
+                        <td
+                          style={{
+                            padding: "8px 10px",
+                            borderBottom: "1px solid #f3f4f6",
+                          }}
+                        >
+                          <PrioBadge prio={item.prioritas} />
                         </td>
-                        <td className="px-2 py-2 text-right font-mono font-semibold">
-                          Rp {item.total.toLocaleString("id-ID")}
+
+                        {/* Status */}
+                        <td
+                          style={{
+                            padding: "8px 10px",
+                            borderBottom: "1px solid #f3f4f6",
+                          }}
+                        >
+                          <UStatusBadge status={item.status} />
                         </td>
-                        <td className="px-2 py-2 text-muted-foreground whitespace-nowrap">
+
+                        {/* Alasan / Justifikasi */}
+                        <td
+                          style={{
+                            padding: "8px 10px",
+                            borderBottom: "1px solid #f3f4f6",
+                            fontSize: 12,
+                            color: "#6b7280",
+                          }}
+                        >
+                          {item.keterangan || "—"}
+                        </td>
+
+                        {/* Keterangan Tambahan */}
+                        <td
+                          style={{
+                            padding: "8px 10px",
+                            borderBottom: "1px solid #f3f4f6",
+                            fontSize: 12,
+                            color: "#6b7280",
+                          }}
+                        >
+                          —
+                        </td>
+
+                        {/* Tgl Diajukan */}
+                        <td
+                          style={{
+                            padding: "8px 10px",
+                            borderBottom: "1px solid #f3f4f6",
+                            fontSize: 12,
+                            color: "#6b7280",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
                           {fmtDate(usulanDate)}
+                        </td>
+
+                        {/* Action (delete) */}
+                        <td
+                          style={{
+                            padding: "8px 10px",
+                            borderBottom: "1px solid #f3f4f6",
+                            textAlign: "center",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            title="Hapus usulan"
+                            style={{
+                              width: 24,
+                              height: 24,
+                              borderRadius: 6,
+                              border: "1px solid #fca5a5",
+                              background: "#fee2e2",
+                              color: "#b91c1c",
+                              fontSize: 12,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              lineHeight: 1,
+                            }}
+                          >
+                            ✕
+                          </button>
                         </td>
                       </tr>
                     ))}
-                  </tbody>
-                  {filteredItems.length > 0 && (
-                    <tfoot className="bg-muted/50">
-                      <tr className="border-t-2 border-border">
+
+                    {filteredItems.length === 0 && (
+                      <tr>
                         <td
-                          colSpan={7}
-                          className="px-2 py-2 text-right font-mono font-bold"
+                          colSpan={11}
+                          style={{
+                            padding: "24px 10px",
+                            textAlign: "center",
+                            color: "#9ca3af",
+                            fontSize: 13,
+                          }}
                         >
-                          Total:
+                          Tidak ada usulan dengan filter ini.
                         </td>
-                        <td className="px-2 py-2 text-right font-mono font-bold">
-                          Rp{" "}
-                          {filteredItems
-                            .reduce((s, { item }) => s + (item.total || 0), 0)
-                            .toLocaleString("id-ID")}
-                        </td>
-                        <td />
                       </tr>
-                    </tfoot>
-                  )}
+                    )}
+                  </tbody>
                 </table>
-              </div>
-
-              {filteredItems.length === 0 && (
-                <p className="text-center text-xs text-muted-foreground py-4">
-                  Tidak ada usulan yang cocok dengan filter.
-                </p>
-              )}
-
-              {/* Link to full usulan list for this room */}
-              <div className="flex justify-end pt-1">
-                <Link href="/usulan">
-                  <Button size="xs" variant="ghost">
-                    Lihat semua usulan →
-                  </Button>
-                </Link>
               </div>
             </>
           )}
