@@ -85,9 +85,7 @@ export function RoomNav() {
         borderRight: "1px solid rgba(255,255,255,0.1)",
         display: "flex",
         flexDirection: "column",
-        position: "sticky",
-        top: 0,
-        height: "calc(100vh - 80px)",
+        height: "100%",
         overflow: "hidden",
       }}
       onMouseEnter={(e) => { e.currentTarget.style.overflowY = "auto"; }}

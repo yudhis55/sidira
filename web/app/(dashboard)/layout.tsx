@@ -14,7 +14,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-screen flex-col overflow-hidden">
       <SiteHeader />
       <AppLayout>{children}</AppLayout>
     </div>
