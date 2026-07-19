@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, Save, Loader2 } from "lucide-react";
-import { createUsulan, updateUsulan } from "@/lib/auth/usulan";
 import type { Usulan, UsulanItem, UsulanPrioritas } from "@/lib/usulan-types";
 import type { ItemCategory, Room } from "@/types/database";
 
@@ -97,22 +96,13 @@ export function UsulanForm({ rooms, usulan, defaultRoomId }: UsulanFormProps) {
       return;
     }
 
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.append("room_id", selectedRoom);
-      formData.append("items", JSON.stringify(items));
-
-      let result;
-      if (usulan?.id) {
-        result = await updateUsulan(usulan.id, formData);
-      } else {
-        result = await createUsulan(formData);
-      }
-
-      if (result?.error) {
-        toast.error(result.error);
-      }
-      // On success the server action redirects, so we don't need to do anything.
+    startTransition(() => {
+      // Mock mode: no backend — form stays client-only.
+      toast.success(
+        usulan?.id
+          ? "Usulan diperbarui (mode demo)"
+          : "Usulan disimpan (mode demo)"
+      );
     });
   };
 

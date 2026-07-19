@@ -1,11 +1,9 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Check, X, Loader2 } from "lucide-react";
-import { updateItemStatus } from "@/lib/auth/usulan";
 import type { UsulanStatus } from "@/lib/usulan-types";
 import { USULAN_STATUS_LABELS } from "@/lib/usulan-types";
 
@@ -16,22 +14,13 @@ interface ItemStatusActionsProps {
 }
 
 export function ItemStatusActions({
-  usulanId,
-  itemIndex,
   currentStatus,
 }: ItemStatusActionsProps) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  const handleStatusChange = (status: UsulanStatus) => {
-    startTransition(async () => {
-      const result = await updateItemStatus(usulanId, itemIndex, status);
-      if (result?.error) {
-        toast.error(result.error);
-      } else {
-        toast.success("Status barang diperbarui");
-        router.refresh();
-      }
+  const handleStatusChange = (_status: UsulanStatus) => {
+    startTransition(() => {
+      toast.success("Mode demo — status tidak disimpan ke server");
     });
   };
 

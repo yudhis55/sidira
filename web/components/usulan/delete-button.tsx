@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +12,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Trash2, Loader2 } from "lucide-react";
-import { deleteUsulan } from "@/lib/auth/usulan";
 
 interface DeleteUsulanButtonProps {
   id: number;
@@ -22,24 +20,16 @@ interface DeleteUsulanButtonProps {
 }
 
 export function DeleteUsulanButton({
-  id,
   variant = "destructive",
   size = "sm",
 }: DeleteUsulanButtonProps) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
 
   function handleDelete() {
-    startTransition(async () => {
-      const result = await deleteUsulan(id);
-      if (result?.error) {
-        toast.error(result.error);
-      } else {
-        toast.success("Usulan dihapus");
-        router.push("/usulan");
-        router.refresh();
-      }
+    startTransition(() => {
+      toast.success("Mode demo — usulan tidak dihapus dari server");
+      setOpen(false);
     });
   }
 
