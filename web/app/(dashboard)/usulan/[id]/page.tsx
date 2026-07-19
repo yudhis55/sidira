@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/gas/button";
 import { Card } from "@/components/gas/card";
-import { getUsulanById } from "@/lib/auth/usulan";
+import { getMockUsulan } from "@/lib/mock-data";
 import { USULAN_KATEGORI_LABELS } from "@/lib/usulan-types";
 import type { UsulanItem } from "@/lib/usulan-types";
 import { ItemStatusActions } from "@/components/usulan/item-status-actions";
@@ -21,8 +21,6 @@ function CardTitle({ children, className }: { children: React.ReactNode; classNa
 function CardContent({ children, className }: { children: React.ReactNode; className?: string }) {
   return <div className={className}>{children}</div>;
 }
-
-export const dynamic = "force-dynamic";
 
 const BULAN = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -53,18 +51,13 @@ export default async function UsulanDetailPage({
   const prioritasFilter = sp.prioritas || "all";
   const statusFilter = sp.status || "all";
 
-  let usulan;
-  try {
-    usulan = await getUsulanById(id);
-  } catch {
-    notFound();
-  }
+  const usulan = getMockUsulan().find((u) => u.id === id);
+  if (!usulan) notFound();
 
   const roomName = usulan.rooms?.name || usulan.room_id;
   const roomIcon = usulan.rooms?.icon || "📦";
   const allItems: UsulanItem[] = usulan.payload?.items || [];
 
-  // Apply filters
   const filteredItems = allItems.filter((item) => {
     if (prioritasFilter !== "all" && item.prioritas !== prioritasFilter) {
       return false;
@@ -86,7 +79,6 @@ export default async function UsulanDetailPage({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Link href="/usulan">
@@ -118,7 +110,6 @@ export default async function UsulanDetailPage({
         </div>
       </div>
 
-      {/* Info + summary cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-3">
@@ -171,10 +162,8 @@ export default async function UsulanDetailPage({
         </Card>
       </div>
 
-      {/* Filter chips (client) */}
       <UsulanDetailFilters />
 
-      {/* Items table */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="font-mono text-sm">Daftar Barang Diusulkan</CardTitle>

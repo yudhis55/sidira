@@ -1,5 +1,5 @@
-import { getUsulanList } from "@/lib/auth/usulan";
 import type { Usulan, UsulanItem } from "@/lib/usulan-types";
+import { getMockUsulan } from "@/lib/mock-data";
 import { Card } from "@/components/gas/card";
 import { Button } from "@/components/gas/button";
 import Link from "next/link";
@@ -18,8 +18,6 @@ function CardTitle({ children, className }: { children: React.ReactNode; classNa
 function CardContent({ children, className }: { children: React.ReactNode; className?: string }) {
   return <div className={className}>{children}</div>;
 }
-
-export const dynamic = "force-dynamic";
 
 const BULAN = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -48,9 +46,8 @@ export default async function UsulanPage({ searchParams }: PageProps) {
   const prioritasFilter = sp.prioritas || "all";
   const statusFilter = sp.status || "all";
 
-  const usulanList = await getUsulanList();
+  const usulanList = getMockUsulan();
 
-  // Calculate statistics over ALL usulan (unfiltered)
   const totalItems = usulanList.reduce(
     (sum, usulan) => sum + (usulan.payload?.items?.length || 0),
     0
@@ -71,8 +68,6 @@ export default async function UsulanPage({ searchParams }: PageProps) {
     0
   );
 
-  // Filter usulan: keep a usulan if it has at least one matching item.
-  // We also filter the items shown in the summary badges.
   const filtered = usulanList
     .map((usulan) => {
       if (prioritasFilter === "all" && statusFilter === "all") {
@@ -108,7 +103,6 @@ export default async function UsulanPage({ searchParams }: PageProps) {
         }
       />
 
-      {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -160,12 +154,10 @@ export default async function UsulanPage({ searchParams }: PageProps) {
         </Card>
       </div>
 
-      {/* Filter chips (client, needs Suspense for useSearchParams) */}
       <Suspense fallback={null}>
         <UsulanListFilters />
       </Suspense>
 
-      {/* Usulan List */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="font-mono text-sm">
@@ -186,15 +178,22 @@ export default async function UsulanPage({ searchParams }: PageProps) {
               </h3>
               <p className="text-xs text-muted-foreground text-center mb-4">
                 {usulanList.length === 0
-                  ? "Mulai buat usulan pengadaan barang dari ruangan Anda"
+                  ? "Kelola usulan dari detail inventaris ruangan, atau buat usulan baru di sini."
                   : "Coba ubah filter pencarian Anda."}
               </p>
               {usulanList.length === 0 && (
-                <Link href="/usulan/new">
-                  <Button size="sm">
-                    ➕ Buat Usulan Pertama
-                  </Button>
-                </Link>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  <Link href="/inventaris">
+                    <Button size="sm">
+                      🏥 Ke Inventaris Ruangan
+                    </Button>
+                  </Link>
+                  <Link href="/usulan/new">
+                    <Button size="sm" variant="ghost">
+                      ➕ Buat Usulan
+                    </Button>
+                  </Link>
+                </div>
               )}
             </div>
           ) : (

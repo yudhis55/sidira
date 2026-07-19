@@ -1,9 +1,7 @@
-import { getRooms } from "@/lib/auth/rooms";
+import { getMockRooms } from "@/lib/mock-data";
 import { UsulanForm } from "@/components/usulan/usulan-form";
 import Link from "next/link";
 import { Button } from "@/components/gas/button";
-
-export const dynamic = "force-dynamic";
 
 interface NewUsulanPageProps {
   searchParams: Promise<{ room?: string }>;
@@ -14,7 +12,7 @@ export default async function NewUsulanPage({
 }: NewUsulanPageProps) {
   const sp = await searchParams;
   const defaultRoomId = sp.room || undefined;
-  const rooms = await getRooms();
+  const rooms = getMockRooms();
 
   return (
     <div className="space-y-6">

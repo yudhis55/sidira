@@ -2,15 +2,12 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/gas/button";
 import { Card } from "@/components/gas/card";
-import { getUsulanById } from "@/lib/auth/usulan";
-import { getRooms } from "@/lib/auth/rooms";
+import { getMockUsulan, getMockRooms } from "@/lib/mock-data";
 import { UsulanForm } from "@/components/usulan/usulan-form";
 
 function CardContent({ children, className }: { children: React.ReactNode; className?: string }) {
   return <div className={className}>{children}</div>;
 }
-
-export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -21,14 +18,10 @@ export default async function EditUsulanPage({ params }: PageProps) {
   const id = parseInt(idStr, 10);
   if (Number.isNaN(id)) notFound();
 
-  let usulan;
-  try {
-    usulan = await getUsulanById(id);
-  } catch {
-    notFound();
-  }
+  const usulan = getMockUsulan().find((u) => u.id === id);
+  if (!usulan) notFound();
 
-  const rooms = await getRooms();
+  const rooms = getMockRooms();
 
   return (
     <div className="space-y-6">
