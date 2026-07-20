@@ -1,7 +1,6 @@
 import { Card } from "@/components/gas/card";
 import { UserDetail } from "@/components/admin/user-detail";
-import { getMockUsers } from "@/lib/mock-data/users";
-import type { UserProfile } from "@/lib/auth/admin";
+import { getMockUserById } from "@/lib/mock-data/users";
 
 interface UserDetailPageProps {
   params: Promise<{ userId: string }>;
@@ -9,9 +8,7 @@ interface UserDetailPageProps {
 
 export default async function UserDetailPage({ params }: UserDetailPageProps) {
   const { userId } = await params;
-
-  const users = getMockUsers();
-  const userData = users.find((u) => u.id === userId) as UserProfile | undefined;
+  const userData = getMockUserById(userId);
 
   if (!userData) {
     return (

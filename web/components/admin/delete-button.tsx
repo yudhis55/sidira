@@ -1,18 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
-import { deleteUser } from "@/lib/auth/admin";
 
 interface DeleteUserButtonProps {
   userId: string;
   username: string;
 }
 
-export function DeleteUserButton({ userId, username }: DeleteUserButtonProps) {
-  const router = useRouter();
+export function DeleteUserButton({ username }: DeleteUserButtonProps) {
   const [loading, setLoading] = useState(false);
 
   const handleDelete = async () => {
@@ -21,16 +19,8 @@ export function DeleteUserButton({ userId, username }: DeleteUserButtonProps) {
     }
 
     setLoading(true);
-
-    const result = await deleteUser(userId);
-
+    toast.success("Mode demo — user tidak dihapus dari server");
     setLoading(false);
-
-    if (result?.error) {
-      alert(result.error);
-    } else {
-      router.refresh();
-    }
   };
 
   return (

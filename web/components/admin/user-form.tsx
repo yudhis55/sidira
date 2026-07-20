@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,11 +15,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Save } from "lucide-react";
-import { createUser, updateUser } from "@/lib/auth/admin";
-import type { UserProfile } from "@/lib/auth/admin";
+import type { Profile } from "@/types/database";
 
 interface UserFormProps {
-  user?: UserProfile;
+  user?: Profile;
 }
 
 const AVATAR_PRESETS = ["👤", "🛡️", "👩‍⚕️", "👨‍⚕️", "📦", "🔧", "📋", "💉"];
@@ -30,21 +30,13 @@ export function UserForm({ user }: UserFormProps) {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-
-    const formData = new FormData(e.currentTarget);
-
-    let result;
-    if (user?.id) {
-      result = await updateUser(user.id, formData);
-    } else {
-      result = await createUser(formData);
-    }
-
+    toast.success(
+      user?.id
+        ? "Mode demo — perubahan user tidak disimpan ke server"
+        : "Mode demo — user baru tidak disimpan ke server"
+    );
     setLoading(false);
-
-    if (result?.error) {
-      alert(result.error);
-    }
+    router.push("/admin/users");
   };
 
   return (
@@ -73,8 +65,10 @@ export function UserForm({ user }: UserFormProps) {
                 id="email"
                 name="email"
                 type="email"
-                defaultValue={user?.email}
-                placeholder="user@example.com"
+                defaultValue={
+                  user?.username ? `${user.username}@sidira.local` : undefined
+                }
+                placeholder="user@sidira.local"
                 required
                 disabled={loading}
               />

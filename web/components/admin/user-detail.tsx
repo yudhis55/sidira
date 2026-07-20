@@ -5,10 +5,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Edit, ArrowLeft, Calendar, Mail, Briefcase } from "lucide-react";
 import Link from "next/link";
 import { DeleteUserButton } from "./delete-button";
-import type { UserProfile } from "@/lib/auth/admin";
+import type { Profile } from "@/types/database";
 
 interface UserDetailProps {
-  user: UserProfile;
+  user: Profile;
 }
 
 const ROLE_LABELS = {
@@ -18,6 +18,8 @@ const ROLE_LABELS = {
 };
 
 export function UserDetail({ user }: UserDetailProps) {
+  const email = `${user.username}@sidira.local`;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -65,7 +67,7 @@ export function UserDetail({ user }: UserDetailProps) {
                 <Mail className="h-4 w-4" />
                 <span>Email</span>
               </div>
-              <p className="font-medium">{user.email}</p>
+              <p className="font-medium">{email}</p>
             </div>
 
             <div className="space-y-1">

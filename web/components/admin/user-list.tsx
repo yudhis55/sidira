@@ -5,10 +5,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Plus, Edit, Eye } from "lucide-react";
 import Link from "next/link";
 import { DeleteUserButton } from "./delete-button";
-import type { UserProfile } from "@/lib/auth/admin";
+import type { Profile } from "@/types/database";
 
 interface UserListProps {
-  users: UserProfile[];
+  users: Profile[];
 }
 
 const ROLE_LABELS = {
@@ -56,7 +56,7 @@ export function UserList({ users }: UserListProps) {
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        @{user.username} • {user.email}
+                        @{user.username} • {user.username}@sidira.local
                       </p>
                       {user.jabatan && (
                         <p className="text-sm text-muted-foreground">

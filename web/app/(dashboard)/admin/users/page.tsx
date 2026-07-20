@@ -82,10 +82,12 @@ export default async function AdminUsersPage() {
             Kelola user dan hak akses aplikasi
           </p>
         </div>
-        <Button>
-          <span className="mr-2 font-bold">+</span>
-          Tambah User
-        </Button>
+        <Link href="/admin/users/new">
+          <Button>
+            <span className="mr-2 font-bold">+</span>
+            Tambah User
+          </Button>
+        </Link>
       </div>
 
       <div className="rounded-lg border border-line bg-white">

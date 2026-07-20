@@ -1,8 +1,7 @@
 import { Card } from "@/components/gas/card";
 import { Button } from "@/components/gas/button";
 import { UserForm } from "@/components/admin/user-form";
-import { getMockUsers } from "@/lib/mock-data/users";
-import type { UserProfile } from "@/lib/auth/admin";
+import { getMockUserById } from "@/lib/mock-data/users";
 import Link from "next/link";
 
 interface UserEditPageProps {
@@ -11,9 +10,7 @@ interface UserEditPageProps {
 
 export default async function UserEditPage({ params }: UserEditPageProps) {
   const { userId } = await params;
-
-  const users = getMockUsers();
-  const userData = users.find((u) => u.id === userId) as UserProfile | undefined;
+  const userData = getMockUserById(userId);
 
   if (!userData) {
     return (
