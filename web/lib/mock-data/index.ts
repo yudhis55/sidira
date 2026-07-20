@@ -1,6 +1,6 @@
 export { getMockRooms } from "./rooms";
 export { getMockItems, getMockItemsByRoom, getMockItemsByCategory } from "./items";
-export { getMockSbbk } from "./sbbk";
+export { getMockSbbk, getMockSbbkById } from "./sbbk";
 export { getMockPakta, getMockPaktaById } from "./pakta";
 export {
   getMockUtilitasMeta,

@@ -1,11 +1,8 @@
 import React from "react";
-import { getSbbkById, deleteSbbk } from "@/lib/auth/sbbk";
+import { getMockSbbkById } from "@/lib/mock-data";
 import { Card } from "@/components/gas/card";
 import { Button } from "@/components/gas/button";
 import Link from "next/link";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-
 
 function CardHeader({ children, className }: { children: React.ReactNode; className?: string }) {
   return <div className={className}>{children}</div>;
@@ -35,17 +32,9 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-async function handleDelete(formData: FormData) {
-  "use server";
-  const id = formData.get("id") as string;
-  await deleteSbbk(id);
-  revalidatePath("/sbbk");
-  redirect("/sbbk");
-}
-
 export default async function SbbkDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const sbbk = await getSbbkById(id);
+  const sbbk = getMockSbbkById(id);
 
   if (!sbbk) {
     return (
@@ -95,13 +84,12 @@ export default async function SbbkDetailPage({ params }: PageProps) {
               🖨️ Cetak
             </Button>
           </Link>
-          <form action={handleDelete}>
-            <input type="hidden" name="id" value={sbbk.id} />
-            <Button variant="ghost" size="sm" type="submit" className="text-red border-red/30 hover:bg-red2">
+          <Link href="/sbbk" title="Mode demo — hapus tidak aktif">
+            <Button variant="ghost" size="sm" className="text-red border-red/30 hover:bg-red2">
               🗑️
               Hapus
             </Button>
-          </form>
+          </Link>
         </div>
       </div>
 
@@ -159,57 +147,58 @@ export default async function SbbkDetailPage({ params }: PageProps) {
       {/* Items table */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="font-mono text-sm">Daftar Barang</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="font-mono text-sm">
+              Daftar Barang ({sbbk.items.length} item)
+            </CardTitle>
+            <span className="font-mono text-sm font-bold">
+              Total: Rp {totalValue.toLocaleString("id-ID")}
+            </span>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
-          {sbbk.items.length === 0 ? (
-            <p className="py-8 text-center text-xs text-muted-foreground">
-              Tidak ada barang dalam SBBK ini
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="h-9 px-2 text-left font-mono font-medium">No</th>
-                    <th className="h-9 px-2 text-left font-mono font-medium">Nama Barang</th>
-                    <th className="h-9 px-2 text-left font-mono font-medium">Merk</th>
-                    <th className="h-9 px-2 text-right font-mono font-medium">Qty</th>
-                    <th className="h-9 px-2 text-left font-mono font-medium">Satuan</th>
-                    <th className="h-9 px-2 text-right font-mono font-medium">Harga Satuan</th>
-                    <th className="h-9 px-2 text-right font-mono font-medium">Jumlah</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sbbk.items.map((item, index) => (
-                    <tr key={index} className="border-b border-border last:border-0">
-                      <td className="px-2 py-2 font-mono">{index + 1}</td>
-                      <td className="px-2 py-2 font-medium">{item.nama}</td>
-                      <td className="px-2 py-2 text-muted-foreground">{item.merk || "-"}</td>
-                      <td className="px-2 py-2 text-right font-mono">{item.qty}</td>
-                      <td className="px-2 py-2">{item.satuan}</td>
-                      <td className="px-2 py-2 text-right font-mono">
-                        Rp {item.harga.toLocaleString("id-ID")}
-                      </td>
-                      <td className="px-2 py-2 text-right font-mono font-semibold">
-                        Rp {item.total.toLocaleString("id-ID")}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot className="bg-muted/50">
-                  <tr className="border-t-2 border-border">
-                    <td colSpan={6} className="px-2 py-2 text-right font-mono font-bold">
-                      Total Nilai:
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  <th className="px-4 py-2 text-left font-mono text-[10px] uppercase text-muted-foreground">No</th>
+                  <th className="px-4 py-2 text-left font-mono text-[10px] uppercase text-muted-foreground">Nama Barang</th>
+                  <th className="px-4 py-2 text-left font-mono text-[10px] uppercase text-muted-foreground">Merk</th>
+                  <th className="px-4 py-2 text-right font-mono text-[10px] uppercase text-muted-foreground">Qty</th>
+                  <th className="px-4 py-2 text-left font-mono text-[10px] uppercase text-muted-foreground">Satuan</th>
+                  <th className="px-4 py-2 text-right font-mono text-[10px] uppercase text-muted-foreground">Harga</th>
+                  <th className="px-4 py-2 text-right font-mono text-[10px] uppercase text-muted-foreground">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sbbk.items.map((item, idx) => (
+                  <tr key={idx} className="border-b border-border last:border-0 hover:bg-muted/20">
+                    <td className="px-4 py-2.5 text-muted-foreground">{idx + 1}</td>
+                    <td className="px-4 py-2.5 font-medium">{item.nama}</td>
+                    <td className="px-4 py-2.5 text-muted-foreground">{item.merk || "-"}</td>
+                    <td className="px-4 py-2.5 text-right font-mono">{item.qty}</td>
+                    <td className="px-4 py-2.5 text-muted-foreground">{item.satuan || "-"}</td>
+                    <td className="px-4 py-2.5 text-right font-mono">
+                      {Number(item.harga || 0).toLocaleString("id-ID")}
                     </td>
-                    <td className="px-2 py-2 text-right font-mono font-bold">
-                      Rp {totalValue.toLocaleString("id-ID")}
+                    <td className="px-4 py-2.5 text-right font-mono font-semibold">
+                      {Number(item.total || 0).toLocaleString("id-ID")}
                     </td>
                   </tr>
-                </tfoot>
-              </table>
-            </div>
-          )}
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-border bg-muted/20">
+                  <td colSpan={6} className="px-4 py-2.5 text-right font-mono text-[10px] uppercase text-muted-foreground">
+                    Total Nilai
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-mono font-bold">
+                    Rp {totalValue.toLocaleString("id-ID")}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </CardContent>
       </Card>
     </div>

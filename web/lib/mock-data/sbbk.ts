@@ -68,3 +68,7 @@ const sbbkList: SBBK[] = [
 export function getMockSbbk(): SBBK[] {
   return sbbkList;
 }
+
+export function getMockSbbkById(id: string): SBBK | null {
+  return sbbkList.find((s) => s.id === id) ?? null;
+}
