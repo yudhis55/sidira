@@ -1,21 +1,34 @@
+import Link from "next/link";
 import { UserForm } from "@/components/admin/user-form";
 import { Button } from "@/components/gas/button";
-import Link from "next/link";
+
+export const dynamic = "force-dynamic";
 
 export default function NewUserPage() {
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center gap-4">
+    <div className="mx-auto max-w-2xl space-y-5">
+      <div className="flex items-center gap-3">
         <Link href="/admin/users">
-          <Button variant="ghost" size="icon">
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+          <Button
+            variant="ghost"
+            className="h-9 w-9 p-0"
+            aria-label="Kembali"
+          >
+            ←
           </Button>
         </Link>
-        <div>
-          <h1 className="font-mono text-3xl font-bold">Tambah User Baru</h1>
-          <p className="text-muted-foreground">
-            Buat akun user baru untuk aplikasi
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="flex size-11 items-center justify-center bg-teal3 text-2xl leading-none">
+            ➕
+          </div>
+          <div>
+            <h1 className="font-mono text-xl font-bold tracking-tight text-ink">
+              Tambah User Baru
+            </h1>
+            <p className="text-xs text-ink3">
+              Buat akun user baru · mode demo
+            </p>
+          </div>
         </div>
       </div>
 
