@@ -193,34 +193,34 @@ export function UtilChecklistMatrix({
   const selectMonth = (m0: number) => setMonth0(m0);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-line bg-white">
-      {/* Card head — util.bg is identity color (GAS util-card-head) */}
+    <div className="util-card overflow-hidden rounded-[10px] border border-line bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+      {/* Card head — GAS .util-card-head (white text on util.bg) */}
       <div
-        className="flex items-center gap-3 px-5 py-3.5"
-        style={{ background: utilMeta.bg }}
+        className="flex items-center gap-3 px-5 py-3.5 text-white"
+        style={{ background: utilMeta.bg || "var(--teal)" }}
       >
         <span className="text-[22px] leading-none" aria-hidden>
           {utilMeta.icon}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="text-[15px] font-extrabold text-ink">
+          <div className="text-[15px] font-extrabold leading-tight">
             Ceklist Pemeliharaan Bulanan
           </div>
-          <div className="mt-0.5 text-[11px] text-ink3">
+          <div className="mt-0.5 text-[11px] opacity-75">
             Klik sel untuk tandai sudah dikerjakan
           </div>
         </div>
-        <span className="ml-auto whitespace-nowrap font-mono text-[11px] font-semibold text-ink2">
+        <span className="ml-auto whitespace-nowrap text-[11px] font-semibold opacity-80">
           {summary.done}/{summary.cells} dikerjakan
         </span>
       </div>
 
-      {/* Month nav: year ‹ › + 12 month tabs */}
+      {/* Month nav: year ‹ › + 12 month tabs — GAS .util-month-nav */}
       <div className="flex flex-wrap items-center gap-1.5 border-b border-line bg-[#fafafa] px-5 py-2.5">
         <button
           type="button"
           onClick={() => goYear(-1)}
-          className="rounded-md border-[1.5px] border-line bg-white px-2.5 py-0.5 text-[13px] font-bold text-ink2 hover:border-ink3"
+          className="rounded-md border-[1.5px] border-line bg-white px-2.5 py-0.5 text-[13px] font-bold text-ink2 transition-colors hover:border-ink3"
           aria-label="Tahun sebelumnya"
         >
           ‹
@@ -231,13 +231,13 @@ export function UtilChecklistMatrix({
         <button
           type="button"
           onClick={() => goYear(1)}
-          className="rounded-md border-[1.5px] border-line bg-white px-2.5 py-0.5 text-[13px] font-bold text-ink2 hover:border-ink3"
+          className="rounded-md border-[1.5px] border-line bg-white px-2.5 py-0.5 text-[13px] font-bold text-ink2 transition-colors hover:border-ink3"
           aria-label="Tahun berikutnya"
         >
           ›
         </button>
 
-        <div className="ml-2 flex flex-wrap gap-0.5">
+        <div className="ml-2 flex flex-wrap gap-[3px]">
           {MONTH_NAMES_SHORT.map((label, mi) => {
             const active = mi === month0;
             return (
@@ -397,10 +397,10 @@ export function UtilChecklistMatrix({
                                 : "Belum dikerjakan")
                           }
                           className={cn(
-                            "flex h-8 w-full select-none items-center justify-center text-[13px] font-bold transition-[filter]",
+                            "flex h-8 w-full select-none items-center justify-center text-[13px] font-bold transition-[filter,background]",
                             isFuture &&
                               "cursor-default bg-[#f9f9f9] text-[#ddd]",
-                            !isFuture && "cursor-pointer hover:brightness-95",
+                            !isFuture && "cursor-pointer hover:brightness-[0.93]",
                             !isFuture &&
                               !done &&
                               isWeekend &&
@@ -409,11 +409,14 @@ export function UtilChecklistMatrix({
                               !done &&
                               !isWeekend &&
                               "text-[#ccc]",
-                            done && "bg-teal3 text-teal",
-                            isToday && !isFuture && "outline outline-2 outline-teal -outline-offset-2"
+                            /* GAS .uchk.done */
+                            done && "bg-[#d1fae5] text-[#065f46]",
+                            isToday &&
+                              !isFuture &&
+                              "outline outline-2 outline-teal -outline-offset-2"
                           )}
                         >
-                          {done ? "✔" : isFuture ? "" : "·"}
+                          {done ? "\u2714" : isFuture ? "" : "\u00b7"}
                         </button>
                       </td>
                     );
@@ -428,26 +431,26 @@ export function UtilChecklistMatrix({
         </div>
       )}
 
-      {/* Summary chips */}
+      {/* Summary chips — GAS .util-summary */}
       <div className="flex flex-wrap gap-2 border-t border-line bg-[#fafafa] px-5 py-2.5">
         <span className="inline-flex items-center gap-1 rounded-full bg-[#d1fae5] px-3 py-1 text-[11px] font-bold text-[#065f46]">
-          ✔ {summary.done} sudah dikerjakan
+          {"\u2714"} {summary.done} sudah dikerjakan
         </span>
-        <span className="inline-flex items-center gap-1 rounded-full bg-slate2 px-3 py-1 text-[11px] font-bold text-ink3">
-          · {Math.max(0, summary.cells - summary.done)} belum
+        <span className="inline-flex items-center gap-1 rounded-full bg-[#f1f5f9] px-3 py-1 text-[11px] font-bold text-ink3">
+          {"\u00b7"} {Math.max(0, summary.cells - summary.done)} belum
         </span>
         <span className="inline-flex items-center gap-1 rounded-full bg-teal4 px-3 py-1 text-[11px] font-bold text-teal">
-          📊 {summaryPct}% selesai bulan ini
+          {"\u{1F4CA}"} {summaryPct}% selesai bulan ini
         </span>
       </div>
 
-      {/* Notes — local only */}
+      {/* Notes — local only (GAS .util-notes) */}
       <div className="border-t border-line px-5 py-3">
         <label
           htmlFor="utilNotesTa"
           className="mb-1.5 block text-[11px] font-bold text-ink3"
         >
-          📝 Catatan Kondisi / Tindakan Bulan Ini
+          {"\u{1F4DD}"} Catatan Kondisi / Tindakan Bulan Ini:
         </label>
         <textarea
           id="utilNotesTa"
@@ -455,12 +458,12 @@ export function UtilChecklistMatrix({
           onChange={(e) => setNoteText(e.target.value)}
           placeholder="Tuliskan catatan pemeliharaan, kendala, atau tindakan yang dilakukan..."
           rows={3}
-          className="min-h-[56px] w-full resize-y rounded-md border-[1.5px] border-line bg-white px-2.5 py-2 text-xs text-ink outline-none focus:border-teal"
+          className="min-h-[56px] w-full resize-y rounded-lg border-[1.5px] border-line bg-white px-2.5 py-2 text-xs text-ink outline-none transition-colors focus:border-teal"
         />
       </div>
 
       {/* Quiet mock hint — no server persist */}
-      <div className="border-t border-line px-5 py-2 text-[10px] text-ink3">
+      <div className="border-t border-line bg-[#fafafa] px-5 py-2 text-[10px] text-ink3">
         Mode mock — perubahan tidak disimpan ke server.
         <span className="ml-1 font-semibold text-ink2">{utilMeta.label}</span>
       </div>
