@@ -1,4 +1,4 @@
-import { getSbbkById } from "@/lib/auth/sbbk";
+import { getMockSbbkById } from "@/lib/mock-data";
 import { PrintTrigger } from "@/components/sbbk/print-trigger";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -23,7 +23,7 @@ interface PageProps {
 
 export default async function SbbkPrintPage({ params }: PageProps) {
   const { id } = await params;
-  const sbbk = await getSbbkById(id);
+  const sbbk = getMockSbbkById(id);
 
   if (!sbbk) {
     notFound();
@@ -36,10 +36,10 @@ export default async function SbbkPrintPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Print trigger (hidden when printing) */}
-      <div className="mx-auto max-w-[210mm] px-4 pt-4">
+      {/* Toolbar — hidden when printing (no dashboard chrome) */}
+      <div className="mx-auto max-w-[210mm] px-4 pt-4 no-print print:hidden">
         <PrintTrigger />
-        <div className="print:hidden mb-4 text-center">
+        <div className="mb-4 text-center">
           <Link
             href={`/sbbk/${sbbk.id}`}
             className="text-sm text-neutral-500 underline hover:text-neutral-800"
@@ -49,14 +49,14 @@ export default async function SbbkPrintPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Print-only styles */}
+      {/* Print styles — GAS sbbkPrint kop + tabel + TTD */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
             @media print {
               @page { size: A4; margin: 12mm; }
               body { background: #fff !important; }
-              .no-print { display: none !important; }
+              .no-print, .print\\:hidden { display: none !important; }
               .sbbk-doc { box-shadow: none !important; }
             }
             .sbbk-doc {
@@ -64,7 +64,7 @@ export default async function SbbkPrintPage({ params }: PageProps) {
               color: #000;
               max-width: 210mm;
               margin: 0 auto;
-              padding: 0 4mm;
+              padding: 0 4mm 12mm;
             }
             .sbbk-doc table { border-collapse: collapse; }
             .sbbk-doc .kop-line-thin { border-top: 1px solid #000; margin-top: 2px; }
@@ -78,36 +78,14 @@ export default async function SbbkPrintPage({ params }: PageProps) {
         <table style={{ width: "100%", marginBottom: 0 }}>
           <tbody>
             <tr>
-              {/* Logo kiri */}
               <td style={{ width: "95px", verticalAlign: "middle", padding: "4px 0" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/logo-puskesmas.svg"
                   alt="Logo Puskesmas Baruharjo"
                   style={{ width: "88px", height: "auto", display: "block" }}
-                  onError={(e) => {
-                    const t = e.currentTarget as HTMLImageElement;
-                    t.style.display = "none";
-                    const ph = t.nextElementSibling as HTMLElement | null;
-                    if (ph) ph.style.display = "flex";
-                  }}
                 />
-                <div
-                  style={{
-                    width: "88px",
-                    height: "88px",
-                    display: "none",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    border: "1px solid #000",
-                    fontSize: "9px",
-                    textAlign: "center",
-                  }}
-                >
-                  LOGO
-                </div>
               </td>
-              {/* Teks kop */}
               <td style={{ textAlign: "center", verticalAlign: "middle", padding: "4px 0" }}>
                 <div style={{ fontSize: "10.5pt", lineHeight: 1.5 }}>
                   PEMERINTAH KABUPATEN TRENGGALEK
@@ -147,16 +125,20 @@ export default async function SbbkPrintPage({ params }: PageProps) {
           SURAT BUKTI BARANG KELUAR (SBBK) DARI GUDANG
         </div>
 
-        {/* ── INFO ── */}
+        {/* ── KEPADA & INFO ── */}
         <table style={{ marginBottom: "10px", fontSize: "11px" }}>
           <tbody>
             <tr>
               <td style={{ width: "80px", padding: "1px 0" }}>KEPADA</td>
               <td style={{ width: "10px" }}>:</td>
-              <td><b>{sbbk.kepada || "-"}</b></td>
+              <td>
+                <b>{sbbk.kepada || "-"}</b>
+              </td>
               <td style={{ paddingLeft: "40px", width: "80px" }}>No. SBBK</td>
               <td style={{ width: "10px" }}>:</td>
-              <td><b>{sbbk.no || "-"}</b></td>
+              <td>
+                <b>{sbbk.no || "-"}</b>
+              </td>
             </tr>
             <tr>
               <td style={{ padding: "1px 0" }}>Tanggal</td>
@@ -170,27 +152,56 @@ export default async function SbbkPrintPage({ params }: PageProps) {
         </table>
 
         {/* ── TABEL BARANG ── */}
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10.5px", marginBottom: 0 }}>
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            fontSize: "10.5px",
+            marginBottom: 0,
+          }}
+        >
           <thead>
             <tr style={{ background: "#d0d0d0" }}>
-              <th style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center", width: "28px" }}>No.</th>
-              <th style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center" }}>Nama Barang</th>
-              <th style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center", width: "90px" }}>Merk</th>
-              <th style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center", width: "62px" }}>Banyaknya</th>
-              <th style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center", width: "52px" }}>Satuan</th>
-              <th style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center", width: "110px" }}>Harga Satuan</th>
-              <th style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center", width: "110px" }}>Jumlah Harga</th>
-              <th style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center", width: "90px" }}>Keterangan</th>
+              <th style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center", width: "28px" }}>
+                No.
+              </th>
+              <th style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center" }}>
+                Nama Barang
+              </th>
+              <th style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center", width: "90px" }}>
+                Merk
+              </th>
+              <th style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center", width: "62px" }}>
+                Banyaknya
+              </th>
+              <th style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center", width: "52px" }}>
+                Satuan
+              </th>
+              <th style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center", width: "110px" }}>
+                Harga Satuan
+              </th>
+              <th style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center", width: "110px" }}>
+                Jumlah Harga
+              </th>
+              <th style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center", width: "90px" }}>
+                Keterangan
+              </th>
             </tr>
           </thead>
           <tbody style={{ fontSize: "10.5px" }}>
             {sbbk.items.map((it, i) => (
               <tr key={i}>
-                <td style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center" }}>{i + 1}</td>
+                <td style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center" }}>
+                  {i + 1}
+                </td>
                 <td style={{ border: "1.5px solid #000", padding: "5px" }}>{it.nama || "-"}</td>
                 <td style={{ border: "1.5px solid #000", padding: "5px" }}>{it.merk || "-"}</td>
-                <td style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center" }}>{it.qty || 0}</td>
-                <td style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center" }}>{it.satuan || "Unit"}</td>
+                <td style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center" }}>
+                  {it.qty || 0}
+                </td>
+                <td style={{ border: "1.5px solid #000", padding: "5px", textAlign: "center" }}>
+                  {it.satuan || "Unit"}
+                </td>
                 <td style={{ border: "1.5px solid #000", padding: "5px", textAlign: "right" }}>
                   {(Number(it.harga) || 0).toLocaleString("id-ID")}
                 </td>
@@ -215,7 +226,10 @@ export default async function SbbkPrintPage({ params }: PageProps) {
           </tbody>
           <tfoot>
             <tr style={{ background: "#f0f0f0", fontWeight: "bold" }}>
-              <td colSpan={6} style={{ border: "1.5px solid #000", padding: "5px", textAlign: "right" }}>
+              <td
+                colSpan={6}
+                style={{ border: "1.5px solid #000", padding: "5px", textAlign: "right" }}
+              >
                 TOTAL
               </td>
               <td style={{ border: "1.5px solid #000", padding: "5px", textAlign: "right" }}>
@@ -227,9 +241,16 @@ export default async function SbbkPrintPage({ params }: PageProps) {
         </table>
 
         {/* ── TANDA TANGAN ── */}
-        <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "16px", fontSize: "11px" }}>
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            marginTop: "16px",
+            fontSize: "11px",
+            fontFamily: "Times New Roman, Times, serif",
+          }}
+        >
           <tbody>
-            {/* Baris: Trenggalek, tanggal di kolom kanan */}
             <tr>
               <td style={{ width: "38%", verticalAlign: "top" }}></td>
               <td style={{ width: "24%", verticalAlign: "top" }}></td>
@@ -237,36 +258,61 @@ export default async function SbbkPrintPage({ params }: PageProps) {
                 Trenggalek,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{tglStr}
               </td>
             </tr>
-            {/* Baris: Yang Menyerahkan | (kosong) | Yang Menerima */}
             <tr>
-              <td style={{ verticalAlign: "top", paddingTop: "8px" }}><b>Yang Menyerahkan,</b></td>
+              <td style={{ verticalAlign: "top", paddingTop: "8px" }}>
+                <b>Yang Menyerahkan,</b>
+              </td>
               <td style={{ verticalAlign: "top" }}></td>
-              <td style={{ verticalAlign: "top", paddingTop: "8px" }}><b>Yang Menerima,</b></td>
+              <td style={{ verticalAlign: "top", paddingTop: "8px" }}>
+                <b>Yang Menerima,</b>
+              </td>
             </tr>
-            {/* Baris tanda tangan */}
             <tr>
-              {/* Penyerah */}
               <td style={{ verticalAlign: "top", paddingTop: "24px" }}>
                 <div style={{ height: "60px" }}></div>
-                <div style={{ borderTop: "1.5px solid #000", width: "75%", marginBottom: "3px" }}></div>
-                <div><b>MUHAMMAD SYAIFULLOH MAHDZUR</b></div>
+                <div
+                  style={{
+                    borderTop: "1.5px solid #000",
+                    width: "75%",
+                    marginBottom: "3px",
+                  }}
+                ></div>
+                <div>
+                  <b>MUHAMMAD SYAIFULLOH MAHDZUR</b>
+                </div>
                 <div>NIP. 19960125 202012 1 004</div>
               </td>
-              {/* Mengetahui - tengah */}
               <td style={{ verticalAlign: "top", textAlign: "center", paddingTop: "24px" }}>
                 <div>Mengetahui,</div>
-                <div><b>Kuasa Pengguna Barang</b></div>
+                <div>
+                  <b>Kuasa Pengguna Barang</b>
+                </div>
                 <div>Puskesmas Baruharjo</div>
                 <div style={{ height: "60px" }}></div>
-                <div style={{ borderTop: "1.5px solid #000", width: "80%", margin: "0 auto 3px" }}></div>
-                <div><b>dr. RIANA WIDYASTUTI</b></div>
+                <div
+                  style={{
+                    borderTop: "1.5px solid #000",
+                    width: "80%",
+                    margin: "0 auto 3px",
+                  }}
+                ></div>
+                <div>
+                  <b>dr. RIANA WIDYASTUTI</b>
+                </div>
                 <div>NIP. 19750516 201001 2 011</div>
               </td>
-              {/* Penerima */}
               <td style={{ verticalAlign: "top", paddingTop: "24px" }}>
                 <div style={{ height: "60px" }}></div>
-                <div style={{ borderTop: "1.5px solid #000", width: "75%", marginBottom: "3px" }}></div>
-                <div><b>{sbbk.kepada || "Penerima"}</b></div>
+                <div
+                  style={{
+                    borderTop: "1.5px solid #000",
+                    width: "75%",
+                    marginBottom: "3px",
+                  }}
+                ></div>
+                <div>
+                  <b>{sbbk.kepada || "Penerima"}</b>
+                </div>
                 <div>NIP. &nbsp;&nbsp;:</div>
               </td>
             </tr>
