@@ -1,8 +1,24 @@
-﻿import { getMockItems, getMockUsulan } from "@/lib/mock-data";
+import { Suspense } from "react";
+import {
+  getMockItems,
+  getMockUsulan,
+  getMockRiwayat,
+  getMockLaporanSummary,
+  getMockLaporanRooms,
+} from "@/lib/mock-data";
+import { PageActionsHost } from "@/components/gas/page-actions-host";
 
+/**
+ * Dashboard shell — GAS v3 parity:
+ * legend-bar + 6 gstats + PageActionsHost (Laporan/Riwayat modals).
+ * Density/colors match gas-legacy .legend-bar / .gstats / .page-actions.
+ */
 export default function DashboardPage() {
   const items = getMockItems();
   const usulan = getMockUsulan();
+  const riwayatItems = getMockRiwayat();
+  const laporanSummary = getMockLaporanSummary();
+  const laporanRooms = getMockLaporanRooms();
 
   const totalItems = items.length;
   const alkes = items.filter((i) => i.category === "alkes").length;
@@ -13,19 +29,71 @@ export default function DashboardPage() {
   ).length;
   const usulanAktif = usulan.length;
 
+  // GAS gstat icon bg: teal3 / teal3 / amber2 / blue2 / red2 / #f5f3ff
+  // GAS value colors: teal / teal / amber / blue / red / #7c3aed
   const stats = [
-    { emoji: "📦", value: totalItems, label: "Total Item", bg: "#ccfbf1", color: "#0e7c6b" },
-    { emoji: "🩺", value: alkes, label: "Alat Kesehatan", bg: "#ccfbf1", color: "#0e7c6b" },
-    { emoji: "🪑", value: meubelair, label: "Meubelair", bg: "#fef3c7", color: "#b45309" },
-    { emoji: "💻", value: elektronik, label: "Elektronik", bg: "#dbeafe", color: "#1d4ed8" },
-    { emoji: "🔴", value: perluPerhatian, label: "Perlu Perhatian", bg: "#fee2e2", color: "#b91c1c" },
-    { emoji: "📋", value: usulanAktif, label: "Usulan Aktif", bg: "#f5f3ff", color: "#7c3aed" },
+    {
+      emoji: "📦",
+      value: totalItems,
+      label: "Total Item",
+      bg: "var(--teal3)",
+      color: "var(--teal)",
+    },
+    {
+      emoji: "🩺",
+      value: alkes,
+      label: "Alat Kesehatan",
+      bg: "var(--teal3)",
+      color: "var(--teal)",
+    },
+    {
+      emoji: "🪑",
+      value: meubelair,
+      label: "Meubelair",
+      bg: "var(--amber2)",
+      color: "var(--amber)",
+    },
+    {
+      emoji: "💻",
+      value: elektronik,
+      label: "Elektronik",
+      bg: "var(--blue2)",
+      color: "var(--blue)",
+    },
+    {
+      emoji: "🔴",
+      value: perluPerhatian,
+      label: "Perlu Perhatian",
+      bg: "var(--red2)",
+      color: "var(--red)",
+    },
+    {
+      emoji: "📋",
+      value: usulanAktif,
+      label: "Usulan Aktif",
+      bg: "#f5f3ff",
+      color: "#7c3aed",
+    },
+  ];
+
+  const legendItems = [
+    { color: "var(--teal)", label: "Alat Kesehatan" },
+    { color: "var(--amber)", label: "Meubelair" },
+    { color: "var(--blue)", label: "Elektronik" },
+    { color: "var(--slate)", label: "Lainnya" },
+  ];
+
+  const spillItems = [
+    { label: "Wajib", bg: "#fef3c7", color: "#92400e" },
+    { label: "Penting", bg: "var(--blue2)", color: "var(--blue)" },
+    { label: "Pendukung", bg: "var(--slate2)", color: "var(--slate)" },
   ];
 
   return (
     <div>
-      {/* ── Legend Bar ─────────────────────────────────────────────── */}
+      {/* ── Legend Bar — GAS .legend-bar ───────────────────────────── */}
       <div
+        className="legend-bar"
         style={{
           display: "flex",
           alignItems: "center",
@@ -33,104 +101,96 @@ export default function DashboardPage() {
           flexWrap: "wrap",
           padding: "12px 16px",
           background: "#fff",
-          border: "1px solid #e5e7eb",
-          borderRadius: "var(--radius)",
+          border: "1px solid var(--line)",
+          borderRadius: "var(--r)",
           marginBottom: "20px",
           fontSize: "11.5px",
         }}
       >
-        <span style={{ fontWeight: 700, color: "#64748b", marginRight: "4px" }}>
+        <span
+          className="legend-title"
+          style={{
+            fontWeight: 700,
+            color: "var(--ink2)",
+            marginRight: "4px",
+          }}
+        >
           Keterangan:
         </span>
-        {[
-          { color: "#0e7c6b", label: "Alat Kesehatan" },
-          { color: "#b45309", label: "Meubelair" },
-          { color: "#1d4ed8", label: "Elektronik" },
-          { color: "#475569", label: "Lainnya" },
-        ].map((leg) => (
+        {legendItems.map((leg) => (
           <span
             key={leg.label}
-            style={{ display: "flex", alignItems: "center", gap: "5px", color: "#94a3b8" }}
+            className="legend-item"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              color: "var(--ink3)",
+            }}
           >
             <span
+              className="legend-dot"
               style={{
                 width: "10px",
                 height: "10px",
                 borderRadius: "50%",
                 background: leg.color,
+                flexShrink: 0,
               }}
             />
             {leg.label}
           </span>
         ))}
-        <span style={{ marginLeft: "auto", display: "flex", gap: "8px", alignItems: "center" }}>
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "4px",
-              padding: "3px 9px",
-              borderRadius: "20px",
-              fontSize: "10.5px",
-              fontWeight: 700,
-              whiteSpace: "nowrap",
-              background: "#fef3c7",
-              color: "#92400e",
-            }}
-          >
-            Wajib
-          </span>
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "4px",
-              padding: "3px 9px",
-              borderRadius: "20px",
-              fontSize: "10.5px",
-              fontWeight: 700,
-              whiteSpace: "nowrap",
-              background: "#dbeafe",
-              color: "#1d4ed8",
-            }}
-          >
-            Penting
-          </span>
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "4px",
-              padding: "3px 9px",
-              borderRadius: "20px",
-              fontSize: "10.5px",
-              fontWeight: 700,
-              whiteSpace: "nowrap",
-              background: "#e2e8f0",
-              color: "#475569",
-            }}
-          >
-            Pendukung
-          </span>
+        <span
+          style={{
+            marginLeft: "auto",
+            display: "flex",
+            gap: "8px",
+            alignItems: "center",
+          }}
+        >
+          {spillItems.map((sp) => (
+            <span
+              key={sp.label}
+              className="spill"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "3px 9px",
+                borderRadius: "20px",
+                fontSize: "10.5px",
+                fontWeight: 700,
+                whiteSpace: "nowrap",
+                background: sp.bg,
+                color: sp.color,
+              }}
+            >
+              {sp.label}
+            </span>
+          ))}
         </span>
       </div>
 
-      {/* ── GStats ────────────────────────────────────────────────── */}
+      {/* ── Global Stats — GAS .gstats (6 cards) ───────────────────── */}
       <div
+        className="gstats"
+        id="gstats"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
           gap: "12px",
           marginBottom: "20px",
         }}
       >
-        {stats.map((stat) => (
+        {stats.map((s) => (
           <div
-            key={stat.label}
+            key={s.label}
+            className="gstat"
             style={{
               background: "#fff",
-              border: "1px solid #e5e7eb",
-              borderRadius: "var(--radius)",
+              border: "1px solid var(--line)",
+              borderRadius: "var(--r)",
               padding: "16px",
               display: "flex",
               alignItems: "center",
@@ -138,6 +198,7 @@ export default function DashboardPage() {
             }}
           >
             <div
+              className="gstat-ico"
               style={{
                 width: "40px",
                 height: "40px",
@@ -147,70 +208,52 @@ export default function DashboardPage() {
                 justifyContent: "center",
                 fontSize: "20px",
                 flexShrink: 0,
-                background: stat.bg,
+                background: s.bg,
+                lineHeight: 1,
               }}
             >
-              {stat.emoji}
+              {s.emoji}
             </div>
-            <div>
+            <div style={{ minWidth: 0 }}>
               <div
+                className="gstat-v"
                 style={{
                   fontSize: "22px",
                   fontWeight: 800,
-                  fontFamily: '"JetBrains Mono", monospace',
-                  color: stat.color,
-                  lineHeight: 1.2,
+                  fontFamily: "var(--font-mono), 'JetBrains Mono', monospace",
+                  color: s.color,
+                  lineHeight: 1.15,
                 }}
               >
-                {stat.value}
+                {s.value}
               </div>
               <div
+                className="gstat-l"
                 style={{
                   fontSize: "10.5px",
-                  color: "#94a3b8",
+                  color: "var(--ink3)",
                   fontWeight: 600,
                   textTransform: "uppercase",
                   letterSpacing: "0.3px",
+                  marginTop: "2px",
                 }}
               >
-                {stat.label}
+                {s.label}
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* ── Page Actions ──────────────────────────────────────────── */}
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          justifyContent: "flex-end",
-          marginTop: "28px",
-          paddingTop: "20px",
-          borderTop: "1px solid #e5e7eb",
-        }}
-      >
-        <a
-          href="/laporan"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "10px 22px",
-            borderRadius: "var(--radius)",
-            border: "1px solid #e5e7eb",
-            background: "#fff",
-            fontSize: "0.875rem",
-            fontWeight: 600,
-            color: "#1e293b",
-            textDecoration: "none",
-            cursor: "pointer",
-          }}
-        >
-          📄 Laporan Monitoring
-        </a>
-      </div>
+      {/* ── Page Actions — Laporan + Riwayat modals (T6 wiring) ────── */}
+      <Suspense fallback={null}>
+        <PageActionsHost
+          riwayatItems={riwayatItems}
+          laporanSummary={laporanSummary}
+          laporanRooms={laporanRooms}
+          withDivider
+        />
+      </Suspense>
     </div>
   );
 }
