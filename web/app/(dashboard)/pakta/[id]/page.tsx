@@ -1,11 +1,8 @@
-import { deletePakta } from "@/lib/auth/pakta";
 import { getMockPaktaById } from "@/lib/mock-data";
 import { countAset } from "@/lib/pakta-utils";
 import { Card } from "@/components/gas/card";
 import { Button } from "@/components/gas/button";
 import Link from "next/link";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
 import type {
   PaktaAsetKendaraan,
@@ -29,14 +26,6 @@ function fmtDate(iso?: string): string {
 
 interface PageProps {
   params: Promise<{ id: string }>;
-}
-
-async function handleDelete(formData: FormData) {
-  "use server";
-  const id = formData.get("id") as string;
-  await deletePakta(id);
-  revalidatePath("/pakta");
-  redirect("/pakta");
 }
 
 export default async function PaktaDetailPage({ params }: PageProps) {
@@ -80,12 +69,6 @@ export default async function PaktaDetailPage({ params }: PageProps) {
               🖨️ Cetak
             </Button>
           </Link>
-          <form action={handleDelete}>
-            <input type="hidden" name="id" value={pakta.id} />
-            <Button variant="primary" className="text-xs px-3 py-1.5 bg-red-600 hover:bg-red-700" type="submit">
-              🗑️ Hapus
-            </Button>
-          </form>
         </div>
       </div>
 
