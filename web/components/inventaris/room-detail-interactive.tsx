@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { toast } from "sonner";
 import { Badge } from "@/components/gas/badge";
 import { Button } from "@/components/gas/button";
@@ -135,10 +134,6 @@ export function RoomDetailInteractive({
 
   const totalItems = items.length;
   const totalUnits = items.reduce((s, i) => s + (i.quantity || 0), 0);
-  const baikCount = items.filter((i) => i.condition === "baik").length;
-  const rrCount = items.filter((i) => i.condition === "rr").length;
-  const rbCount = items.filter((i) => i.condition === "rb").length;
-  const taCount = items.filter((i) => i.condition === "ta").length;
 
   const grouped: Record<ItemCategory, Item[]> = {
     alkes: [],
@@ -245,15 +240,8 @@ export function RoomDetailInteractive({
 
   return (
     <>
-      {/* ── Room Header (matches GAS .room-header) ── */}
-      <div className="flex items-center gap-4 mb-5 p-5 bg-white rounded-lg border border-line flex-wrap">
-        <Link
-          href="/inventaris"
-          className="text-ink3 hover:text-ink text-sm shrink-0"
-        >
-          ← Kembali
-        </Link>
-
+      {/* Room Header (matches GAS .room-header) */}
+      <div className="flex flex-wrap items-center gap-4 mb-[22px] px-6 py-5 bg-white rounded-[var(--r)] border border-line">
         <div
           className="w-[52px] h-[52px] rounded-[14px] flex items-center justify-center text-[26px] shrink-0"
           style={{ background: room.bg }}
@@ -270,110 +258,77 @@ export function RoomDetailInteractive({
 
         <div className="ml-auto flex gap-3 flex-wrap">
           <div className="text-center px-4 py-2 rounded-lg bg-line2">
-            <div className="text-xl font-extrabold text-teal font-mono">
+            <div className="text-[20px] font-extrabold text-teal font-mono leading-none">
               {totalItems}
             </div>
-            <div className="text-[10px] text-ink3 font-semibold uppercase tracking-wide">
+            <div className="text-[10px] text-ink3 font-semibold uppercase tracking-wide mt-1">
               Jenis Item
             </div>
           </div>
           <div className="text-center px-4 py-2 rounded-lg bg-line2">
-            <div className="text-xl font-extrabold text-teal font-mono">
+            <div className="text-[20px] font-extrabold text-teal font-mono leading-none">
               {totalUnits}
             </div>
-            <div className="text-[10px] text-ink3 font-semibold uppercase tracking-wide">
+            <div className="text-[10px] text-ink3 font-semibold uppercase tracking-wide mt-1">
               Total Unit
             </div>
           </div>
-          <div className="text-center px-4 py-2 rounded-lg bg-line2">
-            <div className="text-xl font-extrabold text-teal font-mono">
-              {baikCount}
-            </div>
-            <div className="text-[10px] text-ink3 font-semibold uppercase tracking-wide">
-              Baik
-            </div>
-          </div>
-          {rrCount > 0 && (
-            <div className="text-center px-4 py-2 rounded-lg bg-line2">
-              <div className="text-xl font-extrabold text-amber font-mono">
-                {rrCount}
-              </div>
-              <div className="text-[10px] text-ink3 font-semibold uppercase tracking-wide">
-                Rusak Ringan
-              </div>
-            </div>
-          )}
-          {rbCount > 0 && (
-            <div className="text-center px-4 py-2 rounded-lg bg-line2">
-              <div className="text-xl font-extrabold text-red font-mono">
-                {rbCount}
-              </div>
-              <div className="text-[10px] text-ink3 font-semibold uppercase tracking-wide">
-                Rusak Berat
-              </div>
-            </div>
-          )}
-          {taCount > 0 && (
-            <div className="text-center px-4 py-2 rounded-lg bg-line2">
-              <div className="text-xl font-extrabold text-slate font-mono">
-                {taCount}
-              </div>
-              <div className="text-[10px] text-ink3 font-semibold uppercase tracking-wide">
-                Tidak Ada
-              </div>
-            </div>
-          )}
         </div>
 
-        <div
-          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-line2 shrink-0"
-          title="Penanggung Jawab (mock)"
+        <button
+          type="button"
+          onClick={() => toast.info("Ubah penanggung jawab (mock)")}
+          className="flex items-center gap-2 px-[14px] py-[7px] rounded-[10px] bg-line2 border-[1.5px] border-line min-w-[200px] max-w-[280px] text-left hover:border-teal hover:bg-[#f0fdfa] group"
         >
-          <span className="text-base">👤</span>
-          <div>
-            <div className="text-[10px] text-ink3 font-semibold uppercase tracking-wide">
+          <span className="text-base">{"\u{1F464}"}</span>
+          <div className="min-w-0 flex-1">
+            <div className="text-[9.5px] font-extrabold text-ink3 uppercase tracking-wide">
               Penanggung Jawab
             </div>
             <div
-              className={`text-sm font-semibold ${room.pj ? "text-ink" : "text-ink3 italic"}`}
+              className={`text-[12.5px] font-bold truncate ${
+                room.pj
+                  ? "text-ink"
+                  : "text-ink3 italic font-normal"
+              }`}
             >
               {room.pj || "Belum diisi"}
             </div>
           </div>
-        </div>
+          <span className="text-xs text-ink3 opacity-0 group-hover:opacity-100">
+            {"\u270F\uFE0F"}
+          </span>
+        </button>
 
-        <div className="flex gap-2 shrink-0 flex-wrap">
-          <button
-            type="button"
-            onClick={handleSemuaBaik}
-            className="text-xs px-3 py-1.5 rounded-md bg-teal text-white font-semibold hover:opacity-90"
-          >
-            ✅ Semua Baik
-          </button>
-          <button
-            type="button"
-            onClick={handleEditMock}
-            className="text-xs px-3 py-1.5 rounded-md bg-line2 text-ink2 font-semibold hover:bg-line"
-          >
-            ✏️ Edit
-          </button>
-          <button
-            type="button"
-            onClick={openMoveAll}
-            className="text-xs px-3 py-1.5 rounded-md bg-line2 text-ink2 font-semibold hover:bg-line"
-          >
-            📦 Pindah Semua
-          </button>
-          <button
-            type="button"
-            onClick={handleHapusMock}
-            className="text-xs px-3 py-1.5 rounded-md bg-red2 text-red font-semibold hover:opacity-90"
-          >
-            🗑️ Hapus
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleSemuaBaik}
+          className="px-[14px] py-[6px] rounded-lg text-xs font-bold border-[1.5px] border-[rgba(14,124,107,0.3)] bg-[rgba(14,124,107,0.08)] text-teal hover:bg-teal hover:text-white transition-colors"
+        >
+          {"\u2705"} Semua Kondisi Baik
+        </button>
+        <button
+          type="button"
+          onClick={handleEditMock}
+          className="px-[14px] py-[6px] rounded-lg text-xs font-bold border-[1.5px] border-[#bfdbfe] bg-[#eff6ff] text-[#1d4ed8] hover:bg-[#1d4ed8] hover:text-white transition-colors"
+        >
+          {"\u270F\uFE0F"} Edit Nama
+        </button>
+        <button
+          type="button"
+          onClick={openMoveAll}
+          className="px-[14px] py-[6px] rounded-lg text-xs font-bold border-[1.5px] border-[#bfdbfe] bg-[#eff6ff] text-[#1d4ed8] hover:bg-[#1d4ed8] hover:text-white transition-colors"
+        >
+          {"\u2197"} Pindah Item
+        </button>
+        <button
+          type="button"
+          onClick={handleHapusMock}
+          className="del-room-btn px-[14px] py-[6px] rounded-lg text-xs font-bold border-[1.5px] border-red/30 bg-red2 text-red hover:bg-red hover:text-white transition-colors"
+        >
+          {"\u{1F5D1}"} Hapus
+        </button>
       </div>
-
       {/* ── 4 Category Sections ── */}
       <div className="space-y-5">
         {CATEGORY_CONFIG.map((cat) => {

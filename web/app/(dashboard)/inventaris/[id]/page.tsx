@@ -1,9 +1,16 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { getMockRooms } from "@/lib/mock-data/rooms";
 import { getMockItemsByRoom } from "@/lib/mock-data/items";
 import { getMockUsulan } from "@/lib/mock-data/usulan";
+import {
+  getMockRiwayat,
+  getMockLaporanSummary,
+  getMockLaporanRooms,
+} from "@/lib/mock-data";
 import { RoomDetailInteractive } from "@/components/inventaris/room-detail-interactive";
 import { RoomUsulanSection } from "@/components/inventaris/room-usulan-section";
+import { PageActionsHost } from "@/components/gas/page-actions-host";
 
 interface RoomDetailPageProps {
   params: Promise<{ id: string }>;
@@ -30,6 +37,17 @@ export default async function RoomDetailPage({
         roomName={room.name}
         usulanList={usulanList}
       />
+
+      <Suspense fallback={null}>
+        <PageActionsHost
+          riwayatItems={getMockRiwayat()}
+          laporanSummary={getMockLaporanSummary()}
+          laporanRooms={getMockLaporanRooms()}
+          withDivider
+          exportItems={items}
+          roomName={room.name}
+        />
+      </Suspense>
     </div>
   );
 }
