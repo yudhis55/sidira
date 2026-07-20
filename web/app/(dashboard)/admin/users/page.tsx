@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getMockUsers } from "@/lib/mock-data/users";
 import { Table } from "@/components/gas/table";
 import type { TableColumn } from "@/components/gas/table";
