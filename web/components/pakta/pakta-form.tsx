@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createPakta, updatePakta, type PaktaInput } from "@/lib/auth/pakta";
 import type {
   Pakta,
   PaktaAsetKendaraan,
@@ -15,7 +14,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Save, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 interface PaktaFormProps {
@@ -103,23 +101,17 @@ export function PaktaForm({ pakta }: PaktaFormProps) {
       const cleanLaptop = laptop.filter((r) => r.merk?.trim() || r.type?.trim());
       const cleanAlat = alat.filter((r) => r.merk?.trim() || r.type?.trim());
 
-      const payload: PaktaInput = {
-        hari: header.hari,
-        tgl: header.tgl,
-        nama: header.nama,
-        nip: header.nip,
-        jabatan: header.jabatan,
-        alamat: header.alamat,
-        aset_kendaraan: cleanKendaraan,
-        aset_laptop: cleanLaptop,
-        aset_alat: cleanAlat,
-      };
-
-      if (isEdit && pakta) {
-        await updatePakta(pakta.id, payload);
-      } else {
-        await createPakta(payload);
-      }
+      // Mock-only: no backend. Toast + redirect like usulan/sbbk polish pattern.
+      void cleanKendaraan;
+      void cleanLaptop;
+      void cleanAlat;
+      await new Promise((r) => setTimeout(r, 300));
+      alert(
+        isEdit
+          ? "Pakta berhasil diupdate (mode demo — data tidak disimpan ke server)."
+          : "Pakta berhasil disimpan (mode demo — data tidak disimpan ke server).",
+      );
+      router.push(isEdit && pakta ? `/pakta/${pakta.id}` : "/pakta");
       router.refresh();
     } catch (error) {
       console.error("Gagal menyimpan Pakta:", error);
@@ -222,7 +214,7 @@ export function PaktaForm({ pakta }: PaktaFormProps) {
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="font-mono text-sm">🚗 Kendaraan Dinas</CardTitle>
           <Button type="button" onClick={addKendaraan} size="sm" variant="outline" disabled={loading}>
-            <Plus className="h-4 w-4 mr-1" />
+            <span aria-hidden>➕</span>
             Tambah Baris
           </Button>
         </CardHeader>
@@ -314,7 +306,7 @@ export function PaktaForm({ pakta }: PaktaFormProps) {
                         className="inline-flex h-6 w-6 items-center justify-center bg-destructive/10 text-destructive ring-1 ring-destructive/20 hover:bg-destructive/20"
                         title="Hapus baris"
                       >
-                        <Trash2 className="h-3 w-3" aria-hidden />
+                        <span aria-hidden>🗑</span>
                         <span className="sr-only">Hapus baris kendaraan</span>
                       </button>
                     </td>
@@ -331,7 +323,7 @@ export function PaktaForm({ pakta }: PaktaFormProps) {
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="font-mono text-sm">💻 Laptop / Personal Komputer</CardTitle>
           <Button type="button" onClick={addLaptop} size="sm" variant="outline" disabled={loading}>
-            <Plus className="h-4 w-4 mr-1" />
+            <span aria-hidden>➕</span>
             Tambah Baris
           </Button>
         </CardHeader>
@@ -416,7 +408,7 @@ export function PaktaForm({ pakta }: PaktaFormProps) {
                         className="inline-flex h-6 w-6 items-center justify-center bg-destructive/10 text-destructive ring-1 ring-destructive/20 hover:bg-destructive/20"
                         title="Hapus baris"
                       >
-                        <Trash2 className="h-3 w-3" aria-hidden />
+                        <span aria-hidden>🗑</span>
                         <span className="sr-only">Hapus baris laptop</span>
                       </button>
                     </td>
@@ -435,7 +427,7 @@ export function PaktaForm({ pakta }: PaktaFormProps) {
             📱 Alat Penunjang (Tablet, Handphone, Handy Talky, External Hardisk)
           </CardTitle>
           <Button type="button" onClick={addAlat} size="sm" variant="outline" disabled={loading}>
-            <Plus className="h-4 w-4 mr-1" />
+            <span aria-hidden>➕</span>
             Tambah Baris
           </Button>
         </CardHeader>
@@ -520,7 +512,7 @@ export function PaktaForm({ pakta }: PaktaFormProps) {
                         className="inline-flex h-6 w-6 items-center justify-center bg-destructive/10 text-destructive ring-1 ring-destructive/20 hover:bg-destructive/20"
                         title="Hapus baris"
                       >
-                        <Trash2 className="h-3 w-3" aria-hidden />
+                        <span aria-hidden>🗑</span>
                         <span className="sr-only">Hapus baris alat</span>
                       </button>
                     </td>
@@ -536,12 +528,12 @@ export function PaktaForm({ pakta }: PaktaFormProps) {
       <div className="flex gap-2">
         <Link href={isEdit && pakta ? `/pakta/${pakta.id}` : "/pakta"}>
           <Button variant="outline" type="button" disabled={loading}>
-            <ArrowLeft className="h-4 w-4 mr-1" />
+            <span aria-hidden>←</span>
             Batal
           </Button>
         </Link>
         <Button type="submit" disabled={loading}>
-          <Save className="h-4 w-4 mr-1" />
+          <span aria-hidden>💾</span>
           {loading ? "Menyimpan..." : isEdit ? "Update Pakta" : "Simpan Pakta"}
         </Button>
       </div>

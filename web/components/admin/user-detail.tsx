@@ -1,9 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Edit, ArrowLeft, Calendar, Mail, Briefcase } from "lucide-react";
 import Link from "next/link";
+import { Card } from "@/components/gas/card";
+import { Button } from "@/components/gas/button";
 import { DeleteUserButton } from "./delete-button";
 import type { Profile } from "@/types/database";
 
@@ -11,131 +8,149 @@ interface UserDetailProps {
   user: Profile;
 }
 
-const ROLE_LABELS = {
+const ROLE_LABELS: Record<string, string> = {
   admin: "Admin",
   editor: "Editor",
   viewer: "Viewer",
 };
 
+const ROLE_COLORS: Record<string, string> = {
+  admin: "bg-teal4 text-teal",
+  editor: "bg-blue2 text-blue",
+  viewer: "bg-slate2 text-slate",
+};
+
+const ROLE_HINTS: Record<string, string> = {
+  admin: "Akses penuh ke semua modul dan manajemen user",
+  editor: "Bisa menambah dan mengubah data inventaris",
+  viewer: "Hanya dapat melihat data (read-only)",
+};
+
+function formatDateTime(dateString?: string) {
+  if (!dateString) return "—";
+  return new Date(dateString).toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function UserDetail({ user }: UserDetailProps) {
   const email = `${user.username}@sidira.local`;
+  const roleLabel = ROLE_LABELS[user.role] || user.role;
+  const roleColor = ROLE_COLORS[user.role] || "bg-line2 text-ink2";
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/admin/users">
-          <Button variant="outline" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="font-mono text-3xl font-bold">Detail User</h1>
-          <p className="text-muted-foreground">Informasi lengkap user</p>
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Link href="/admin/users">
+            <Button
+              variant="ghost"
+              className="h-9 w-9 p-0"
+              aria-label="Kembali"
+            >
+              ←
+            </Button>
+          </Link>
+          <div>
+            <h1 className="font-mono text-xl font-bold tracking-tight text-ink">
+              Detail User
+            </h1>
+            <p className="text-xs text-ink3">Informasi lengkap akun</p>
+          </div>
         </div>
-        <Link href={`/admin/users/${user.id}/edit`}>
-          <Button variant="outline">
-            <Edit className="mr-2 h-4 w-4" />
-            Edit
-          </Button>
-        </Link>
-        <DeleteUserButton userId={user.id} username={user.username} />
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href={`/admin/users/${user.id}/edit`}>
+            <Button variant="ghost" className="text-xs px-3 py-1.5">
+              ✏️ Edit
+            </Button>
+          </Link>
+          <DeleteUserButton userId={user.id} username={user.username} />
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Informasi User</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20">
-              <AvatarFallback className="text-4xl">
-                {user.avatar}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h2 className="font-mono text-2xl font-bold">{user.nama}</h2>
-              <p className="text-muted-foreground">@{user.username}</p>
-              <Badge variant="outline" className="mt-2">
-                {ROLE_LABELS[user.role]}
-              </Badge>
-            </div>
+      {/* Identity card */}
+      <Card className="space-y-5">
+        <div className="flex flex-wrap items-center gap-4 border-b border-line pb-4">
+          <div className="flex size-16 items-center justify-center rounded-full bg-teal4 text-2xl font-bold text-teal">
+            {user.avatar}
+          </div>
+          <div className="min-w-0">
+            <h2 className="font-mono text-lg font-bold text-ink">{user.nama}</h2>
+            <p className="text-sm text-ink2">@{user.username}</p>
+            <span
+              className={`mt-2 inline-flex items-center rounded-[4px] px-2 py-0.5 text-[11px] font-bold ${roleColor}`}
+            >
+              {roleLabel}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div className="space-y-1">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink3">
+              <span aria-hidden>✉️</span> Email
+            </p>
+            <p className="font-mono text-sm font-medium text-ink">{email}</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Mail className="h-4 w-4" />
-                <span>Email</span>
-              </div>
-              <p className="font-medium">{email}</p>
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Briefcase className="h-4 w-4" />
-                <span>Jabatan</span>
-              </div>
-              <p className="font-medium">{user.jabatan || "-"}</p>
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                <span>Terdaftar Sejak</span>
-              </div>
-              <p className="font-medium">
-                {new Date(user.created_at).toLocaleDateString("id-ID", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </p>
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                <span>Login Terakhir</span>
-              </div>
-              <p className="font-medium">
-                {user.last_login
-                  ? new Date(user.last_login).toLocaleString("id-ID")
-                  : "Belum pernah login"}
-              </p>
-            </div>
+          <div className="space-y-1">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink3">
+              <span aria-hidden>💼</span> Jabatan
+            </p>
+            <p className="text-sm font-medium text-ink">
+              {user.jabatan || "—"}
+            </p>
           </div>
 
-          <div className="pt-4 border-t">
-            <h3 className="font-mono font-semibold mb-2">Hak Akses</h3>
-            <div className="space-y-2 text-sm">
-              {user.role === "admin" && (
-                <>
-                  <p>✅ Akses penuh ke semua fitur</p>
-                  <p>✅ Kelola user dan role</p>
-                  <p>✅ Tambah, edit, dan hapus data</p>
-                  <p>✅ Lihat laporan dan riwayat</p>
-                </>
-              )}
-              {user.role === "editor" && (
-                <>
-                  <p>✅ Tambah dan edit data inventaris</p>
-                  <p>✅ Buat checklist dan SBBK</p>
-                  <p>✅ Buat usulan pengadaan</p>
-                  <p>❌ Tidak bisa kelola user</p>
-                  <p>❌ Tidak bisa hapus data</p>
-                </>
-              )}
-              {user.role === "viewer" && (
-                <>
-                  <p>✅ Lihat semua data inventaris</p>
-                  <p>✅ Lihat laporan dan riwayat</p>
-                  <p>❌ Tidak bisa tambah/edit data</p>
-                  <p>❌ Tidak bisa kelola user</p>
-                </>
-              )}
-            </div>
+          <div className="space-y-1">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink3">
+              <span aria-hidden>🔑</span> Role
+            </p>
+            <p className="text-sm font-medium text-ink">{roleLabel}</p>
+            <p className="text-[11px] text-ink3">
+              {ROLE_HINTS[user.role] || ""}
+            </p>
           </div>
-        </CardContent>
+
+          <div className="space-y-1">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink3">
+              <span aria-hidden>🕐</span> Login Terakhir
+            </p>
+            <p className="text-sm font-medium text-ink">
+              {formatDateTime(user.last_login)}
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink3">
+              <span aria-hidden>📅</span> Dibuat
+            </p>
+            <p className="text-sm font-medium text-ink">
+              {formatDateTime(user.created_at)}
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink3">
+              <span aria-hidden>🔄</span> Diperbarui
+            </p>
+            <p className="text-sm font-medium text-ink">
+              {formatDateTime(user.updated_at)}
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="bg-line2/40">
+        <p className="text-xs text-ink3">
+          ℹ️ Mode demo — data user dari mock. Tidak ada sinkronisasi ke
+          Supabase Auth.
+        </p>
       </Card>
     </div>
   );

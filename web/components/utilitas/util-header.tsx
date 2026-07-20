@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { renameUtil, type UtilMeta } from "@/lib/auth/utilitas";
 
@@ -74,8 +73,9 @@ export function UtilHeader({
                 className="h-8 w-8"
                 onClick={handleSave}
                 disabled={pending}
+                aria-label="Simpan"
               >
-                <Check className="h-4 w-4" />
+                ✓
               </Button>
               <Button
                 type="button"
@@ -84,8 +84,9 @@ export function UtilHeader({
                 className="h-8 w-8"
                 onClick={handleCancel}
                 disabled={pending}
+                aria-label="Batal"
               >
-                <X className="h-4 w-4" />
+                ✕
               </Button>
             </div>
           ) : (
@@ -98,8 +99,7 @@ export function UtilHeader({
                 className="h-7 px-2 font-mono text-xs"
                 onClick={() => setEditing(true)}
               >
-                <Pencil className="mr-1 h-3 w-3" />
-                Edit Nama
+                ✏️ Edit Nama
               </Button>
             </h1>
           )}

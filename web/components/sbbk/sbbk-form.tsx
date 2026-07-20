@@ -15,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Save, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 const SATUAN_OPTIONS = [
@@ -217,7 +216,7 @@ export function SbbkForm({ sbbk }: SbbkFormProps) {
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="font-mono text-sm">Daftar Barang</CardTitle>
           <Button type="button" onClick={addItem} size="sm" variant="outline" disabled={loading}>
-            <Plus className="h-4 w-4 mr-1" />
+            <span aria-hidden>➕</span>
             Tambah Barang
           </Button>
         </CardHeader>
@@ -238,7 +237,7 @@ export function SbbkForm({ sbbk }: SbbkFormProps) {
                     onClick={() => removeItem(index)}
                     disabled={loading}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <span aria-hidden>🗑</span>
                     <span className="sr-only">Hapus barang</span>
                   </Button>
                 </div>
@@ -331,12 +330,12 @@ export function SbbkForm({ sbbk }: SbbkFormProps) {
       <div className="flex gap-2">
         <Link href={sbbk?.id ? `/sbbk/${sbbk.id}` : "/sbbk"}>
           <Button variant="outline" type="button" disabled={loading}>
-            <ArrowLeft className="h-4 w-4 mr-1" />
+            <span aria-hidden>←</span>
             Batal
           </Button>
         </Link>
         <Button type="submit" disabled={loading}>
-          <Save className="h-4 w-4 mr-1" />
+          <span aria-hidden>💾</span>
           {loading ? "Menyimpan..." : "Simpan"}
         </Button>
       </div>

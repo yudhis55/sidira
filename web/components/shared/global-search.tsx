@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, X } from "lucide-react";
 import { globalSearch, type SearchResult } from "@/lib/auth/global-search";
 
 /**
@@ -33,27 +32,32 @@ export function GlobalSearchDialog() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  // Reset state via refs to avoid setState-in-effect warnings (React 19).
-  const prevOpenRef = useRef(false);
-  const resetKeyRef = useRef(0);
-  if (open && !prevOpenRef.current) {
-    resetKeyRef.current++;
-    requestAnimationFrame(() => inputRef.current?.focus());
-  }
-  prevOpenRef.current = open;
-  const resetKey = resetKeyRef.current;
+  // Focus input when palette opens (DOM side-effect only — no setState).
+  useEffect(() => {
+    if (!open) return;
+    const id = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [open]);
 
-  // Debounced search
+  // Debounced search — async callback setState is fine; clear via timeout only.
   useEffect(() => {
     if (!open) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (q.trim().length < 2) {
-      if (results.length) setResults([]);
-      if (loading) setLoading(false);
-      return;
+
+    const query = q.trim();
+    if (query.length < 2) {
+      debounceRef.current = setTimeout(() => {
+        setResults([]);
+        setLoading(false);
+        setActiveIdx(0);
+      }, 0);
+      return () => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+      };
     }
-    setLoading(true);
+
     debounceRef.current = setTimeout(async () => {
+      setLoading(true);
       try {
         const r = await globalSearch(q);
         setResults(r);
@@ -115,7 +119,7 @@ export function GlobalSearchDialog() {
       >
         {/* Search input */}
         <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-          <Search className="size-4 shrink-0 text-muted-foreground" />
+          <span className="shrink-0 text-muted-foreground" aria-hidden>🔍</span>
           <input
             ref={inputRef}
             value={q}
@@ -126,7 +130,7 @@ export function GlobalSearchDialog() {
           />
           {q ? (
             <button onClick={() => setQ("")} aria-label="Bersihkan">
-              <X className="size-4 text-muted-foreground" />
+              <span className="text-muted-foreground" aria-hidden>✕</span>
             </button>
           ) : null}
           <kbd className="rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">

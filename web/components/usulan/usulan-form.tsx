@@ -14,7 +14,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Save, Loader2 } from "lucide-react";
 import type { Usulan, UsulanItem, UsulanPrioritas } from "@/lib/usulan-types";
 import type { ItemCategory, Room } from "@/types/database";
 
@@ -153,7 +152,7 @@ export function UsulanForm({ rooms, usulan, defaultRoomId }: UsulanFormProps) {
             variant="outline"
             disabled={pending || !selectedRoom}
           >
-            <Plus className="mr-1 h-3.5 w-3.5" />
+            <span className="mr-1" aria-hidden>➕</span>
             Tambah Barang
           </Button>
         </CardHeader>
@@ -181,7 +180,7 @@ export function UsulanForm({ rooms, usulan, defaultRoomId }: UsulanFormProps) {
                     disabled={pending}
                     title="Hapus barang ini"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <span aria-hidden>🗑️</span>
                   </Button>
                 </div>
 
@@ -371,9 +370,9 @@ export function UsulanForm({ rooms, usulan, defaultRoomId }: UsulanFormProps) {
                 disabled={pending || items.length === 0}
               >
                 {pending ? (
-                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  <span className="mr-1.5" aria-hidden>⏳</span>
                 ) : (
-                  <Save className="mr-1.5 h-4 w-4" />
+                  <span className="mr-1.5" aria-hidden>💾</span>
                 )}
                 {usulan?.id ? "Update Usulan" : "Simpan Usulan"}
               </Button>

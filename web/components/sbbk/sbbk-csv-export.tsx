@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
 
 /**
  * Client button that fetches the CSV string from the server action
@@ -43,7 +42,7 @@ export function SbbkCsvExport() {
       onClick={handleExport}
       disabled={loading}
     >
-      <Download className="h-4 w-4 mr-2" />
+      <span aria-hidden className="mr-2">⬇️</span>
       {loading ? "Mengekspor..." : "Export CSV"}
     </Button>
   );

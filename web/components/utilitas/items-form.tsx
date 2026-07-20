@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, Save } from "lucide-react";
 import { updateUtilItems } from "@/lib/auth/utilitas";
 
 interface ItemsFormProps {
@@ -51,8 +50,7 @@ export function ItemsForm({ utilId, initialItems }: ItemsFormProps) {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="font-mono">Jadwal — Daftar Item Pemeliharaan</CardTitle>
         <Button onClick={addItem} size="sm" disabled={loading} className="h-8">
-          <Plus className="mr-1.5 h-4 w-4" />
-          Tambah Item
+          ➕ Tambah Item
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -73,7 +71,7 @@ export function ItemsForm({ utilId, initialItems }: ItemsFormProps) {
                   className="h-8 w-8 px-0"
                   aria-label="Hapus item"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  🗑️
                 </Button>
               </div>
 
@@ -114,8 +112,7 @@ export function ItemsForm({ utilId, initialItems }: ItemsFormProps) {
               </span>
             )}
             <Button onClick={handleSubmit} disabled={loading} className="h-8">
-              <Save className="mr-1.5 h-4 w-4" />
-              {loading ? "Menyimpan..." : "Simpan Perubahan"}
+              {loading ? "⏳ Menyimpan..." : "💾 Simpan Perubahan"}
             </Button>
           </div>
         )}

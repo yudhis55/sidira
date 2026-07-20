@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import type { UtilMeta } from "@/lib/auth/utilitas";
 
@@ -164,12 +163,11 @@ export function UtilitasForm({ utilitas }: UtilitasFormProps) {
         </Link>
         <Button type="submit" disabled={loading}>
           {loading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Menyimpan...
-            </>
+            <>⏳ Menyimpan...</>
+          ) : utilitas ? (
+            "💾 Update"
           ) : (
-            utilitas ? "Update" : "Simpan"
+            "💾 Simpan"
           )}
         </Button>
       </div>

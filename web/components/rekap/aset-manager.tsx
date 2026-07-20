@@ -1,25 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import {
-  addAset,
-  updateAset,
-  deleteAset,
-  type AsetInput,
-} from "@/lib/auth/rekap";
 import type { AsetPemegang, AsetPemegangJenis } from "@/types/database";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Plus, Trash2, Pencil, X, Check } from "lucide-react";
+import { Button } from "@/components/gas/button";
+import { Input } from "@/components/gas/input";
 
 interface AsetManagerProps {
   pemegangId: string;
@@ -51,15 +35,13 @@ function toRowState(a: AsetPemegang): AsetRowState {
   };
 }
 
-const JENIS_CONFIG: Record<
-  AsetPemegangJenis,
-  { icon: string; label: string }
-> = {
-  kendaraan: { icon: "🚗", label: "Kendaraan Dinas" },
-  laptop: { icon: "💻", label: "Laptop / PC" },
-  alat: { icon: "🔧", label: "Alat Penunjang" },
-  rumah: { icon: "🏠", label: "Rumah Dinas" },
-};
+const JENIS_CONFIG: Record<AsetPemegangJenis, { icon: string; label: string }> =
+  {
+    kendaraan: { icon: "\uD83D\uDE97", label: "Kendaraan Dinas" },
+    laptop: { icon: "\uD83D\uDCBB", label: "Laptop / PC" },
+    alat: { icon: "\uD83D\uDD27", label: "Alat Penunjang" },
+    rumah: { icon: "\uD83C\uDFE0", label: "Rumah Dinas" },
+  };
 
 const JENIS_ORDER: AsetPemegangJenis[] = [
   "kendaraan",
@@ -68,11 +50,10 @@ const JENIS_ORDER: AsetPemegangJenis[] = [
   "rumah",
 ];
 
-/** Satu sub-tabel aset per jenis, dengan add/edit/delete inline. */
+/** Satu sub-tabel aset per jenis — mock-only (no backend). */
 function AsetJenisTable({
-  pemegangId,
   jenis,
-  items,
+  items: initialItems,
   readOnly,
 }: {
   pemegangId: string;
@@ -80,548 +61,330 @@ function AsetJenisTable({
   items: AsetPemegang[];
   readOnly?: boolean;
 }) {
-  const router = useRouter();
   const config = JENIS_CONFIG[jenis];
+  const [items, setItems] = useState(initialItems);
   const [adding, setAdding] = useState(false);
   const [newRow, setNewRow] = useState<AsetRowState>(emptyRow());
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<AsetRowState>(emptyRow());
-  const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const handleAdd = async (e: React.FormEvent) => {
+  const showNopol = jenis === "kendaraan";
+
+  const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    setBusy(true);
     setErr(null);
-    try {
-      const payload: AsetInput = {
-        jenis,
-        merk: newRow.merk,
-        type: newRow.type,
-        tahun: newRow.tahun,
-        nopol: newRow.nopol,
-        harga: newRow.harga,
-        ket: newRow.ket,
-      };
-      await addAset(pemegangId, payload);
-      setNewRow(emptyRow());
-      setAdding(false);
-      router.refresh();
-    } catch (error) {
-      setErr(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
+    if (!newRow.merk.trim() && !newRow.ket.trim()) {
+      setErr("Isi minimal merk atau keterangan");
+      return;
     }
+    const next: AsetPemegang = {
+      id: Date.now(),
+      pemegang_id: initialItems[0]?.pemegang_id || "mock",
+      jenis,
+      merk: newRow.merk || undefined,
+      type: newRow.type || undefined,
+      tahun: newRow.tahun || undefined,
+      nopol: newRow.nopol || undefined,
+      harga: newRow.harga || undefined,
+      ket: newRow.ket || undefined,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setItems((prev) => [...prev, next]);
+    setNewRow(emptyRow());
+    setAdding(false);
   };
 
-  const handleSaveEdit = async (asetId: number) => {
-    setBusy(true);
+  const handleUpdate = (e: React.FormEvent, id: number) => {
+    e.preventDefault();
     setErr(null);
-    try {
-      await updateAset(asetId, { ...editRow }, pemegangId);
-      setEditingId(null);
-      setEditRow(emptyRow());
-      router.refresh();
-    } catch (error) {
-      setErr(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
+    setItems((prev) =>
+      prev.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              merk: editRow.merk || undefined,
+              type: editRow.type || undefined,
+              tahun: editRow.tahun || undefined,
+              nopol: editRow.nopol || undefined,
+              harga: editRow.harga || undefined,
+              ket: editRow.ket || undefined,
+              updated_at: new Date().toISOString(),
+            }
+          : a,
+      ),
+    );
+    setEditingId(null);
   };
 
-  const handleDelete = async (asetId: number) => {
+  const handleDelete = (id: number) => {
     if (!confirm("Hapus aset ini?")) return;
-    setBusy(true);
-    setErr(null);
-    try {
-      await deleteAset(asetId, pemegangId);
-      router.refresh();
-    } catch (error) {
-      setErr(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
+    setItems((prev) => prev.filter((a) => a.id !== id));
   };
-
-  const isKendaraan = jenis === "kendaraan";
-  const isRumah = jenis === "rumah";
 
   return (
-    <div className="ring-1 ring-border">
-      <div className="flex items-center justify-between border-b border-border bg-muted/50 px-2 py-1.5">
+    <div className="rounded-lg border border-line bg-white overflow-hidden">
+      <div
+        className="flex items-center justify-between gap-2 px-3 py-2 border-b border-line"
+        style={{ background: "#ecfdf5" }}
+      >
         <div className="flex items-center gap-2">
-          <span aria-hidden>{config.icon}</span>
-          <span className="font-mono text-xs font-semibold">
+          <span aria-hidden className="text-base">
+            {config.icon}
+          </span>
+          <span
+            className="text-[11px] font-extrabold uppercase tracking-[0.4px]"
+            style={{ color: "#065f46" }}
+          >
             {config.label} ({items.length})
           </span>
         </div>
         {!readOnly && !adding && (
           <Button
             type="button"
-            variant="outline"
-            size="xs"
-            onClick={() => setAdding(true)}
-            disabled={busy}
+            variant="ghost"
+            className="text-[11px] px-2 py-0.5 h-auto"
+            onClick={() => {
+              setAdding(true);
+              setErr(null);
+            }}
           >
-            <Plus className="h-3 w-3" />
-            Tambah
+            {"\u2795"} Tambah
           </Button>
         )}
       </div>
 
       {err && (
-        <p className="border-b border-destructive/20 bg-destructive/10 px-2 py-1 text-[10px] text-destructive">
+        <p className="px-3 py-2 text-xs text-red border-b border-line" role="alert">
           {err}
         </p>
       )}
 
-      <Table>
-        <TableHeader>
-          <TableRow className="border-b border-border">
-            <TableHead className="h-8 w-7 px-2 font-mono text-[10px]">No</TableHead>
-            {isKendaraan ? (
-              <>
-                <TableHead className="h-8 px-2 font-mono text-[10px]">Jenis</TableHead>
-                <TableHead className="h-8 px-2 font-mono text-[10px]">Merk</TableHead>
-                <TableHead className="h-8 px-2 font-mono text-[10px]">Tahun</TableHead>
-                <TableHead className="h-8 px-2 font-mono text-[10px]">No. Polisi</TableHead>
-                <TableHead className="h-8 px-2 font-mono text-[10px]">Harga</TableHead>
-                <TableHead className="h-8 px-2 font-mono text-[10px]">Ket</TableHead>
-              </>
-            ) : isRumah ? (
-              <>
-                <TableHead className="h-8 px-2 font-mono text-[10px]">Ket</TableHead>
-                <TableHead className="h-8 px-2 font-mono text-[10px]">Merk</TableHead>
-                <TableHead className="h-8 px-2 font-mono text-[10px]">Tahun</TableHead>
-              </>
-            ) : (
-              <>
-                <TableHead className="h-8 px-2 font-mono text-[10px]">Merk</TableHead>
-                <TableHead className="h-8 px-2 font-mono text-[10px]">Type</TableHead>
-                <TableHead className="h-8 px-2 font-mono text-[10px]">Tahun</TableHead>
-                <TableHead className="h-8 px-2 font-mono text-[10px]">Harga</TableHead>
-                <TableHead className="h-8 px-2 font-mono text-[10px]">Ket</TableHead>
-              </>
-            )}
-            {!readOnly && (
-              <TableHead className="h-8 w-16 px-2 text-center font-mono text-[10px]">
-                Aksi
-              </TableHead>
-            )}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items.length === 0 && !adding && (
-            <TableRow>
-              <TableCell
-                colSpan={isKendaraan ? 8 : isRumah ? 5 : 7}
-                className="px-2 py-3 text-center text-[11px] text-muted-foreground"
-              >
-                Tidak ada data
-              </TableCell>
-            </TableRow>
-          )}
-
-          {items.map((a, i) => (
-            <TableRow key={a.id} className="border-b border-border last:border-0">
-              <TableCell className="px-2 py-1.5 font-mono text-[11px]">
-                {i + 1}
-              </TableCell>
-              {editingId === a.id ? (
-                <>
-                  {isKendaraan && (
-                    <>
-                      <TableCell className="px-1 py-1">
+      {items.length === 0 && !adding ? (
+        <p className="px-3 py-6 text-center text-[11.5px] text-ink3">
+          Tidak ada data
+        </p>
+      ) : (
+        <div className="w-full overflow-x-auto">
+          <table className="w-full border-collapse text-[12px]">
+            <thead>
+              <tr>
+                {(showNopol
+                  ? ["Merk", "Tipe", "Tahun", "Nopol", "Harga", "Ket", ""]
+                  : ["Merk", "Tipe", "Tahun", "Harga", "Ket", ""]
+                ).map((h) => (
+                  <th
+                    key={h || "act"}
+                    className="px-2.5 py-2 text-[10px] font-bold uppercase tracking-wide text-left text-ink3 border-b border-line"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) =>
+                editingId === item.id ? (
+                  <tr key={item.id} className="border-b border-line">
+                    <td className="px-2 py-1.5" colSpan={showNopol ? 7 : 6}>
+                      <form
+                        onSubmit={(e) => handleUpdate(e, item.id)}
+                        className="grid grid-cols-2 md:grid-cols-3 gap-2"
+                      >
                         <Input
-                          className="h-7"
-                          value={editRow.ket}
-                          onChange={(e) =>
-                            setEditRow({ ...editRow, ket: e.target.value })
-                          }
-                          placeholder="Jenis"
-                          disabled={busy}
-                        />
-                      </TableCell>
-                      <TableCell className="px-1 py-1">
-                        <Input
-                          className="h-7"
+                          label="Merk"
                           value={editRow.merk}
                           onChange={(e) =>
-                            setEditRow({ ...editRow, merk: e.target.value })
+                            setEditRow((r) => ({ ...r, merk: e.target.value }))
                           }
-                          placeholder="Merk"
-                          disabled={busy}
                         />
-                      </TableCell>
-                      <TableCell className="px-1 py-1">
                         <Input
-                          className="h-7 w-20"
-                          value={editRow.tahun}
-                          onChange={(e) =>
-                            setEditRow({ ...editRow, tahun: e.target.value })
-                          }
-                          placeholder="Tahun"
-                          disabled={busy}
-                        />
-                      </TableCell>
-                      <TableCell className="px-1 py-1">
-                        <Input
-                          className="h-7"
-                          value={editRow.nopol}
-                          onChange={(e) =>
-                            setEditRow({ ...editRow, nopol: e.target.value })
-                          }
-                          placeholder="No. Polisi"
-                          disabled={busy}
-                        />
-                      </TableCell>
-                      <TableCell className="px-1 py-1">
-                        <Input
-                          className="h-7"
-                          value={editRow.harga}
-                          onChange={(e) =>
-                            setEditRow({ ...editRow, harga: e.target.value })
-                          }
-                          placeholder="Harga"
-                          disabled={busy}
-                        />
-                      </TableCell>
-                      <TableCell className="px-1 py-1">
-                        <Input
-                          className="h-7"
-                          value={editRow.ket}
-                          onChange={(e) =>
-                            setEditRow({ ...editRow, ket: e.target.value })
-                          }
-                          placeholder="Ket"
-                          disabled={busy}
-                        />
-                      </TableCell>
-                    </>
-                  )}
-                  {isRumah && (
-                    <>
-                      <TableCell className="px-1 py-1">
-                        <Input
-                          className="h-7"
-                          value={editRow.ket}
-                          onChange={(e) =>
-                            setEditRow({ ...editRow, ket: e.target.value })
-                          }
-                          placeholder="Ket"
-                          disabled={busy}
-                        />
-                      </TableCell>
-                      <TableCell className="px-1 py-1">
-                        <Input
-                          className="h-7"
-                          value={editRow.merk}
-                          onChange={(e) =>
-                            setEditRow({ ...editRow, merk: e.target.value })
-                          }
-                          placeholder="Merk"
-                          disabled={busy}
-                        />
-                      </TableCell>
-                      <TableCell className="px-1 py-1">
-                        <Input
-                          className="h-7 w-20"
-                          value={editRow.tahun}
-                          onChange={(e) =>
-                            setEditRow({ ...editRow, tahun: e.target.value })
-                          }
-                          placeholder="Tahun"
-                          disabled={busy}
-                        />
-                      </TableCell>
-                    </>
-                  )}
-                  {!isKendaraan && !isRumah && (
-                    <>
-                      <TableCell className="px-1 py-1">
-                        <Input
-                          className="h-7"
-                          value={editRow.merk}
-                          onChange={(e) =>
-                            setEditRow({ ...editRow, merk: e.target.value })
-                          }
-                          placeholder="Merk"
-                          disabled={busy}
-                        />
-                      </TableCell>
-                      <TableCell className="px-1 py-1">
-                        <Input
-                          className="h-7"
+                          label="Tipe"
                           value={editRow.type}
                           onChange={(e) =>
-                            setEditRow({ ...editRow, type: e.target.value })
+                            setEditRow((r) => ({ ...r, type: e.target.value }))
                           }
-                          placeholder="Type"
-                          disabled={busy}
                         />
-                      </TableCell>
-                      <TableCell className="px-1 py-1">
                         <Input
-                          className="h-7 w-20"
+                          label="Tahun"
                           value={editRow.tahun}
                           onChange={(e) =>
-                            setEditRow({ ...editRow, tahun: e.target.value })
+                            setEditRow((r) => ({ ...r, tahun: e.target.value }))
                           }
-                          placeholder="Tahun"
-                          disabled={busy}
                         />
-                      </TableCell>
-                      <TableCell className="px-1 py-1">
+                        {showNopol && (
+                          <Input
+                            label="Nopol"
+                            value={editRow.nopol}
+                            onChange={(e) =>
+                              setEditRow((r) => ({
+                                ...r,
+                                nopol: e.target.value,
+                              }))
+                            }
+                          />
+                        )}
                         <Input
-                          className="h-7"
+                          label="Harga"
                           value={editRow.harga}
                           onChange={(e) =>
-                            setEditRow({ ...editRow, harga: e.target.value })
+                            setEditRow((r) => ({ ...r, harga: e.target.value }))
                           }
-                          placeholder="Harga"
-                          disabled={busy}
                         />
-                      </TableCell>
-                      <TableCell className="px-1 py-1">
                         <Input
-                          className="h-7"
+                          label="Ket"
                           value={editRow.ket}
                           onChange={(e) =>
-                            setEditRow({ ...editRow, ket: e.target.value })
+                            setEditRow((r) => ({ ...r, ket: e.target.value }))
                           }
-                          placeholder="Ket"
-                          disabled={busy}
                         />
-                      </TableCell>
-                    </>
-                  )}
-                  <TableCell className="px-1 py-1">
-                    <div className="flex items-center justify-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleSaveEdit(a.id)}
-                        disabled={busy}
-                        className="inline-flex h-6 w-6 items-center justify-center ring-1 ring-border hover:bg-muted"
-                        title="Simpan"
-                      >
-                        <Check className="h-3 w-3" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingId(null);
-                          setEditRow(emptyRow());
-                        }}
-                        disabled={busy}
-                        className="inline-flex h-6 w-6 items-center justify-center ring-1 ring-border hover:bg-muted"
-                        title="Batal"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  </TableCell>
-                </>
-              ) : (
-                <>
-                  {isKendaraan && (
-                    <>
-                      <TableCell className="px-2 py-1.5 text-[11px]">{a.ket || a.merk || "-"}</TableCell>
-                      <TableCell className="px-2 py-1.5 text-[11px] font-medium">{a.merk || "-"}</TableCell>
-                      <TableCell className="px-2 py-1.5 text-[11px]">{a.tahun || "-"}</TableCell>
-                      <TableCell className="px-2 py-1.5 text-[11px]">{a.nopol || "-"}</TableCell>
-                      <TableCell className="px-2 py-1.5 text-[11px]">{a.harga || "-"}</TableCell>
-                      <TableCell className="px-2 py-1.5 text-[11px] text-muted-foreground">{a.ket || "-"}</TableCell>
-                    </>
-                  )}
-                  {isRumah && (
-                    <>
-                      <TableCell className="px-2 py-1.5 text-[11px]">{a.ket || "-"}</TableCell>
-                      <TableCell className="px-2 py-1.5 text-[11px] font-medium">{a.merk || "-"}</TableCell>
-                      <TableCell className="px-2 py-1.5 text-[11px]">{a.tahun || "-"}</TableCell>
-                    </>
-                  )}
-                  {!isKendaraan && !isRumah && (
-                    <>
-                      <TableCell className="px-2 py-1.5 text-[11px] font-medium">{a.merk || "-"}</TableCell>
-                      <TableCell className="px-2 py-1.5 text-[11px]">{a.type || "-"}</TableCell>
-                      <TableCell className="px-2 py-1.5 text-[11px]">{a.tahun || "-"}</TableCell>
-                      <TableCell className="px-2 py-1.5 text-[11px]">{a.harga || "-"}</TableCell>
-                      <TableCell className="px-2 py-1.5 text-[11px] text-muted-foreground">{a.ket || "-"}</TableCell>
-                    </>
-                  )}
-                  {!readOnly && (
-                    <TableCell className="px-2 py-1.5">
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingId(a.id);
-                            setEditRow(toRowState(a));
-                          }}
-                          disabled={busy}
-                          className="inline-flex h-6 w-6 items-center justify-center ring-1 ring-border hover:bg-muted"
-                          title="Edit"
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(a.id)}
-                          disabled={busy}
-                          className="inline-flex h-6 w-6 items-center justify-center bg-destructive/10 text-destructive ring-1 ring-destructive/20 hover:bg-destructive/20"
-                          title="Hapus"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
-                    </TableCell>
-                  )}
-                </>
-              )}
-            </TableRow>
-          ))}
-
-          {adding && (
-            <TableRow className="border-b border-border bg-muted/20">
-              <TableCell className="px-2 py-1.5 font-mono text-[11px]">
-                {items.length + 1}
-              </TableCell>
-              <TableCell className="px-1 py-1" colSpan={1}>
-                {isKendaraan ? (
-                  <Input
-                    className="h-7"
-                    value={newRow.ket}
-                    onChange={(e) => setNewRow({ ...newRow, ket: e.target.value })}
-                    placeholder="Jenis (motor/mobil)"
-                    disabled={busy}
-                  />
-                ) : isRumah ? (
-                  <Input
-                    className="h-7"
-                    value={newRow.ket}
-                    onChange={(e) => setNewRow({ ...newRow, ket: e.target.value })}
-                    placeholder="Keterangan"
-                    disabled={busy}
-                  />
+                        <div className="col-span-full flex gap-2 justify-end">
+                          <Button
+                            type="button"
+                            variant="modal-cancel"
+                            className="text-[11px] px-3 py-1.5"
+                            onClick={() => setEditingId(null)}
+                          >
+                            Batal
+                          </Button>
+                          <Button
+                            type="submit"
+                            variant="modal-ok"
+                            className="text-[11px] px-3 py-1.5"
+                          >
+                            Simpan
+                          </Button>
+                        </div>
+                      </form>
+                    </td>
+                  </tr>
                 ) : (
-                  <Input
-                    className="h-7"
-                    value={newRow.merk}
-                    onChange={(e) => setNewRow({ ...newRow, merk: e.target.value })}
-                    placeholder="Merk"
-                    disabled={busy}
-                  />
-                )}
-              </TableCell>
-              <TableCell className="px-1 py-1">
-                <Input
-                  className="h-7"
-                  value={newRow.merk}
-                  onChange={(e) => setNewRow({ ...newRow, merk: e.target.value })}
-                  placeholder="Merk"
-                  disabled={busy}
-                />
-              </TableCell>
-              <TableCell className="px-1 py-1">
-                <Input
-                  className="h-7 w-20"
-                  value={newRow.tahun}
-                  onChange={(e) => setNewRow({ ...newRow, tahun: e.target.value })}
-                  placeholder="Tahun"
-                  disabled={busy}
-                />
-              </TableCell>
-              {isKendaraan && (
-                <>
-                  <TableCell className="px-1 py-1">
-                    <Input
-                      className="h-7"
-                      value={newRow.nopol}
-                      onChange={(e) => setNewRow({ ...newRow, nopol: e.target.value })}
-                      placeholder="No. Polisi"
-                      disabled={busy}
-                    />
-                  </TableCell>
-                  <TableCell className="px-1 py-1">
-                    <Input
-                      className="h-7"
-                      value={newRow.harga}
-                      onChange={(e) => setNewRow({ ...newRow, harga: e.target.value })}
-                      placeholder="Harga"
-                      disabled={busy}
-                    />
-                  </TableCell>
-                  <TableCell className="px-1 py-1">
-                    <Input
-                      className="h-7"
-                      value={newRow.ket}
-                      onChange={(e) => setNewRow({ ...newRow, ket: e.target.value })}
-                      placeholder="Ket"
-                      disabled={busy}
-                    />
-                  </TableCell>
-                </>
-              )}
-              {!isKendaraan && !isRumah && (
-                <>
-                  <TableCell className="px-1 py-1">
-                    <Input
-                      className="h-7"
-                      value={newRow.type}
-                      onChange={(e) => setNewRow({ ...newRow, type: e.target.value })}
-                      placeholder="Type"
-                      disabled={busy}
-                    />
-                  </TableCell>
-                  <TableCell className="px-1 py-1">
-                    <Input
-                      className="h-7"
-                      value={newRow.harga}
-                      onChange={(e) => setNewRow({ ...newRow, harga: e.target.value })}
-                      placeholder="Harga"
-                      disabled={busy}
-                    />
-                  </TableCell>
-                  <TableCell className="px-1 py-1">
-                    <Input
-                      className="h-7"
-                      value={newRow.ket}
-                      onChange={(e) => setNewRow({ ...newRow, ket: e.target.value })}
-                      placeholder="Ket"
-                      disabled={busy}
-                    />
-                  </TableCell>
-                </>
-              )}
-              <TableCell className="px-1 py-1">
-                <div className="flex items-center justify-center gap-1">
-                  <button
-                    type="button"
-                    onClick={handleAdd}
-                    disabled={busy}
-                    className="inline-flex h-6 w-6 items-center justify-center ring-1 ring-border hover:bg-muted"
-                    title="Simpan"
+                  <tr
+                    key={item.id}
+                    className="border-b border-line last:border-0 hover:bg-line2/40"
                   >
-                    <Check className="h-3 w-3" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAdding(false);
-                      setNewRow(emptyRow());
-                    }}
-                    disabled={busy}
-                    className="inline-flex h-6 w-6 items-center justify-center ring-1 ring-border hover:bg-muted"
-                    title="Batal"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              </TableCell>
-            </TableRow>
+                    <td className="px-2.5 py-2 text-ink font-semibold">
+                      {item.merk || "—"}
+                    </td>
+                    <td className="px-2.5 py-2 text-ink2">{item.type || "—"}</td>
+                    <td className="px-2.5 py-2 text-ink2 font-mono text-[11px]">
+                      {item.tahun || "—"}
+                    </td>
+                    {showNopol && (
+                      <td className="px-2.5 py-2 text-ink2 font-mono text-[11px]">
+                        {item.nopol || "—"}
+                      </td>
+                    )}
+                    <td className="px-2.5 py-2 text-ink2">
+                      {item.harga ? `Rp ${item.harga}` : "—"}
+                    </td>
+                    <td className="px-2.5 py-2 text-ink3 text-[11px]">
+                      {item.ket || "—"}
+                    </td>
+                    {!readOnly && (
+                      <td className="px-2.5 py-2 whitespace-nowrap">
+                        <button
+                          type="button"
+                          className="mr-1 py-0.5 px-2 rounded border border-line text-[10.5px] font-semibold text-ink2 hover:border-teal hover:text-teal"
+                          onClick={() => {
+                            setEditingId(item.id);
+                            setEditRow(toRowState(item));
+                            setErr(null);
+                          }}
+                        >
+                          {"\u270F\uFE0F"}
+                        </button>
+                        <button
+                          type="button"
+                          className="py-0.5 px-2 rounded border border-line text-[10.5px] font-semibold text-ink2 hover:border-red hover:text-red"
+                          onClick={() => handleDelete(item.id)}
+                        >
+                          {"\uD83D\uDDD1\uFE0F"}
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ),
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {adding && !readOnly && (
+        <form
+          onSubmit={handleAdd}
+          className="border-t border-line p-3 grid grid-cols-2 md:grid-cols-3 gap-2"
+          style={{ background: "#f8fafc" }}
+        >
+          <Input
+            label="Merk"
+            value={newRow.merk}
+            onChange={(e) => setNewRow((r) => ({ ...r, merk: e.target.value }))}
+            placeholder="Merk"
+          />
+          <Input
+            label="Tipe"
+            value={newRow.type}
+            onChange={(e) => setNewRow((r) => ({ ...r, type: e.target.value }))}
+            placeholder="Tipe / model"
+          />
+          <Input
+            label="Tahun"
+            value={newRow.tahun}
+            onChange={(e) =>
+              setNewRow((r) => ({ ...r, tahun: e.target.value }))
+            }
+            placeholder="Tahun"
+          />
+          {showNopol && (
+            <Input
+              label="Nopol"
+              value={newRow.nopol}
+              onChange={(e) =>
+                setNewRow((r) => ({ ...r, nopol: e.target.value }))
+              }
+              placeholder="Nopol"
+            />
           )}
-        </TableBody>
-      </Table>
+          <Input
+            label="Harga"
+            value={newRow.harga}
+            onChange={(e) =>
+              setNewRow((r) => ({ ...r, harga: e.target.value }))
+            }
+            placeholder="Harga"
+          />
+          <Input
+            label="Ket"
+            value={newRow.ket}
+            onChange={(e) => setNewRow((r) => ({ ...r, ket: e.target.value }))}
+            placeholder="Keterangan"
+          />
+          <div className="col-span-full flex gap-2 justify-end">
+            <Button
+              type="button"
+              variant="modal-cancel"
+              className="text-[11px] px-3 py-1.5"
+              onClick={() => {
+                setAdding(false);
+                setNewRow(emptyRow());
+                setErr(null);
+              }}
+            >
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              variant="modal-ok"
+              className="text-[11px] px-3 py-1.5"
+            >
+              {"\u2795"} Simpan
+            </Button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }
@@ -631,14 +394,17 @@ export function AsetManager({
   asetList,
   readOnly,
 }: AsetManagerProps) {
+  const byJenis = (jenis: AsetPemegangJenis) =>
+    asetList.filter((a) => a.jenis === jenis);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {JENIS_ORDER.map((jenis) => (
         <AsetJenisTable
           key={jenis}
           pemegangId={pemegangId}
           jenis={jenis}
-          items={asetList.filter((a) => a.jenis === jenis)}
+          items={byJenis(jenis)}
           readOnly={readOnly}
         />
       ))}

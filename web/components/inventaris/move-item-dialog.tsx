@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight, Loader2 } from "lucide-react";
 import { moveItem } from "@/lib/auth/items";
 import type { Room } from "@/types/database";
 
@@ -122,17 +121,7 @@ export function MoveItemDialog({
             onClick={handleConfirm}
             disabled={pending || otherRooms.length === 0 || !targetRoomId}
           >
-            {pending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Memindahkan...
-              </>
-            ) : (
-              <>
-                <ArrowUpRight className="mr-2 h-4 w-4" />
-                Pindahkan
-              </>
-            )}
+            {pending ? "⏳ Memindahkan..." : "↗️ Pindahkan"}
           </Button>
         </DialogFooter>
       </DialogContent>

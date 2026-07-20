@@ -15,7 +15,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
 import type { Item } from "@/types/database";
 import {
   CATEGORIES,
@@ -267,10 +266,7 @@ export function ItemForm({ roomId, item }: ItemFormProps) {
         </Link>
         <Button type="submit" disabled={loading}>
           {loading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Menyimpan...
-            </>
+            "⏳ Menyimpan..."
           ) : (
             item ? "Update" : "Simpan"
           )}

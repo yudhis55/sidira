@@ -1,41 +1,30 @@
 "use client";
 
-import { useState, useMemo, useTransition, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Check,
-  TriangleAlert,
-  CircleX,
-  Minus,
-  Search,
-} from "lucide-react";
-import { toast } from "sonner";
+import { useState, useMemo, useCallback } from "react";
+import { cn } from "@/lib/utils";
 import { ChecklistFormDialog } from "./checklist-form-dialog";
-import {
-  saveChecklistPayload,
-  deleteChecklistEntry,
-  bulkSetChecklist,
-  type ChecklistEntry,
-  type ChecklistPayload,
-} from "@/lib/auth/checklist";
-import type { ItemCategory } from "@/types/database";
+import type { ItemCategory, ItemCondition, ChecklistPayload } from "@/types/database";
+
+/* ── local mock types (no backend) ── */
+
+export interface ChecklistEntryLocal {
+  id: string;
+  room_id: string;
+  item_id: number;
+  category: ItemCategory;
+  item_index: number;
+  date_key: string;
+  payload: ChecklistPayload;
+}
 
 interface ChecklistCalendarProps {
   roomId: string;
   roomName: string;
   roomIcon: string;
-  /** Year (e.g. 2026) being viewed. */
+  /** Year (e.g. 2026) being viewed — seed only; nav is local. */
   year: number;
-  /** Month 0-based (0 = Jan). */
+  /** Month 0-based (0 = Jan) — seed only; nav is local. */
   month: number;
-  /**
-   * Items in the room. `index_in_room` is used as the row identity key and
-   * must match `item_index` stored on checklist entries.
-   */
   items: Array<{
     id: number;
     name: string;
@@ -45,8 +34,8 @@ interface ChecklistCalendarProps {
     category: ItemCategory;
     index_in_room: number;
   }>;
-  /** Checklist entries for the viewed month. */
-  entries: ChecklistEntry[];
+  /** Optional seed entries (mock page passes []). */
+  entries?: ChecklistEntryLocal[];
 }
 
 const MONTH_NAMES_SHORT = [
@@ -65,10 +54,48 @@ const CAT_LABELS: Record<ItemCategory, string> = {
   lainnya: "Lainnya",
 };
 
+const CAT_EMOJI: Record<ItemCategory, string> = {
+  alkes: "🩺",
+  meubelair: "🪑",
+  elektronik: "💻",
+  lainnya: "📦",
+};
+
 const CAT_ORDER: ItemCategory[] = ["alkes", "meubelair", "elektronik", "lainnya"];
 
-// Status cycle: empty -> baik -> rr -> rb -> ta -> empty
-const CYCLE: (ChecklistPayload["status"] | null)[] = [null, "baik", "rr", "rb", "ta"];
+const CAT_ROW_CLASS: Record<ItemCategory, string> = {
+  alkes: "bg-[var(--teal3)] text-[var(--teal)]",
+  meubelair: "bg-[var(--amber2)] text-[var(--amber)]",
+  elektronik: "bg-[var(--blue2)] text-[var(--blue)]",
+  lainnya: "bg-[var(--slate2)] text-[var(--slate)]",
+};
+
+/** GAS CL_CYCLE / CL_ICON / CL_BG / CL_BORDER / CL_TEXTCOL */
+const CYCLE: (ItemCondition | null)[] = [null, "baik", "rr", "rb", "ta"];
+
+const CL_ICON: Record<ItemCondition, string> = {
+  baik: "✔",
+  rr: "⚠",
+  rb: "✖",
+  ta: "—",
+};
+
+const CL_LABEL: Record<ItemCondition, string> = {
+  baik: "Baik",
+  rr: "Rusak Ringan",
+  rb: "Rusak Berat",
+  ta: "Tidak Ada",
+};
+
+const CL_STYLE: Record<
+  ItemCondition,
+  { bg: string; border: string; color: string }
+> = {
+  baik: { bg: "#d1fae5", border: "#10b981", color: "#065f46" },
+  rr: { bg: "#fef3c7", border: "#f59e0b", color: "#92400e" },
+  rb: { bg: "#fee2e2", border: "#b91c1c", color: "#b91c1c" },
+  ta: { bg: "#f1f5f9", border: "#94a3b8", color: "#475569" },
+};
 
 const DAY_NAMES = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 
@@ -83,695 +110,644 @@ function todayString() {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
+function formatDateKey(year: number, month0: number, day: number) {
+  return `${year}-${pad2(month0 + 1)}-${pad2(day)}`;
+}
+
+function entryKey(itemIndex: number, dateKey: string) {
+  return `${itemIndex}|${dateKey}`;
+}
+
+function daysInMonth(year: number, month0: number) {
+  return new Date(year, month0 + 1, 0).getDate();
+}
+
+function seedMap(entries: ChecklistEntryLocal[] | undefined) {
+  const map = new Map<string, ChecklistEntryLocal>();
+  for (const e of entries ?? []) {
+    map.set(entryKey(e.item_index, e.date_key), e);
+  }
+  return map;
+}
+
 export function ChecklistCalendar({
   roomId,
   roomName,
   roomIcon,
-  year,
-  month,
+  year: initialYear,
+  month: initialMonth,
   items,
   entries,
 }: ChecklistCalendarProps) {
+  const [year, setYear] = useState(initialYear);
+  const [month0, setMonth0] = useState(initialMonth);
   const [filter, setFilter] = useState<FilterValue>("all");
   const [search, setSearch] = useState("");
+  const [map, setMap] = useState(() => seedMap(entries));
   const [detailCell, setDetailCell] = useState<{
     itemId: number;
     itemName: string;
     itemCategory: ItemCategory;
     itemIndex: number;
     dateKey: string;
-    existingEntry?: ChecklistEntry;
+    existing?: ChecklistEntryLocal;
   } | null>(null);
-  const [pending, startTransition] = useTransition();
 
-  // set-all-baik form state
-  const [baikDate, setBaikDate] = useState<string>(todayString());
-  const [baikFrom, setBaikFrom] = useState<string>(todayString());
-  const [baikTo, setBaikTo] = useState<string>(todayString());
-
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
   const tds = todayString();
+  const dim = daysInMonth(year, month0);
 
-  // Index entries by `${item_index}|${date_key}` for O(1) lookup.
-  // NOTE: lookup uses item_index (the matrix row key) per the unique constraint.
-  const entryMap = useMemo(() => {
-    const m = new Map<string, ChecklistEntry>();
-    for (const e of entries) {
-      m.set(`${e.item_index}|${e.date_key}`, e);
-    }
-    return m;
-  }, [entries]);
+  const [baikDate, setBaikDate] = useState(tds);
+  const [baikFrom, setBaikFrom] = useState(tds);
+  const [baikTo, setBaikTo] = useState(tds);
 
   const getEntry = useCallback(
-    (itemIndex: number, dateKey: string): ChecklistEntry | undefined => {
-      return entryMap.get(`${itemIndex}|${dateKey}`);
-    },
-    [entryMap]
+    (itemIndex: number, dateKey: string) => map.get(entryKey(itemIndex, dateKey)),
+    [map]
   );
 
-  const formatDateKey = useCallback(
-    (day: number) => {
-      return `${year}-${pad2(month + 1)}-${pad2(day)}`;
-    },
-    [year, month]
-  );
-
-  // Items grouped + filtered, in category order.
-  const groupedItems = useMemo(() => {
+  const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const cats: ItemCategory[] = filter === "all" ? CAT_ORDER : [filter];
-    return cats
-      .map((cat) => ({
-        category: cat,
-        items: items.filter((it) => {
-          if (it.category !== cat) return false;
-          if (q && !it.name.toLowerCase().includes(q)) return false;
-          return true;
-        }),
-      }))
-      .filter((g) => g.items.length > 0);
+    return items.filter((it) => {
+      if (filter !== "all" && it.category !== filter) return false;
+      if (!q) return true;
+      return (
+        it.name.toLowerCase().includes(q) ||
+        (it.spec || "").toLowerCase().includes(q) ||
+        (it.merk || "").toLowerCase().includes(q)
+      );
+    });
   }, [items, filter, search]);
 
-  // Summary counts (computed across the visible matrix, like GAS clUpdateSummaryOnly
-  // which counts up-to-and-including-today cells).
+  const grouped = useMemo(() => {
+    const groups: { cat: ItemCategory; items: typeof filteredItems }[] = [];
+    for (const cat of CAT_ORDER) {
+      const list = filteredItems.filter((i) => i.category === cat);
+      if (list.length) groups.push({ cat, items: list });
+    }
+    return groups;
+  }, [filteredItems]);
+
   const summary = useMemo(() => {
-    let baik = 0, rr = 0, rb = 0, ta = 0, checked = 0, cells = 0;
-    const cats: ItemCategory[] = filter === "all" ? CAT_ORDER : [filter];
-    const q = search.trim().toLowerCase();
-    for (const cat of cats) {
-      for (const it of items) {
-        if (it.category !== cat) continue;
-        if (q && !it.name.toLowerCase().includes(q)) continue;
-        for (let day = 1; day <= daysInMonth; day++) {
-          const ds = formatDateKey(day);
-          if (ds > tds) continue; // future dates don't count as cells
-          cells++;
-          const e = getEntry(it.index_in_room, ds);
-          const st = e?.payload?.status;
-          if (st) {
-            checked++;
-            if (st === "baik") baik++;
-            else if (st === "rr") rr++;
-            else if (st === "rb") rb++;
-            else if (st === "ta") ta++;
-          }
+    let baik = 0;
+    let rr = 0;
+    let rb = 0;
+    let ta = 0;
+    let checked = 0;
+    let cells = 0;
+    for (const it of filteredItems) {
+      for (let d = 1; d <= dim; d++) {
+        const dk = formatDateKey(year, month0, d);
+        if (dk > tds) continue;
+        cells++;
+        const st = getEntry(it.index_in_room, dk)?.payload?.status;
+        if (st) {
+          checked++;
+          if (st === "baik") baik++;
+          else if (st === "rr") rr++;
+          else if (st === "rb") rb++;
+          else if (st === "ta") ta++;
         }
       }
     }
     return { baik, rr, rb, ta, checked, cells };
-  }, [items, filter, search, daysInMonth, getEntry, tds, formatDateKey]);
+  }, [filteredItems, dim, year, month0, tds, getEntry]);
 
-  const cycleStatus = useCallback(
-    (itemIndex: number, dateKey: string, currentStatus: ChecklistPayload["status"] | undefined) => {
-      const cur = currentStatus ?? null;
-      const ci = CYCLE.indexOf(cur);
-      const next = CYCLE[(ci + 1) % CYCLE.length];
-
-      const item = items.find((it) => it.index_in_room === itemIndex);
-      if (!item) return;
-
-      if (next === null) {
-        // Cycle to empty: GAS clears the entry. We emulate "empty" by deleting
-        // the row (saveChecklistPayload always upserts, so a delete is the only
-        // way to represent the empty state).
-        const existing = getEntry(itemIndex, dateKey);
-        if (existing?.id) {
-          startTransition(async () => {
-            try {
-              await deleteChecklistEntry(existing.id!, roomId);
-            } catch (err) {
-              console.error(err);
-              toast.error("Gagal menghapus status checklist");
-            }
-          });
+  const setStatus = useCallback(
+    (
+      item: ChecklistCalendarProps["items"][number],
+      dateKey: string,
+      status: ItemCondition | null,
+      preserve?: ChecklistPayload
+    ) => {
+      setMap((prev) => {
+        const next = new Map(prev);
+        const k = entryKey(item.index_in_room, dateKey);
+        if (status === null) {
+          next.delete(k);
+          return next;
         }
-        return;
-      }
-
-      // Preserve existing detail fields when toggling status.
-      const existing = getEntry(itemIndex, dateKey);
-      const merged: ChecklistPayload = {
-        status: next,
-        jenis_kerusakan: existing?.payload?.jenis_kerusakan,
-        uraian_kerusakan: existing?.payload?.uraian_kerusakan,
-        jenis_tindakan: existing?.payload?.jenis_tindakan,
-        uraian_tindakan: existing?.payload?.uraian_tindakan,
-        petugas: existing?.payload?.petugas,
-        no_laporan: existing?.payload?.no_laporan,
-      };
-
-      startTransition(async () => {
-        try {
-          await saveChecklistPayload(
-            roomId,
-            item.id,
-            item.category,
-            itemIndex,
-            dateKey,
-            merged
-          );
-        } catch (err) {
-          console.error(err);
-          toast.error("Gagal menyimpan status checklist");
-        }
+        const existing = prev.get(k);
+        next.set(k, {
+          id: existing?.id ?? `local-${item.index_in_room}-${dateKey}`,
+          room_id: roomId,
+          item_id: item.id,
+          category: item.category,
+          item_index: item.index_in_room,
+          date_key: dateKey,
+          payload: {
+            status,
+            jenis_kerusakan: preserve?.jenis_kerusakan ?? existing?.payload?.jenis_kerusakan,
+            uraian_kerusakan: preserve?.uraian_kerusakan ?? existing?.payload?.uraian_kerusakan,
+            jenis_tindakan: preserve?.jenis_tindakan ?? existing?.payload?.jenis_tindakan,
+            uraian_tindakan: preserve?.uraian_tindakan ?? existing?.payload?.uraian_tindakan,
+            petugas: preserve?.petugas ?? existing?.payload?.petugas,
+            no_laporan: preserve?.no_laporan ?? existing?.payload?.no_laporan,
+          },
+        });
+        return next;
       });
     },
-    [items, roomId, getEntry, startTransition]
+    [roomId]
   );
 
-  const openDetail = (itemIndex: number, dateKey: string) => {
-    const item = items.find((it) => it.index_in_room === itemIndex);
-    if (!item) return;
+  const cycleStatus = (
+    item: ChecklistCalendarProps["items"][number],
+    dateKey: string
+  ) => {
+    if (dateKey > tds) return;
+    const cur = getEntry(item.index_in_room, dateKey)?.payload?.status ?? null;
+    const ci = CYCLE.indexOf(cur);
+    const next = CYCLE[(ci + 1) % CYCLE.length];
+    setStatus(item, dateKey, next);
+  };
+
+  const openDetail = (
+    item: ChecklistCalendarProps["items"][number],
+    dateKey: string
+  ) => {
+    if (dateKey > tds) return;
     setDetailCell({
       itemId: item.id,
       itemName: item.name,
       itemCategory: item.category,
-      itemIndex,
+      itemIndex: item.index_in_room,
       dateKey,
-      existingEntry: getEntry(itemIndex, dateKey),
+      existing: getEntry(item.index_in_room, dateKey),
+    });
+  };
+
+  const applyBaikOnDates = (dates: string[]) => {
+    if (!dates.length || !filteredItems.length) return;
+    setMap((prev) => {
+      const next = new Map(prev);
+      for (const dk of dates) {
+        if (dk > tds) continue;
+        for (const item of filteredItems) {
+          const k = entryKey(item.index_in_room, dk);
+          const existing = prev.get(k);
+          next.set(k, {
+            id: existing?.id ?? `local-${item.index_in_room}-${dk}`,
+            room_id: roomId,
+            item_id: item.id,
+            category: item.category,
+            item_index: item.index_in_room,
+            date_key: dk,
+            payload: {
+              status: "baik",
+              jenis_kerusakan: existing?.payload?.jenis_kerusakan,
+              uraian_kerusakan: existing?.payload?.uraian_kerusakan,
+              jenis_tindakan: existing?.payload?.jenis_tindakan,
+              uraian_tindakan: existing?.payload?.uraian_tindakan,
+              petugas: existing?.payload?.petugas,
+              no_laporan: existing?.payload?.no_laporan,
+            },
+          });
+        }
+      }
+      return next;
     });
   };
 
   const handleApplyBaikDate = () => {
-    if (!baikDate) {
-      toast.warning("Pilih tanggal terlebih dahulu");
-      return;
-    }
-    startTransition(async () => {
-      try {
-        const res = await bulkSetChecklist(roomId, "baik", {
-          date: baikDate,
-          category: filter === "all" ? undefined : filter,
-        });
-        toast.success(
-          `${res.count} item diset Baik untuk ${formatDateDisplay(baikDate)}`
-        );
-      } catch (err) {
-        console.error(err);
-        toast.error("Gagal menerapkan status Baik");
-      }
-    });
+    if (!baikDate) return;
+    applyBaikOnDates([baikDate]);
   };
 
   const handleApplyBaikRange = () => {
-    if (!baikFrom || !baikTo) {
-      toast.warning("Isi tanggal dari dan sampai");
-      return;
+    if (!baikFrom || !baikTo || baikFrom > baikTo) return;
+    const dates: string[] = [];
+    const start = new Date(baikFrom + "T00:00:00");
+    const end = new Date(baikTo + "T00:00:00");
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      dates.push(
+        `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+      );
     }
-    if (baikFrom > baikTo) {
-      toast.warning("Tanggal awal harus sebelum tanggal akhir");
-      return;
-    }
-    startTransition(async () => {
-      try {
-        const res = await bulkSetChecklist(roomId, "baik", {
-          dateFrom: baikFrom,
-          dateTo: baikTo,
-          category: filter === "all" ? undefined : filter,
-        });
-        toast.success(
-          `${Math.round(res.count / Math.max(res.dates, 1))} item × ${res.dates} hari diset Baik`
-        );
-      } catch (err) {
-        console.error(err);
-        toast.error("Gagal menerapkan status Baik");
-      }
-    });
+    applyBaikOnDates(dates);
   };
 
   const handleApplyBaikMonth = () => {
-    const monthStart = `${year}-${pad2(month + 1)}-01`;
-    const monthEnd = `${year}-${pad2(month + 1)}-${pad2(daysInMonth)}`;
-    startTransition(async () => {
-      try {
-        const res = await bulkSetChecklist(roomId, "baik", {
-          dateFrom: monthStart,
-          dateTo: monthEnd,
-          category: filter === "all" ? undefined : filter,
-        });
-        toast.success(
-          `${Math.round(res.count / Math.max(res.dates, 1))} item × ${res.dates} hari diset Baik (seluruh bulan)`
-        );
-      } catch (err) {
-        console.error(err);
-        toast.error("Gagal menerapkan status Baik");
-      }
-    });
+    const dates: string[] = [];
+    for (let d = 1; d <= dim; d++) {
+      dates.push(formatDateKey(year, month0, d));
+    }
+    applyBaikOnDates(dates);
   };
 
-  const summaryPct =
-    summary.cells > 0 ? Math.round((summary.checked / summary.cells) * 100) : 0;
+  const FILTERS: { key: FilterValue; label: string; emoji: string; cls?: string }[] = [
+    { key: "all", label: "Semua", emoji: "📋" },
+    { key: "alkes", label: "Alat Kesehatan", emoji: "🩺" },
+    { key: "meubelair", label: "Meubelair", emoji: "🪑", cls: "f-meub" },
+    { key: "elektronik", label: "Elektronik", emoji: "💻", cls: "f-elek" },
+  ];
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div>
-        <h2 className="font-mono text-2xl font-bold tracking-tight">
-          <span className="mr-2">{roomIcon}</span>
-          Ceklist Harian — {roomName}
-        </h2>
-        <p className="text-xs text-muted-foreground">
-          Klik sel untuk ubah status · Klik kanan atau tahan untuk isi keterangan detail
-        </p>
+    <div className="overflow-hidden rounded-[18px] border border-line bg-white">
+      {/* Head — GAS .cl-modal-head gradient */}
+      <div
+        className="flex shrink-0 items-center gap-3.5 px-6 py-[18px]"
+        style={{
+          background: "linear-gradient(135deg, #0a3d32 0%, #0e7c6b 100%)",
+        }}
+      >
+        <div
+          className="flex size-11 shrink-0 items-center justify-center rounded-xl text-[22px] leading-none"
+          style={{
+            background: "rgba(255,255,255,0.15)",
+            border: "1.5px solid rgba(255,255,255,0.22)",
+          }}
+          aria-hidden
+        >
+          {roomIcon}
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-[15px] font-extrabold text-white">
+            Ceklist Harian — {roomName}
+          </h3>
+          <p className="mt-0.5 text-[11.5px] text-white/65">
+            Klik sel untuk ubah status · Klik kanan untuk isi keterangan detail
+          </p>
+        </div>
+        <span className="ml-auto whitespace-nowrap font-mono text-[11px] font-semibold text-white/80">
+          {summary.checked}/{summary.cells} terisi
+        </span>
       </div>
 
-      {/* Year navigation + month tabs */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            asChild
+      {/* Year + month tabs — GAS .cl-controls */}
+      <div className="flex flex-wrap items-center gap-3 border-b border-line bg-[#f8fafc] px-6 py-3.5">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setYear((y) => y - 1)}
+            className="flex size-[30px] items-center justify-center rounded-lg border-[1.5px] border-line bg-white text-sm text-ink2 transition-colors hover:border-teal hover:text-teal"
+            aria-label="Tahun sebelumnya"
           >
-            <a
-              href={`/checklist?room=${encodeURIComponent(roomId)}&year=${year - 1}&month=${month + 1}`}
-              aria-label="Tahun sebelumnya"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </a>
-          </Button>
-          <span className="font-mono text-sm font-semibold tabular-nums w-12 text-center">
+            ‹
+          </button>
+          <span className="min-w-12 text-center text-[15px] font-extrabold tabular-nums text-ink">
             {year}
           </span>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            asChild
+          <button
+            type="button"
+            onClick={() => setYear((y) => y + 1)}
+            className="flex size-[30px] items-center justify-center rounded-lg border-[1.5px] border-line bg-white text-sm text-ink2 transition-colors hover:border-teal hover:text-teal"
+            aria-label="Tahun berikutnya"
           >
-            <a
-              href={`/checklist?room=${encodeURIComponent(roomId)}&year=${year + 1}&month=${month + 1}`}
-              aria-label="Tahun berikutnya"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </a>
-          </Button>
+            ›
+          </button>
         </div>
 
-        <div className="flex flex-wrap gap-1">
-          {MONTH_NAMES_SHORT.map((m, mi) => {
-            const active = mi === month;
-            const monthStart = `${year}-${pad2(mi + 1)}-01`;
-            const monthEnd = `${year}-${pad2(mi + 1)}-${pad2(new Date(year, mi + 1, 0).getDate())}`;
-            // has-data indicator: check if any entry falls in this month.
-            // We only have entries for the viewed month, so this is approximate
-            // (accurate for the currently-viewed month, false otherwise).
-            const hasData =
-              mi === month &&
-              entries.some(
-                (e) => e.date_key >= monthStart && e.date_key <= monthEnd
-              );
+        <div className="flex flex-1 flex-wrap gap-1">
+          {MONTH_NAMES_SHORT.map((label, mi) => {
+            const active = mi === month0;
             return (
-              <a
-                key={m}
-                href={`/checklist?room=${encodeURIComponent(roomId)}&year=${year}&month=${mi + 1}`}
-                className={
-                  "inline-flex h-8 items-center rounded-none border px-2 font-mono text-xs transition-colors " +
-                  (active
-                    ? "border-foreground bg-foreground text-background font-semibold"
-                    : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground")
-                }
-              >
-                {m}
-                {hasData && (
-                  <span
-                    className={
-                      "ml-1 inline-block h-1.5 w-1.5 rounded-full " +
-                      (active ? "bg-background" : "bg-foreground")
-                    }
-                    aria-label="ada data"
-                  />
+              <button
+                key={label}
+                type="button"
+                onClick={() => setMonth0(mi)}
+                className={cn(
+                  "rounded-md border-[1.5px] px-2.5 py-1 text-[11px] font-bold transition-colors",
+                  active
+                    ? "border-teal bg-teal text-white"
+                    : "border-line bg-white text-ink3 hover:border-[var(--teal2)] hover:text-teal"
                 )}
-              </a>
+              >
+                {label}
+              </button>
             );
           })}
         </div>
       </div>
 
-      {/* Filter buttons + search */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex gap-1">
-          {(["all", "alkes", "meubelair", "elektronik"] as FilterValue[]).map((f) => (
+      {/* Filter bar — GAS .cl-filter-bar */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-line bg-white px-6 py-2.5">
+        {FILTERS.map((f) => {
+          const active = filter === f.key;
+          let activeCls =
+            "bg-[var(--teal4)] border-teal text-teal";
+          if (f.key === "meubelair" && active)
+            activeCls = "bg-[var(--amber2)] border-[var(--amber)] text-[var(--amber)]";
+          if (f.key === "elektronik" && active)
+            activeCls = "bg-[var(--blue2)] border-[var(--blue)] text-[var(--blue)]";
+          return (
             <button
-              key={f}
+              key={f.key}
               type="button"
-              onClick={() => setFilter(f)}
-              className={
-                "inline-flex h-8 items-center rounded-none border px-2.5 font-mono text-xs transition-colors " +
-                (filter === f
-                  ? "border-foreground bg-foreground text-background font-semibold"
-                  : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground")
-              }
+              onClick={() => setFilter(f.key)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border-[1.5px] px-3 py-1 text-[11px] font-bold transition-colors",
+                active
+                  ? activeCls
+                  : "border-line bg-[var(--line2)] text-ink3 hover:border-[var(--teal2)]"
+              )}
             >
-              {f === "all" ? "Semua" : CAT_LABELS[f]}
+              <span aria-hidden>{f.emoji}</span>
+              {f.label}
             </button>
-          ))}
-        </div>
-        <div className="relative ml-auto w-full max-w-[16rem]">
-          <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari barang..."
-            className="pl-7"
+          );
+        })}
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="🔍 Cari nama barang..."
+          className="ml-auto w-[180px] rounded-full border-[1.5px] border-line bg-white px-3 py-1.5 text-xs text-ink outline-none transition-colors focus:border-[var(--teal2)]"
+        />
+      </div>
+
+      {/* All-baik bar — GAS .cl-allbaik-bar */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-line bg-[#f0fdf9] px-6 py-2">
+        <span className="text-[11px] font-bold text-ink3">
+          ✔ Centang Semua Baik:
+        </span>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="whitespace-nowrap text-[10px] font-bold text-ink3">
+            📅 Tanggal:
+          </span>
+          <input
+            type="date"
+            value={baikDate}
+            onChange={(e) => setBaikDate(e.target.value)}
+            className="cursor-pointer rounded-lg border-[1.5px] border-teal/40 bg-white px-2 py-1 text-[11px] font-semibold text-ink outline-none focus:border-teal"
           />
-        </div>
-      </div>
-
-      {/* Set-all-baik toolbar */}
-      <div className="rounded-none border border-border p-3">
-        <div className="mb-2 font-mono text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Set Baik Otomatis
-        </div>
-        <div className="flex flex-wrap items-end gap-4">
-          <div className="flex items-end gap-2">
-            <div className="space-y-1">
-              <Label className="text-xs">Tanggal</Label>
-              <Input
-                type="date"
-                value={baikDate}
-                onChange={(e) => setBaikDate(e.target.value)}
-                className="w-[10rem]"
-              />
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleApplyBaikDate}
-              disabled={pending}
-              className="h-8"
-            >
-              Terapkan
-            </Button>
-          </div>
-
-          <div className="flex items-end gap-2">
-            <div className="space-y-1">
-              <Label className="text-xs">Rentang dari</Label>
-              <Input
-                type="date"
-                value={baikFrom}
-                onChange={(e) => setBaikFrom(e.target.value)}
-                className="w-[10rem]"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">sampai</Label>
-              <Input
-                type="date"
-                value={baikTo}
-                onChange={(e) => setBaikTo(e.target.value)}
-                className="w-[10rem]"
-              />
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={handleApplyBaikRange}
-              disabled={pending}
-              className="h-8"
-            >
-              Terapkan Rentang
-            </Button>
-          </div>
-
-          <Button
+          <button
             type="button"
-            size="sm"
-            variant="outline"
-            onClick={handleApplyBaikMonth}
-            disabled={pending}
-            className="h-8"
+            onClick={handleApplyBaikDate}
+            className="inline-flex items-center gap-1 whitespace-nowrap rounded-2xl border-[1.5px] border-teal/40 bg-[var(--teal4)] px-2.5 py-1 text-[11px] font-bold text-teal transition-colors hover:border-teal hover:bg-teal hover:text-white"
           >
-            Seluruh Bulan ({MONTH_NAMES_FULL[month]})
-          </Button>
+            ✔ Terapkan
+          </button>
+        </div>
+
+        <div className="mx-1 hidden h-5 w-px bg-line sm:block" />
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="whitespace-nowrap text-[10px] font-bold text-ink3">
+            📆 Rentang:
+          </span>
+          <input
+            type="date"
+            value={baikFrom}
+            onChange={(e) => setBaikFrom(e.target.value)}
+            className="cursor-pointer rounded-lg border-[1.5px] border-teal/40 bg-white px-2 py-1 text-[11px] font-semibold text-ink outline-none focus:border-teal"
+          />
+          <span className="text-[10px] font-bold text-ink3">s/d</span>
+          <input
+            type="date"
+            value={baikTo}
+            onChange={(e) => setBaikTo(e.target.value)}
+            className="cursor-pointer rounded-lg border-[1.5px] border-teal/40 bg-white px-2 py-1 text-[11px] font-semibold text-ink outline-none focus:border-teal"
+          />
+          <button
+            type="button"
+            onClick={handleApplyBaikRange}
+            className="inline-flex items-center gap-1 whitespace-nowrap rounded-2xl border-[1.5px] border-teal/40 bg-[var(--teal4)] px-2.5 py-1 text-[11px] font-bold text-teal transition-colors hover:border-teal hover:bg-teal hover:text-white"
+          >
+            ✔ Terapkan
+          </button>
+        </div>
+
+        <div className="mx-1 hidden h-5 w-px bg-line sm:block" />
+
+        <button
+          type="button"
+          onClick={handleApplyBaikMonth}
+          className="inline-flex items-center gap-1 whitespace-nowrap rounded-2xl border-[1.5px] border-teal/40 bg-[var(--teal4)] px-2.5 py-1 text-[11px] font-bold text-teal transition-colors hover:border-teal hover:bg-teal hover:text-white"
+          title={`Set semua Baik untuk ${MONTH_NAMES_FULL[month0]} ${year}`}
+        >
+          ✔ Seluruh {MONTH_NAMES_SHORT[month0]}
+        </button>
+      </div>
+
+      {/* Matrix table */}
+      <div className="overflow-x-auto">
+        {filteredItems.length === 0 ? (
+          <div className="px-6 py-12 text-center text-sm text-ink3">
+            {items.length === 0
+              ? "Belum ada barang di ruangan ini."
+              : "Tidak ada barang yang cocok dengan filter."}
+          </div>
+        ) : (
+          <table className="w-full min-w-[900px] border-collapse bg-white text-xs">
+            <thead>
+              <tr>
+                <th className="sticky left-0 top-0 z-20 min-w-[200px] bg-[#f0f4f8] px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wide text-ink3">
+                  Nama Barang
+                </th>
+                {Array.from({ length: dim }, (_, i) => {
+                  const day = i + 1;
+                  const dk = formatDateKey(year, month0, day);
+                  const isToday = dk === tds;
+                  const isSunday = new Date(dk + "T00:00:00").getDay() === 0;
+                  return (
+                    <th
+                      key={day}
+                      className={cn(
+                        "sticky top-0 z-10 w-[34px] bg-[#f0f4f8] px-1 py-2.5 text-center text-[10px] font-bold uppercase tracking-wide text-ink3",
+                        isSunday && "text-[#a855f7]"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "block font-mono text-[9px]",
+                          isToday && "font-extrabold text-teal"
+                        )}
+                      >
+                        {day}
+                      </span>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {grouped.map(({ cat, items: catItems }) => (
+                <>
+                  <tr key={`cat-${cat}`} className={CAT_ROW_CLASS[cat]}>
+                    <td
+                      colSpan={dim + 1}
+                      className="px-4 py-1.5 text-[10.5px] font-extrabold uppercase tracking-wide"
+                    >
+                      {CAT_EMOJI[cat]} {CAT_LABELS[cat]}
+                      <span className="ml-2 opacity-70">({catItems.length})</span>
+                    </td>
+                  </tr>
+                  {catItems.map((item) => (
+                    <tr
+                      key={item.id}
+                      className="group hover:[&>td]:bg-[#f8fffe]"
+                    >
+                      <td className="sticky left-0 z-[5] min-w-[200px] border-b border-r-2 border-line bg-white px-4 py-1.5 text-left group-hover:bg-[#f8fffe]">
+                        <div className="text-xs font-semibold text-ink">
+                          {item.name}
+                        </div>
+                        {(item.spec || item.merk || item.type) && (
+                          <div className="text-[10.5px] text-ink3">
+                            {[item.merk, item.type, item.spec]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </div>
+                        )}
+                      </td>
+                      {Array.from({ length: dim }, (_, i) => {
+                        const day = i + 1;
+                        const dk = formatDateKey(year, month0, day);
+                        const isFuture = dk > tds;
+                        const isToday = dk === tds;
+                        const isSunday =
+                          new Date(dk + "T00:00:00").getDay() === 0;
+                        const entry = getEntry(item.index_in_room, dk);
+                        const st = entry?.payload?.status;
+                        const style = st ? CL_STYLE[st] : null;
+                        const title = isFuture
+                          ? `${DAY_NAMES[new Date(dk + "T00:00:00").getDay()]}, ${day} ${MONTH_NAMES_FULL[month0]} (mendatang)`
+                          : `${dk}${st ? `: ${CL_LABEL[st]}` : ": Belum diisi"}`;
+
+                        return (
+                          <td
+                            key={day}
+                            className="border-b border-line px-1 py-1.5 text-center align-middle"
+                          >
+                            <button
+                              type="button"
+                              disabled={isFuture}
+                              title={title}
+                              onClick={() => cycleStatus(item, dk)}
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                openDetail(item, dk);
+                              }}
+                              className={cn(
+                                "mx-auto flex size-[26px] items-center justify-center rounded-md border-2 text-[13px] transition-all",
+                                isFuture &&
+                                  "cursor-not-allowed border-transparent bg-transparent opacity-30",
+                                !isFuture &&
+                                  !st &&
+                                  "cursor-pointer border-line bg-white text-ink3 hover:border-teal hover:bg-[var(--teal4)]",
+                                isToday && !st && !isFuture && "ring-1 ring-teal/40",
+                                isSunday && !st && !isFuture && "border-[#e9d5ff]"
+                              )}
+                              style={
+                                style
+                                  ? {
+                                      background: style.bg,
+                                      borderColor: style.border,
+                                      color: style.color,
+                                    }
+                                  : undefined
+                              }
+                            >
+                              {st
+                                ? CL_ICON[st]
+                                : isFuture
+                                  ? ""
+                                  : "·"}
+                            </button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Footer legend — GAS .cl-footer / .cl-legend */}
+      <div className="flex flex-wrap items-center gap-3 border-t border-line bg-[#f8fafc] px-6 py-3 text-[11px] text-ink3">
+        <span className="font-bold text-ink2">
+          {MONTH_NAMES_FULL[month0]} {year}
+        </span>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1" title="Baik">
+            <span
+              className="inline-flex size-5 items-center justify-center rounded border-2 text-[11px]"
+              style={{
+                background: CL_STYLE.baik.bg,
+                borderColor: CL_STYLE.baik.border,
+                color: CL_STYLE.baik.color,
+              }}
+            >
+              ✔
+            </span>
+            Baik
+          </span>
+          <span className="inline-flex items-center gap-1" title="Rusak Ringan">
+            <span
+              className="inline-flex size-5 items-center justify-center rounded border-2 text-[11px]"
+              style={{
+                background: CL_STYLE.rr.bg,
+                borderColor: CL_STYLE.rr.border,
+                color: CL_STYLE.rr.color,
+              }}
+            >
+              ⚠
+            </span>
+            RR
+          </span>
+          <span className="inline-flex items-center gap-1" title="Rusak Berat">
+            <span
+              className="inline-flex size-5 items-center justify-center rounded border-2 text-[11px]"
+              style={{
+                background: CL_STYLE.rb.bg,
+                borderColor: CL_STYLE.rb.border,
+                color: CL_STYLE.rb.color,
+              }}
+            >
+              ✖
+            </span>
+            RB
+          </span>
+          <span className="inline-flex items-center gap-1" title="Tidak Ada">
+            <span
+              className="inline-flex size-5 items-center justify-center rounded border-2 text-[11px]"
+              style={{
+                background: CL_STYLE.ta.bg,
+                borderColor: CL_STYLE.ta.border,
+                color: CL_STYLE.ta.color,
+              }}
+            >
+              —
+            </span>
+            TA
+          </span>
+          <span className="text-ink3">· Belum</span>
+          <span className="text-[#a855f7]">■ Minggu</span>
         </div>
       </div>
 
-      {/* Summary bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs">
-        <span className="inline-flex items-center gap-1">
-          <Check className="h-3.5 w-3.5" />
-          {summary.baik} Baik
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <TriangleAlert className="h-3.5 w-3.5" />
-          {summary.rr} Rusak Ringan
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <CircleX className="h-3.5 w-3.5" />
-          {summary.rb} Rusak Berat
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Minus className="h-3.5 w-3.5" />
-          {summary.ta} Tidak Ada
-        </span>
-        <span className="ml-2 text-muted-foreground">
-          Terisi: <span className="font-semibold text-foreground">{summary.checked}/{summary.cells}</span> ({summaryPct}%)
-        </span>
-      </div>
-
-      {/* The matrix table */}
-      <div className="relative w-full overflow-x-auto rounded-none border border-border">
-        <table className="w-full border-collapse text-xs">
-          <thead>
-            <tr className="border-b border-border bg-muted/40">
-              <th className="sticky left-0 z-10 min-w-[12rem] border-r border-border bg-muted/40 px-2 py-1.5 text-left font-mono text-xs font-semibold whitespace-nowrap">
-                {MONTH_NAMES_FULL[month]} {year} — Nama Barang
-              </th>
-              {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
-                const ds = formatDateKey(day);
-                const dow = new Date(ds + "T00:00:00").getDay();
-                const isWeekend = dow === 0 || dow === 6;
-                const isToday = ds === tds;
-                return (
-                  <th
-                    key={day}
-                    className={
-                      "border-r border-border px-0.5 py-1 text-center font-mono text-xs font-medium tabular-nums " +
-                      (isToday ? "ring-2 ring-foreground/30 ring-inset" : "") +
-                      (isWeekend ? " bg-muted/30" : "")
-                    }
-                    title={`${DAY_NAMES[dow]}, ${day} ${MONTH_NAMES_FULL[month]} ${year}`}
-                  >
-                    {day}
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
-          <tbody>
-            {groupedItems.length === 0 && (
-              <tr>
-                <td
-                  colSpan={daysInMonth + 1}
-                  className="px-2 py-8 text-center text-muted-foreground"
-                >
-                  Tidak ada item ditemukan
-                </td>
-              </tr>
-            )}
-            {groupedItems.map((group) => (
-              <MatrixGroup
-                key={group.category}
-                group={group}
-                daysInMonth={daysInMonth}
-                formatDateKey={formatDateKey}
-                getEntry={getEntry}
-                tds={tds}
-                onToggle={cycleStatus}
-                onOpenDetail={openDetail}
-                pending={pending}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Hint */}
-      <p className="text-xs text-muted-foreground">
-        Klik sel = ubah status · Klik kanan atau dobel klik = isi keterangan detail kerusakan &amp; perbaikan
-      </p>
-
-      {/* Legend */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1">
-          <Check className="h-3.5 w-3.5" /> Baik
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <TriangleAlert className="h-3.5 w-3.5" /> Rusak Ringan
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <CircleX className="h-3.5 w-3.5" /> Rusak Berat
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Minus className="h-3.5 w-3.5" /> Tidak Ada
-        </span>
-        <span>· Belum</span>
-      </div>
-
-      {/* Detail dialog */}
-      {detailCell && (
+      {detailCell ? (
         <ChecklistFormDialog
-          open={!!detailCell}
-          onOpenChange={(open) => !open && setDetailCell(null)}
-          entry={detailCell.existingEntry}
-          roomId={roomId}
-          itemId={detailCell.itemId}
+          key={`${detailCell.itemIndex}-${detailCell.dateKey}`}
+          open
+          onOpenChange={(open) => {
+            if (!open) setDetailCell(null);
+          }}
           itemName={detailCell.itemName}
           itemCategory={detailCell.itemCategory}
-          itemIndex={detailCell.itemIndex}
           dateKey={detailCell.dateKey}
+          initial={detailCell.existing?.payload ?? null}
+          onSave={(payload) => {
+            const item = items.find(
+              (it) => it.index_in_room === detailCell.itemIndex
+            );
+            if (!item) return;
+            setStatus(item, detailCell.dateKey, payload.status, payload);
+            setDetailCell(null);
+          }}
+          onClear={() => {
+            const item = items.find(
+              (it) => it.index_in_room === detailCell.itemIndex
+            );
+            if (!item) return;
+            setStatus(item, detailCell.dateKey, null);
+            setDetailCell(null);
+          }}
         />
-      )}
+      ) : null}
     </div>
   );
-}
-
-function formatDateDisplay(dateKey: string) {
-  const [y, m, d] = dateKey.split("-").map(Number);
-  return `${d}/${m}/${y}`;
-}
-
-/** Renders a category separator row + the item rows for that category. */
-function MatrixGroup({
-  group,
-  daysInMonth,
-  formatDateKey,
-  getEntry,
-  tds,
-  onToggle,
-  onOpenDetail,
-  pending,
-}: {
-  group: { category: ItemCategory; items: ChecklistCalendarProps["items"] };
-  daysInMonth: number;
-  formatDateKey: (day: number) => string;
-  getEntry: (itemIndex: number, dateKey: string) => ChecklistEntry | undefined;
-  tds: string;
-  onToggle: (itemIndex: number, dateKey: string, currentStatus: ChecklistPayload["status"] | undefined) => void;
-  onOpenDetail: (itemIndex: number, dateKey: string) => void;
-  pending: boolean;
-}) {
-  return (
-    <>
-      <tr className="border-b border-border bg-muted/20">
-        <td
-          colSpan={daysInMonth + 1}
-          className="px-2 py-1 font-mono text-xs font-semibold whitespace-nowrap"
-        >
-          {CAT_LABELS[group.category]} — {group.items.length} item
-        </td>
-      </tr>
-      {group.items.map((it) => (
-        <tr key={`${it.category}-${it.id}`} className="border-b border-border">
-          <td className="sticky left-0 z-[1] min-w-[12rem] border-r border-border bg-background px-2 py-1 align-top">
-            <div className="font-medium leading-tight">{it.name}</div>
-            {(it.spec || it.merk || it.type) && (
-              <div className="text-[0.65rem] leading-tight text-muted-foreground">
-                {it.spec || [it.merk, it.type].filter(Boolean).join(" ")}
-              </div>
-            )}
-          </td>
-          {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
-            const ds = formatDateKey(day);
-            const entry = getEntry(it.index_in_room, ds);
-            const status = entry?.payload?.status;
-            const isFuture = ds > tds;
-            const isToday = ds === tds;
-            const dow = new Date(ds + "T00:00:00").getDay();
-            const isWeekend = dow === 0 || dow === 6;
-            const hasNote = !!(
-              entry?.payload?.jenis_kerusakan ||
-              entry?.payload?.uraian_kerusakan ||
-              entry?.payload?.uraian_tindakan ||
-              entry?.payload?.petugas
-            );
-            return (
-              <td
-                key={day}
-                className={
-                  "border-r border-border p-0 text-center align-middle " +
-                  (isToday ? "ring-2 ring-foreground/30 ring-inset" : "") +
-                  (isWeekend ? " bg-muted/30" : "")
-                }
-              >
-                <button
-                  type="button"
-                  disabled={isFuture || pending}
-                  onClick={() =>
-                    !isFuture && onToggle(it.index_in_room, ds, status)
-                  }
-                  onDoubleClick={() => !isFuture && onOpenDetail(it.index_in_room, ds)}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    if (!isFuture) onOpenDetail(it.index_in_room, ds);
-                  }}
-                  title={buildTooltip(it.name, ds, status, entry, isFuture)}
-                  className={
-                    "relative flex h-7 w-full items-center justify-center font-mono text-xs transition-colors " +
-                    (isFuture
-                      ? "cursor-not-allowed text-muted-foreground/30"
-                      : "cursor-pointer hover:bg-muted/60") +
-                    (status ? " bg-muted/40 font-semibold" : "")
-                  }
-                >
-                  <StatusIcon status={status} isFuture={isFuture} />
-                  {hasNote && (
-                    <span className="absolute right-0.5 top-0.5 h-1 w-1 rounded-full bg-foreground" />
-                  )}
-                </button>
-              </td>
-            );
-          })}
-        </tr>
-      ))}
-    </>
-  );
-}
-
-function buildTooltip(
-  itemName: string,
-  dateKey: string,
-  status: ChecklistPayload["status"] | undefined,
-  entry: ChecklistEntry | undefined,
-  isFuture: boolean
-) {
-  const [y, m, d] = dateKey.split("-").map(Number);
-  const dow = new Date(dateKey + "T00:00:00").getDay();
-  const label = status
-    ? status === "baik"
-      ? "Baik"
-      : status === "rr"
-        ? "Rusak Ringan"
-        : status === "rb"
-          ? "Rusak Berat"
-          : "Tidak Ada"
-    : isFuture
-      ? "Tanggal mendatang"
-      : "Belum diisi";
-  let t = `${DAY_NAMES[dow]}, ${d} ${MONTH_NAMES_FULL[m - 1]} ${y} — ${itemName}: ${label}`;
-  if (entry?.payload?.petugas) t += ` | ${entry.payload.petugas}`;
-  if (entry?.payload?.jenis_kerusakan) t += ` | ${entry.payload.jenis_kerusakan}`;
-  return t;
-}
-
-function StatusIcon({
-  status,
-  isFuture,
-}: {
-  status: ChecklistPayload["status"] | undefined;
-  isFuture: boolean;
-}) {
-  if (!status) {
-    return isFuture ? <span /> : <span className="text-muted-foreground/50">·</span>;
-  }
-  if (status === "baik") return <Check className="h-3.5 w-3.5" />;
-  if (status === "rr") return <TriangleAlert className="h-3.5 w-3.5" />;
-  if (status === "rb") return <CircleX className="h-3.5 w-3.5" />;
-  if (status === "ta") return <Minus className="h-3.5 w-3.5" />;
-  return null;
 }

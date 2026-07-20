@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Button } from "@/components/gas/button";
 
 interface DeleteUserButtonProps {
   userId: string;
@@ -25,12 +24,14 @@ export function DeleteUserButton({ username }: DeleteUserButtonProps) {
 
   return (
     <Button
-      variant="destructive"
-      size="sm"
+      variant="ghost"
+      className="text-xs px-3 py-1.5 text-red hover:bg-red2"
       onClick={handleDelete}
       disabled={loading}
+      aria-label={`Hapus user ${username}`}
     >
-      <Trash2 className="h-4 w-4" />
+      <span aria-hidden>🗑️</span>
+      <span className="ml-1">Hapus</span>
     </Button>
   );
 }

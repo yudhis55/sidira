@@ -10,15 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Check,
-  Calendar,
-  CalendarRange,
-  CalendarDays,
-  BarChart3,
-} from "lucide-react";
 import { toast } from "sonner";
 import {
   toggleUtilCheck,
@@ -254,7 +245,7 @@ export function Checklist({
                 href={monthHref(year - 1, month)}
                 aria-label="Tahun sebelumnya"
               >
-                <ChevronLeft className="h-4 w-4" />
+                ‹
               </a>
             </Button>
             <span className="w-12 text-center font-mono text-sm font-semibold tabular-nums">
@@ -270,7 +261,7 @@ export function Checklist({
                 href={monthHref(year + 1, month)}
                 aria-label="Tahun berikutnya"
               >
-                <ChevronRight className="h-4 w-4" />
+                ›
               </a>
             </Button>
           </div>
@@ -299,15 +290,13 @@ export function Checklist({
         {/* Centang Semua bar */}
         <div className="rounded-none border border-border p-3">
           <div className="mb-2 font-mono text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <Check className="mr-1 inline h-3.5 w-3.5" />
-            Centang Semua Sudah Dikerjakan
+            ✓ Centang Semua Sudah Dikerjakan
           </div>
           <div className="flex flex-wrap items-end gap-4">
             <div className="flex items-end gap-2">
               <div className="space-y-1">
                 <Label className="text-xs">
-                  <Calendar className="mr-1 inline h-3 w-3" />
-                  Tanggal
+                  📅 Tanggal
                 </Label>
                 <Input
                   type="date"
@@ -324,16 +313,14 @@ export function Checklist({
                 disabled={pending}
                 className="h-8"
               >
-                <Check className="mr-1 h-3.5 w-3.5" />
-                Terapkan
+                ✓ Terapkan
               </Button>
             </div>
 
             <div className="flex items-end gap-2">
               <div className="space-y-1">
                 <Label className="text-xs">
-                  <CalendarRange className="mr-1 inline h-3 w-3" />
-                  Rentang
+                  📆 Rentang
                 </Label>
                 <Input
                   type="date"
@@ -361,8 +348,7 @@ export function Checklist({
                 disabled={pending}
                 className="h-8"
               >
-                <Check className="mr-1 h-3.5 w-3.5" />
-                Terapkan Rentang
+                ✓ Terapkan Rentang
               </Button>
             </div>
 
@@ -374,8 +360,7 @@ export function Checklist({
               disabled={pending}
               className="h-8"
             >
-              <CalendarDays className="mr-1 h-3.5 w-3.5" />
-              Seluruh Bulan ({MONTH_NAMES_FULL[month]})
+              📅 Seluruh Bulan ({MONTH_NAMES_FULL[month]})
             </Button>
           </div>
         </div>
@@ -460,7 +445,7 @@ export function Checklist({
                             }
                           >
                             {done ? (
-                              <Check className="h-3.5 w-3.5" />
+                              <span aria-hidden>✓</span>
                             ) : isFuture ? (
                               <span />
                             ) : (
@@ -483,7 +468,7 @@ export function Checklist({
         {/* Summary — achromatic, icons not colored dots */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs">
           <span className="inline-flex items-center gap-1">
-            <Check className="h-3.5 w-3.5" />
+            <span aria-hidden>✓</span>
             {summary.done} sudah dikerjakan
           </span>
           <span className="inline-flex items-center gap-1 text-muted-foreground">
@@ -491,7 +476,7 @@ export function Checklist({
             {summary.cells - summary.done} belum
           </span>
           <span className="inline-flex items-center gap-1">
-            <BarChart3 className="h-3.5 w-3.5" />
+            <span aria-hidden>📊</span>
             {summaryPct}% selesai bulan ini
           </span>
         </div>

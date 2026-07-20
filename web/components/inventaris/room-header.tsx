@@ -17,15 +17,6 @@ import {
   bulkSetCondition,
 } from "@/lib/auth/items";
 import { deleteRoom, updateRoomName, updateRoomPj } from "@/lib/auth/rooms";
-import {
-  Check,
-  Pencil,
-  ArrowUpRight,
-  Trash2,
-  User,
-  Loader2,
-  X,
-} from "lucide-react";
 import type { Room } from "@/types/database";
 
 interface RoomHeaderProps {
@@ -145,11 +136,7 @@ export function RoomHeader({
                 onClick={handleSaveName}
                 disabled={pending}
               >
-                {pending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Check className="h-4 w-4" />
-                )}
+                {pending ? "⏳" : "✅"}
               </Button>
               <Button
                 size="icon-sm"
@@ -160,7 +147,7 @@ export function RoomHeader({
                 }}
                 disabled={pending}
               >
-                <X className="h-4 w-4" />
+                ✕
               </Button>
             </div>
           ) : (
@@ -193,7 +180,7 @@ export function RoomHeader({
       {/* PJ block */}
       <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
         <div className="flex items-center gap-2">
-          <User className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground" aria-hidden>👤</span>
           <div>
             <div className="font-mono text-xs text-muted-foreground">
               Penanggung Jawab
@@ -220,11 +207,7 @@ export function RoomHeader({
                   onClick={handleSavePj}
                   disabled={pending}
                 >
-                  {pending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Check className="h-4 w-4" />
-                  )}
+                  {pending ? "⏳" : "✅"}
                 </Button>
                 <Button
                   size="icon-sm"
@@ -235,7 +218,7 @@ export function RoomHeader({
                   }}
                   disabled={pending}
                 >
-                  <X className="h-4 w-4" />
+                  ✕
                 </Button>
               </div>
             ) : (
@@ -248,7 +231,7 @@ export function RoomHeader({
                 <span className={room.pj ? "" : "text-muted-foreground italic"}>
                   {room.pj || "Belum diisi"}
                 </span>
-                <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 text-muted-foreground" />
+                <span className="opacity-0 group-hover:opacity-100 text-muted-foreground text-xs" aria-hidden>✏️</span>
               </button>
             )}
           </div>
@@ -262,8 +245,7 @@ export function RoomHeader({
             onClick={handleSetAllBaik}
             disabled={pending}
           >
-            <Check className="mr-1.5 h-3.5 w-3.5" />
-            Semua Kondisi Baik
+✅ Semua Kondisi Baik
           </Button>
           <Button
             variant="outline"
@@ -271,8 +253,7 @@ export function RoomHeader({
             onClick={() => setEditingName(true)}
             disabled={pending || editingName}
           >
-            <Pencil className="mr-1.5 h-3.5 w-3.5" />
-            Edit Nama
+✏️ Edit Nama
           </Button>
           <Button
             variant="outline"
@@ -280,8 +261,7 @@ export function RoomHeader({
             onClick={onOpenMoveAll}
             disabled={pending}
           >
-            <ArrowUpRight className="mr-1.5 h-3.5 w-3.5" />
-            Pindah Item
+↗️ Pindah Item
           </Button>
           <Button
             variant="destructive"
@@ -289,8 +269,7 @@ export function RoomHeader({
             onClick={() => setDeleteOpen(true)}
             disabled={pending}
           >
-            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-            Hapus
+🗑️ Hapus
           </Button>
         </div>
       </div>
@@ -322,12 +301,12 @@ export function RoomHeader({
             >
               {pending ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  
                   Menghapus...
                 </>
               ) : (
                 <>
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  
                   Hapus Ruangan
                 </>
               )}

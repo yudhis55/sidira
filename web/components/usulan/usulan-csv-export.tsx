@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2 } from "lucide-react";
 import { getMockUsulan } from "@/lib/mock-data";
 import {
   USULAN_KATEGORI_LABELS,
@@ -136,9 +135,9 @@ export function UsulanCsvExport({
       disabled={loading}
     >
       {loading ? (
-        <Loader2 className="h-3.5 w-3.5" />
+        <span className="mr-1" aria-hidden>⏳</span>
       ) : (
-        <Download className="h-3.5 w-3.5" />
+        <span className="mr-1" aria-hidden>⬇️</span>
       )}
       Export CSV
     </Button>

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
 import { exportInventarisCSV } from "@/lib/auth/inventaris-export";
 import { exportUsulanCSV } from "@/lib/auth/usulan";
 
@@ -37,8 +36,7 @@ export function InventarisCsvExport() {
 
   return (
     <Button type="button" variant="outline" onClick={handleExport} disabled={loading}>
-      <Download className="h-4 w-4" />
-      {loading ? "Mengekspor..." : "Export CSV"}
+      {"📥"} {loading ? "Mengekspor..." : "Export CSV"}
     </Button>
   );
 }
@@ -62,8 +60,7 @@ export function UsulanRekapCsvExport() {
 
   return (
     <Button type="button" variant="outline" onClick={handleExport} disabled={loading}>
-      <Download className="h-4 w-4" />
-      {loading ? "Mengekspor..." : "Export Rekap Usulan"}
+      {"📥"} {loading ? "Mengekspor..." : "Export Rekap Usulan"}
     </Button>
   );
 }

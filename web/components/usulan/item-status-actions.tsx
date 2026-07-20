@@ -3,7 +3,6 @@
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Check, X, Loader2 } from "lucide-react";
 import type { UsulanStatus } from "@/lib/usulan-types";
 import { USULAN_STATUS_LABELS } from "@/lib/usulan-types";
 
@@ -38,11 +37,7 @@ export function ItemStatusActions({
           disabled={pending}
           title="Set ulang ke Diajukan"
         >
-          {pending ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            "Reset"
-          )}
+          {pending ? "⏳ Reset" : "Reset"}
         </Button>
       </div>
     );
@@ -58,9 +53,9 @@ export function ItemStatusActions({
         title="Setujui barang ini"
       >
         {pending ? (
-          <Loader2 className="h-3 w-3 animate-spin" />
+          <span className="mr-1" aria-hidden>⏳</span>
         ) : (
-          <Check className="h-3 w-3" />
+          <span className="mr-1" aria-hidden>✓</span>
         )}
         Setujui
       </Button>
@@ -72,9 +67,9 @@ export function ItemStatusActions({
         title="Tolak barang ini"
       >
         {pending ? (
-          <Loader2 className="h-3 w-3 animate-spin" />
+          <span className="mr-1" aria-hidden>⏳</span>
         ) : (
-          <X className="h-3 w-3" />
+          <span className="mr-1" aria-hidden>✕</span>
         )}
         Tolak
       </Button>

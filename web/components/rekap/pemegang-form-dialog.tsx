@@ -1,33 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { createPemegang, updatePemegang } from "@/lib/auth/rekap";
 import type { PemegangInventaris, PemegangStatus } from "@/types/database";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Plus, Pencil, Save } from "lucide-react";
+import { Button } from "@/components/gas/button";
+import { Input } from "@/components/gas/input";
+import { Select } from "@/components/gas/select";
+import { Modal } from "@/components/gas/modal";
 
 interface PemegangFormDialogProps {
   pemegang?: PemegangInventaris;
   trigger?: React.ReactNode;
+  /** Mock-only: called on success with form values (no backend). */
+  onSaved?: (values: {
+    nama: string;
+    nip: string;
+    jabatan: string;
+    status: PemegangStatus;
+  }) => void;
 }
 
 export function PemegangFormDialog({
   pemegang,
   trigger,
+  onSaved,
 }: PemegangFormDialogProps) {
-  const router = useRouter();
   const isEdit = !!pemegang;
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -48,13 +44,9 @@ export function PemegangFormDialog({
       if (!nama.trim()) {
         throw new Error("Nama pemegang wajib diisi");
       }
-      if (isEdit && pemegang) {
-        await updatePemegang(pemegang.id, { nama, nip, jabatan, status });
-      } else {
-        await createPemegang({ nama, nip, jabatan, status });
-      }
+      // Mock-only — no auth/backend call
+      onSaved?.({ nama, nip, jabatan, status });
       setOpen(false);
-      router.refresh();
     } catch (error) {
       setErr(error instanceof Error ? error.message : String(error));
     } finally {
@@ -63,117 +55,107 @@ export function PemegangFormDialog({
   };
 
   const defaultTrigger = isEdit ? (
-    <Button variant="outline" size="sm">
-      <Pencil className="h-4 w-4 mr-1" />
+    <Button variant="ghost" type="button">
+      <span aria-hidden className="mr-1">
+        {"\u270F\uFE0F"}
+      </span>
       Edit
     </Button>
   ) : (
-    <Button size="sm">
-      <Plus className="h-4 w-4 mr-1" />
+    <Button type="button">
+      <span aria-hidden className="mr-1">
+        {"\u2795"}
+      </span>
       Tambah Pemegang
     </Button>
   );
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="font-mono">
-            {isEdit ? "Edit Pemegang" : "Tambah Pemegang"}
-          </DialogTitle>
-          <DialogDescription>
-            {isEdit
-              ? "Ubah data pemegang inventaris."
-              : "Tambah pemegang inventaris baru."}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <span
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen(true);
+          }
+        }}
+        className="inline-flex"
+      >
+        {trigger || defaultTrigger}
+      </span>
 
-        {err && (
-          <p className="bg-destructive/10 px-2 py-1.5 text-[11px] text-destructive ring-1 ring-destructive/20">
-            {err}
-          </p>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="pemegang-nama" className="font-mono text-xs">
-              Nama *
-            </Label>
-            <Input
-              id="pemegang-nama"
-              value={nama}
-              onChange={(e) => setNama(e.target.value)}
-              placeholder="Nama lengkap"
-              required
-              disabled={loading}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="pemegang-nip" className="font-mono text-xs">
-              NIP
-            </Label>
-            <Input
-              id="pemegang-nip"
-              value={nip}
-              onChange={(e) => setNip(e.target.value)}
-              placeholder="NIP (opsional)"
-              disabled={loading}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="pemegang-jabatan" className="font-mono text-xs">
-              Jabatan
-            </Label>
-            <Input
-              id="pemegang-jabatan"
-              value={jabatan}
-              onChange={(e) => setJabatan(e.target.value)}
-              placeholder="Jabatan (opsional)"
-              disabled={loading}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="font-mono text-xs">Status</Label>
-            <div className="flex items-center gap-2">
-              {(["PNS", "PPPK"] as PemegangStatus[]).map((s) => {
-                const active = status === s;
-                return (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setStatus(s)}
-                    disabled={loading}
-                    className={`inline-flex h-8 items-center px-3 font-mono text-xs ring-1 transition-colors ${
-                      active
-                        ? "bg-primary text-primary-foreground ring-primary"
-                        : "bg-background text-foreground ring-border hover:bg-muted"
-                    }`}
-                  >
-                    {s}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <DialogFooter>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={isEdit ? "Edit Pemegang" : "Tambah Pemegang"}
+        subtitle={
+          isEdit
+            ? "Ubah data pemegang inventaris."
+            : "Tambah pemegang inventaris baru."
+        }
+        icon={isEdit ? "\u270F\uFE0F" : "\u2795"}
+        iconVariant="teal"
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2 w-full">
             <Button
               type="button"
-              variant="outline"
-              size="sm"
+              variant="modal-cancel"
               onClick={() => setOpen(false)}
               disabled={loading}
             >
               Batal
             </Button>
-            <Button type="submit" size="sm" disabled={loading}>
-              <Save className="h-4 w-4 mr-1" />
-              {loading ? "Menyimpan…" : "Simpan"}
+            <Button
+              type="submit"
+              form="pemegang-form"
+              variant="modal-ok"
+              disabled={loading}
+            >
+              {loading ? "Menyimpan…" : isEdit ? "Simpan" : "Tambah"}
             </Button>
-          </DialogFooter>
+          </div>
+        }
+      >
+        <form id="pemegang-form" onSubmit={handleSubmit} className="space-y-3.5">
+          <Input
+            label="Nama"
+            value={nama}
+            onChange={(e) => setNama(e.target.value)}
+            placeholder="Nama lengkap"
+            required
+          />
+          <Input
+            label="NIP"
+            value={nip}
+            onChange={(e) => setNip(e.target.value)}
+            placeholder="NIP (opsional)"
+          />
+          <Input
+            label="Jabatan"
+            value={jabatan}
+            onChange={(e) => setJabatan(e.target.value)}
+            placeholder="Jabatan"
+          />
+          <Select
+            label="Status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value as PemegangStatus)}
+            options={[
+              { value: "PNS", label: "PNS" },
+              { value: "PPPK", label: "PPPK" },
+            ]}
+          />
+          {err && (
+            <p className="text-xs text-red" role="alert">
+              {err}
+            </p>
+          )}
         </form>
-      </DialogContent>
-    </Dialog>
+      </Modal>
+    </>
   );
 }

@@ -31,15 +31,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  ChevronDown,
-  Check,
-  Plus,
-  ArrowUpRight,
-  Trash2,
-  Calendar,
-  Loader2,
-} from "lucide-react";
-import {
   bulkSetCondition,
   createItem,
   deleteItem,
@@ -125,15 +116,10 @@ export function ItemTable({ roomId, category, items, rooms }: ItemTableProps) {
           disabled={pending || items.length === 0}
           className="ml-2"
         >
-          <Check className="mr-1 h-3 w-3" />
+          ✓
           Semua Baik
         </Button>
-        <ChevronDown
-          className={cn(
-            "ml-auto h-4 w-4 text-muted-foreground transition-transform",
-            collapsed && "-rotate-90"
-          )}
-        />
+        <span className={cn("text-xs transition-transform", collapsed && "rotate-180")} aria-hidden>▼</span>
       </button>
 
       {/* Body */}
@@ -186,7 +172,7 @@ export function ItemTable({ roomId, category, items, rooms }: ItemTableProps) {
               onClick={() => setAddOpen(true)}
               disabled={pending}
             >
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              ➕
               Tambah {label}
             </Button>
           </div>
@@ -235,11 +221,7 @@ export function ItemTable({ roomId, category, items, rooms }: ItemTableProps) {
               onClick={() => deleteTarget && handleDelete(deleteTarget)}
               disabled={pending}
             >
-              {pending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
-              )}
+              {pending ? "⏳" : "🗑️"}{" "}
               Hapus
             </Button>
           </DialogFooter>
@@ -401,7 +383,7 @@ function ItemRow({ item, index, roomId, onMove, onDelete }: ItemRowProps) {
       <TableCell>
         <Button variant="outline" size="icon-sm" asChild title="Buka checklist">
           <Link href={`/checklist?room=${roomId}`}>
-            <Calendar className="h-3.5 w-3.5" />
+            📅
           </Link>
         </Button>
       </TableCell>
@@ -415,7 +397,7 @@ function ItemRow({ item, index, roomId, onMove, onDelete }: ItemRowProps) {
             onClick={onMove}
             title="Pindah ke ruangan lain"
           >
-            <ArrowUpRight className="h-3.5 w-3.5" />
+            ↗️
           </Button>
           <Button
             variant="destructive"
@@ -423,7 +405,7 @@ function ItemRow({ item, index, roomId, onMove, onDelete }: ItemRowProps) {
             onClick={onDelete}
             title="Hapus item"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            🗑️
           </Button>
         </div>
       </TableCell>
@@ -633,11 +615,7 @@ function AddItemDialog({
             Batal
           </Button>
           <Button type="submit" form={formId} disabled={pending}>
-            {pending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="mr-2 h-4 w-4" />
-            )}
+            {pending ? "⏳" : "➕"}{" "}
             Tambah
           </Button>
         </DialogFooter>

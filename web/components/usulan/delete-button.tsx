@@ -11,7 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Trash2, Loader2 } from "lucide-react";
 
 interface DeleteUsulanButtonProps {
   id: number;
@@ -41,7 +40,7 @@ export function DeleteUsulanButton({
         onClick={() => setOpen(true)}
         disabled={pending}
       >
-        <Trash2 className="h-3.5 w-3.5" />
+        <span className="mr-1" aria-hidden>🗑️</span>
         Hapus
       </Button>
 
@@ -68,9 +67,9 @@ export function DeleteUsulanButton({
               disabled={pending}
             >
               {pending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <span className="mr-2" aria-hidden>⏳</span>
               ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
+                <span className="mr-2" aria-hidden>🗑️</span>
               )}
               Hapus Usulan
             </Button>
