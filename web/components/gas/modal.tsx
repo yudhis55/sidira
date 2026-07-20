@@ -22,6 +22,8 @@ interface ModalProps {
   size?: "sm" | "md" | "lg" | "xl";
   children: React.ReactNode;
   footer?: React.ReactNode;
+  /** Forwarded to Dialog backdrop (default 3500). */
+  zIndex?: number;
 }
 
 export function Modal({
@@ -34,6 +36,7 @@ export function Modal({
   size = "md",
   children,
   footer,
+  zIndex,
 }: ModalProps) {
   const variantClasses = {
     teal: "bg-teal3 text-teal",
@@ -47,7 +50,7 @@ export function Modal({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} size={size}>
+    <Dialog open={open} onClose={onClose} size={size} zIndex={zIndex}>
       {/* Modal Head */}
       <div className="px-5 py-3.5 border-b border-line flex items-center gap-3">
         {icon && (

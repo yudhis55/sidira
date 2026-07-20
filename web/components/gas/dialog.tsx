@@ -10,6 +10,21 @@ interface DialogProps {
   children: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl"; // max-width: 360, 520, 720, 960
   closeOnBackdropClick?: boolean; // default true
+  /** Stacking order for overlay parity with GAS (default 3500; laporan uses 3100). */
+  zIndex?: number;
+}
+
+function subscribeNoop() {
+  return () => {};
+}
+
+/** SSR-safe client mount detection without setState-in-effect. */
+function useIsClient() {
+  return React.useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false
+  );
 }
 
 export function Dialog({
@@ -18,12 +33,9 @@ export function Dialog({
   children,
   size = "md",
   closeOnBackdropClick = true,
+  zIndex = 3500,
 }: DialogProps) {
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useIsClient();
 
   React.useEffect(() => {
     if (!open) return;
@@ -35,7 +47,7 @@ export function Dialog({
     };
 
     document.addEventListener("keydown", handleKeyDown);
-    
+
     // Lock body scroll
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -63,7 +75,8 @@ export function Dialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[1000] bg-ink/45 backdrop-blur-[4px] flex items-center justify-center p-4"
+      className="fixed inset-0 bg-ink/45 backdrop-blur-[4px] flex items-center justify-center p-4"
+      style={{ zIndex }}
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
