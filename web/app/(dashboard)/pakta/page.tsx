@@ -1,3 +1,4 @@
+import * as React from "react";
 import { getMockPakta } from "@/lib/mock-data";
 import { countAset } from "@/lib/pakta-utils";
 import { Card } from "@/components/gas/card";
@@ -11,6 +12,13 @@ const BULAN = [
   "Juli", "Agustus", "September", "Oktober", "November", "Desember",
 ];
 
+const FILTER_CHIPS = [
+  { key: "all", label: "Semua" },
+  { key: "kendaraan", label: "\u{1F697} Kendaraan" },
+  { key: "laptop", label: "\u{1F4BB} Laptop/PC" },
+  { key: "alat", label: "\u{1F4F1} Alat Penunjang" },
+];
+
 function fmtDate(iso?: string): string {
   if (!iso) return "-";
   const d = new Date(iso);
@@ -18,18 +26,93 @@ function fmtDate(iso?: string): string {
   return `${d.getDate()} ${BULAN[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-export default function PaktaPage() {
-  const paktaList = getMockPakta();
-  const total = paktaList.length;
+function hasKendaraan(p: {
+  aset_kendaraan?: { merk?: string; jenis?: string }[] | null;
+}): boolean {
+  return (p.aset_kendaraan || []).some((r) => !!(r && (r.merk || r.jenis)));
+}
+
+function hasLaptop(p: {
+  aset_laptop?: { merk?: string; type?: string }[] | null;
+}): boolean {
+  return (p.aset_laptop || []).some((r) => !!(r && (r.merk || r.type)));
+}
+
+function hasAlat(p: {
+  aset_alat?: { merk?: string; type?: string }[] | null;
+}): boolean {
+  return (p.aset_alat || []).some((r) => !!(r && (r.merk || r.type)));
+}
+
+function ActBtn({
+  href,
+  children,
+  accent,
+}: {
+  href: string;
+  children: React.ReactNode;
+  accent?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      target={href.includes("/print") ? "_blank" : undefined}
+      rel={href.includes("/print") ? "noopener noreferrer" : undefined}
+      className="inline-flex items-center font-semibold transition-colors hover:!border-[#2563eb] hover:!text-[#2563eb]"
+      style={{
+        padding: "4px 10px",
+        borderRadius: 6,
+        border: accent ? "1.5px solid #bfdbfe" : "1.5px solid var(--line)",
+        background: "var(--white)",
+        color: accent ? "#1e40af" : "var(--ink2)",
+        fontSize: 11,
+      }}
+    >
+      {children}
+    </Link>
+  );
+}
+
+interface PageProps {
+  searchParams: Promise<{ filter?: string; q?: string }>;
+}
+
+export default async function PaktaPage({ searchParams }: PageProps) {
+  const sp = await searchParams;
+  const filter = sp.filter || "all";
+  const q = (sp.q || "").trim().toLowerCase();
+
+  const all = getMockPakta();
+
+  let filtered = all;
+  if (filter === "kendaraan") filtered = filtered.filter(hasKendaraan);
+  else if (filter === "laptop") filtered = filtered.filter(hasLaptop);
+  else if (filter === "alat") filtered = filtered.filter(hasAlat);
+
+  if (q) {
+    filtered = filtered.filter((p) => {
+      if ((p.nama || "").toLowerCase().includes(q)) return true;
+      if ((p.nip || "").toLowerCase().includes(q)) return true;
+      if ((p.jabatan || "").toLowerCase().includes(q)) return true;
+      return false;
+    });
+  }
+
+  const total = all.length;
+  const nKend = all.filter(hasKendaraan).length;
+  const nLapt = all.filter(hasLaptop).length;
+  const nAlat = all.filter(hasAlat).length;
 
   return (
-    <div className="space-y-5">
-      {/* ── Header — matches GAS .pakta-header ── */}
+    <div className="space-y-4">
+      {/* Header — GAS .pakta-header */}
       <div
-        className="flex items-center gap-3.5 px-6 py-5 bg-white border border-line"
-        style={{ borderRadius: "var(--r, 10px)", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
+        className="flex flex-wrap items-center gap-3.5 px-6 py-5 bg-white border border-line"
+        style={{
+          borderRadius: "var(--r, 10px)",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+        }}
       >
-        {/* Icon box — blue gradient like GAS */}
         <div
           className="flex items-center justify-center shrink-0 text-[26px]"
           style={{
@@ -38,11 +121,12 @@ export default function PaktaPage() {
             borderRadius: 14,
             background: "linear-gradient(135deg, #1e3a5f, #2563eb)",
           }}
+          aria-hidden
         >
-          📜
+          {"\u{1F4DC}"}
         </div>
 
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="text-lg font-extrabold" style={{ color: "var(--ink)" }}>
             Pakta Integritas Pemanfaatan BMD
           </div>
@@ -51,8 +135,7 @@ export default function PaktaPage() {
           </div>
         </div>
 
-        {/* Stat */}
-        <div className="ml-auto flex gap-3">
+        <div className="ml-auto flex flex-wrap gap-3">
           <div
             className="text-center px-4 py-2"
             style={{ borderRadius: 8, background: "var(--line2)" }}
@@ -70,11 +153,44 @@ export default function PaktaPage() {
               Total Pakta
             </div>
           </div>
+          <div
+            className="text-center px-3 py-2"
+            style={{ borderRadius: 8, background: "var(--line2)" }}
+          >
+            <div className="text-base font-black font-mono leading-none text-blue-800">
+              {nKend}
+            </div>
+            <div className="text-[10px] font-semibold mt-1 text-ink3">
+              {"\u{1F697}"} Kendaraan
+            </div>
+          </div>
+          <div
+            className="text-center px-3 py-2"
+            style={{ borderRadius: 8, background: "var(--line2)" }}
+          >
+            <div className="text-base font-black font-mono leading-none text-blue-800">
+              {nLapt}
+            </div>
+            <div className="text-[10px] font-semibold mt-1 text-ink3">
+              {"\u{1F4BB}"} Laptop
+            </div>
+          </div>
+          <div
+            className="text-center px-3 py-2"
+            style={{ borderRadius: 8, background: "var(--line2)" }}
+          >
+            <div className="text-base font-black font-mono leading-none text-blue-800">
+              {nAlat}
+            </div>
+            <div className="text-[10px] font-semibold mt-1 text-ink3">
+              {"\u{1F4F1}"} Alat
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* ── Action buttons — GAS .pakta-btn-new + ghost ── */}
-      <div className="flex gap-2.5 mb-4">
+      {/* Actions — GAS .pakta-btn-new + ghost */}
+      <div className="flex flex-wrap gap-2.5">
         <Link href="/pakta/new">
           <Button
             className="text-[13px] font-bold px-5 py-2.5 text-white"
@@ -85,31 +201,100 @@ export default function PaktaPage() {
               boxShadow: "0 4px 12px rgba(37,99,235,0.3)",
             }}
           >
-            ＋ Entri Pakta Integritas Baru
+            {"\uFF0B"} Entri Pakta Integritas Baru
           </Button>
         </Link>
-        <Button variant="ghost" className="text-xs">
-          📥 Export CSV
+        <Button
+          variant="ghost"
+          className="text-xs"
+          title="Mode demo — export CSV belum aktif"
+          type="button"
+        >
+          {"\u{1F4E5}"} Export CSV
         </Button>
       </div>
 
-      {/* ── Table / Empty ── */}
-      {paktaList.length === 0 ? (
+      {/* Filter chips + Search — aligned with SBBK pattern, blue theme */}
+      <Card className="flex flex-wrap items-center gap-2 px-4 py-3">
+        <span className="text-[11px] font-bold text-ink3">Filter:</span>
+        {FILTER_CHIPS.map((chip) => {
+          const active = filter === chip.key;
+          const href = `/pakta?filter=${encodeURIComponent(chip.key)}${
+            q ? `&q=${encodeURIComponent(q)}` : ""
+          }`;
+          return (
+            <Link
+              key={chip.key}
+              href={href}
+              className={`inline-flex h-7 items-center rounded-full border-[1.5px] px-3 text-[11px] font-bold transition-colors ${
+                active
+                  ? "border-blue-700 bg-blue-700 text-white"
+                  : "border-line bg-white text-ink3 hover:border-blue-600 hover:text-blue-700"
+              }`}
+              aria-pressed={active}
+            >
+              {chip.label}
+            </Link>
+          );
+        })}
+        <form className="ml-auto flex items-center" role="search">
+          <div className="relative">
+            <span
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-ink3"
+              aria-hidden
+            >
+              {"\u{1F50D}"}
+            </span>
+            <input
+              type="search"
+              name="q"
+              defaultValue={sp.q || ""}
+              placeholder={"\u{1F50D} Cari nama/NIP/jabatan..."}
+              className="h-8 w-56 rounded-full border-[1.5px] border-line bg-white pl-8 pr-3 text-xs outline-none focus:border-blue-600"
+            />
+          </div>
+          <input type="hidden" name="filter" value={filter} />
+          <button
+            type="submit"
+            className="ml-1 inline-flex h-8 items-center rounded-full border-[1.5px] border-line bg-white px-3 text-[11px] font-bold text-ink3 hover:border-blue-600 hover:text-blue-700"
+          >
+            Cari
+          </button>
+        </form>
+      </Card>
+
+      {/* Table / Empty — GAS .pakta-list-table */}
+      {filtered.length === 0 ? (
         <Card>
           <div className="text-center py-16" style={{ color: "#93c5fd" }}>
-            <div className="text-5xl mb-3">📜</div>
-            <div className="text-[15px] font-bold mb-1.5" style={{ color: "#2563eb" }}>
-              Belum ada data Pakta Integritas
+            <div className="text-5xl mb-3" aria-hidden>
+              {"\u{1F4DC}"}
+            </div>
+            <div
+              className="text-[15px] font-bold mb-1.5"
+              style={{ color: "#2563eb" }}
+            >
+              {all.length === 0
+                ? "Belum ada data Pakta Integritas"
+                : "Tidak ada pakta yang cocok"}
             </div>
             <div className="text-xs" style={{ color: "var(--ink3)" }}>
-              Klik &quot;+ Entri Pakta Integritas Baru&quot; untuk menambahkan
+              {all.length === 0
+                ? 'Klik "+ Entri Pakta Integritas Baru" untuk menambahkan'
+                : "Coba ubah filter atau kata kunci pencarian."}
             </div>
           </div>
         </Card>
       ) : (
-        <Card className="p-0 overflow-hidden" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+        <Card
+          className="p-0 overflow-hidden"
+          style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
+        >
           <div className="overflow-x-auto">
-            <table className="w-full" style={{ borderCollapse: "collapse", fontSize: "12.5px" }}>
+            <table
+              className="w-full"
+              style={{ borderCollapse: "collapse", fontSize: "12.5px" }}
+            >
               <thead>
                 <tr>
                   {["No.", "Nama / NIP", "Jabatan", "Tanggal", "Aset", "Aksi"].map(
@@ -130,21 +315,27 @@ export default function PaktaPage() {
                       >
                         {h}
                       </th>
-                    )
+                    ),
                   )}
                 </tr>
               </thead>
               <tbody>
-                {paktaList.map((pakta, i) => {
+                {filtered.map((pakta, i) => {
                   const asetCount = countAset(pakta);
+                  const chips: string[] = [];
+                  if (hasKendaraan(pakta)) chips.push("\u{1F697}");
+                  if (hasLaptop(pakta)) chips.push("\u{1F4BB}");
+                  if (hasAlat(pakta)) chips.push("\u{1F4F1}");
+
                   return (
                     <tr
                       key={pakta.id}
                       className="group"
                       style={{ borderBottom: "1px solid var(--line)" }}
                     >
-                      {/* No */}
-                      <td style={{ padding: "10px 14px", verticalAlign: "middle" }}>
+                      <td
+                        style={{ padding: "10px 14px", verticalAlign: "middle" }}
+                      >
                         <span
                           className="inline-block font-mono font-extrabold"
                           style={{
@@ -159,8 +350,9 @@ export default function PaktaPage() {
                         </span>
                       </td>
 
-                      {/* Nama / NIP */}
-                      <td style={{ padding: "10px 14px", verticalAlign: "middle" }}>
+                      <td
+                        style={{ padding: "10px 14px", verticalAlign: "middle" }}
+                      >
                         <Link
                           href={`/pakta/${pakta.id}`}
                           className="font-bold hover:underline"
@@ -168,28 +360,42 @@ export default function PaktaPage() {
                         >
                           {pakta.nama || "-"}
                         </Link>
-                        <div className="mt-px" style={{ fontSize: "10.5px", color: "var(--ink3)" }}>
+                        <div
+                          className="mt-px"
+                          style={{ fontSize: "10.5px", color: "var(--ink3)" }}
+                        >
                           {pakta.nip ? `NIP. ${pakta.nip}` : "NIP. —"}
                         </div>
                       </td>
 
-                      {/* Jabatan */}
-                      <td style={{ padding: "10px 14px", verticalAlign: "middle" }}>
-                        <div className="font-semibold" style={{ color: "var(--ink)" }}>
+                      <td
+                        style={{ padding: "10px 14px", verticalAlign: "middle" }}
+                      >
+                        <div
+                          className="font-semibold"
+                          style={{ color: "var(--ink)" }}
+                        >
                           {pakta.jabatan || "-"}
                         </div>
                       </td>
 
-                      {/* Tanggal */}
-                      <td style={{ padding: "10px 14px", verticalAlign: "middle" }}>
-                        <div style={{ color: "var(--ink2)" }}>{fmtDate(pakta.tgl)}</div>
-                        <div className="mt-px" style={{ fontSize: "10.5px", color: "var(--ink3)" }}>
+                      <td
+                        style={{ padding: "10px 14px", verticalAlign: "middle" }}
+                      >
+                        <div style={{ color: "var(--ink2)" }}>
+                          {fmtDate(pakta.tgl)}
+                        </div>
+                        <div
+                          className="mt-px"
+                          style={{ fontSize: "10.5px", color: "var(--ink3)" }}
+                        >
                           {pakta.hari || "-"}
                         </div>
                       </td>
 
-                      {/* Aset count badge */}
-                      <td style={{ padding: "10px 14px", verticalAlign: "middle" }}>
+                      <td
+                        style={{ padding: "10px 14px", verticalAlign: "middle" }}
+                      >
                         <span
                           className="inline-block font-bold"
                           style={{
@@ -202,57 +408,33 @@ export default function PaktaPage() {
                         >
                           {asetCount} aset
                         </span>
+                        {chips.length > 0 && (
+                          <div
+                            className="mt-1 text-[11px] tracking-wide"
+                            title="Jenis aset"
+                            aria-hidden
+                          >
+                            {chips.join(" ")}
+                          </div>
+                        )}
                       </td>
 
-                      {/* Actions */}
-                      <td style={{ padding: "10px 14px", verticalAlign: "middle" }}>
+                      <td
+                        style={{ padding: "10px 14px", verticalAlign: "middle" }}
+                      >
                         <div className="flex items-center flex-wrap gap-1">
-                          <Link
-                            href={`/pakta/${pakta.id}/edit`}
-                            className="inline-flex items-center font-semibold transition-colors hover:!border-[#2563eb] hover:!text-[#2563eb]"
-                            style={{
-                              padding: "4px 10px",
-                              borderRadius: 6,
-                              border: "1.5px solid var(--line)",
-                              background: "var(--white)",
-                              color: "var(--ink2)",
-                              fontSize: 11,
-                            }}
-                          >
-                            ✏️ Edit
-                          </Link>
-                          <Link
+                          <ActBtn href={`/pakta/${pakta.id}/edit`}>
+                            {"\u270F\uFE0F"} Edit
+                          </ActBtn>
+                          <ActBtn
                             href={`/pakta/${pakta.id}/print?lampiran=1`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center font-semibold transition-colors hover:!border-[#2563eb] hover:!text-[#2563eb]"
-                            style={{
-                              padding: "4px 10px",
-                              borderRadius: 6,
-                              border: "1.5px solid #bfdbfe",
-                              background: "var(--white)",
-                              color: "#1e40af",
-                              fontSize: 11,
-                            }}
+                            accent
                           >
-                            📋 Lampiran
-                          </Link>
-                          <Link
-                            href={`/pakta/${pakta.id}/print`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center font-semibold transition-colors hover:!border-[#2563eb] hover:!text-[#2563eb]"
-                            style={{
-                              padding: "4px 10px",
-                              borderRadius: 6,
-                              border: "1.5px solid var(--line)",
-                              background: "var(--white)",
-                              color: "var(--ink2)",
-                              fontSize: 11,
-                            }}
-                          >
-                            🖨️ Cetak
-                          </Link>
+                            {"\u{1F4CB}"} Lampiran
+                          </ActBtn>
+                          <ActBtn href={`/pakta/${pakta.id}/print`}>
+                            {"\u{1F5A8}\uFE0F"} Cetak
+                          </ActBtn>
                           <span
                             className="inline-flex items-center font-semibold cursor-not-allowed opacity-50"
                             style={{
@@ -263,8 +445,9 @@ export default function PaktaPage() {
                               color: "var(--ink2)",
                               fontSize: 11,
                             }}
+                            title="Mode demo — hapus tidak aktif"
                           >
-                            ✕
+                            {"\u2715"}
                           </span>
                         </div>
                       </td>
@@ -273,6 +456,56 @@ export default function PaktaPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        </Card>
+      )}
+
+      {/* Summary chips */}
+      {all.length > 0 && (
+        <Card className="px-5 py-4">
+          <h3 className="mb-3 flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-wider text-ink3">
+            <span className="text-base" aria-hidden>
+              {"\u{1F4CA}"}
+            </span>
+            Ringkasan Pakta
+          </h3>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-ink3">
+                Ditampilkan
+              </div>
+              <div className="mt-1 font-mono text-sm font-bold text-blue-700">
+                {filtered.length} / {total}
+              </div>
+              <div className="text-[10px] text-ink3">pakta</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-ink3">
+                Ada Kendaraan
+              </div>
+              <div className="mt-1 font-mono text-sm font-bold text-blue-800">
+                {nKend}
+              </div>
+              <div className="text-[10px] text-ink3">pemegang</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-ink3">
+                Ada Laptop/PC
+              </div>
+              <div className="mt-1 font-mono text-sm font-bold text-blue-800">
+                {nLapt}
+              </div>
+              <div className="text-[10px] text-ink3">pemegang</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-ink3">
+                Ada Alat Penunjang
+              </div>
+              <div className="mt-1 font-mono text-sm font-bold text-blue-800">
+                {nAlat}
+              </div>
+              <div className="text-[10px] text-ink3">pemegang</div>
+            </div>
           </div>
         </Card>
       )}

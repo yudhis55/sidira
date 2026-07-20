@@ -1,4 +1,4 @@
-import { getPaktaById } from "@/lib/auth/pakta";
+import { getMockPaktaById } from "@/lib/mock-data";
 import { PrintTrigger } from "@/components/sbbk/print-trigger";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -48,6 +48,14 @@ function fmtTanggal(iso?: string): string {
   return `${d.getDate()} ${BULAN[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+function esc(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 interface PageProps {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ lampiran?: string; pakta?: string }>;
@@ -56,13 +64,13 @@ interface PageProps {
 export default async function PaktaPrintPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const sp = await searchParams;
-  // Print mode: default = both sheets. ?pakta=1 → only Pakta. ?lampiran=1 → only Lampiran.
+  // Print mode: default = both sheets. ?pakta=1 only Pakta. ?lampiran=1 only Lampiran.
   const onlyPakta = sp.pakta === "1";
   const onlyLampiran = sp.lampiran === "1";
   const showPakta = !onlyLampiran;
   const showLampiran = !onlyPakta;
 
-  const pakta = await getPaktaById(id);
+  const pakta = getMockPaktaById(id);
 
   if (!pakta) {
     notFound();
@@ -89,7 +97,7 @@ export default async function PaktaPrintPage({ params, searchParams }: PageProps
     const thHtml = cols
       .map(
         (c) =>
-          `<th style="border:1px solid #000;padding:4px 5px;text-align:center;background:#d0d0d0;font-size:9pt">${c}</th>`,
+          `<th style="border:1px solid #000;padding:4px 5px;text-align:center;background:#d0d0d0;font-size:9pt">${esc(c)}</th>`,
       )
       .join("");
     const tdCount = cols.length;
@@ -103,14 +111,14 @@ export default async function PaktaPrintPage({ params, searchParams }: PageProps
             row
               .map(
                 (v) =>
-                  `<td style="border:1px solid #000;padding:3px 5px;font-size:9pt">${v || ""}</td>`,
+                  `<td style="border:1px solid #000;padding:3px 5px;font-size:9pt">${esc(v || "")}</td>`,
               )
               .join("") +
             "</tr>",
         )
         .join("");
     } else {
-      tbodyHtml = `<tr><td colspan="${tdCount}" style="border:1px solid #000;padding:6px;text-align:center;color:#888;font-size:9pt;font-style:italic">${emptyNote}</td></tr>`;
+      tbodyHtml = `<tr><td colspan="${tdCount}" style="border:1px solid #000;padding:6px;text-align:center;color:#888;font-size:9pt;font-style:italic">${esc(emptyNote)}</td></tr>`;
     }
     return (
       `<table style="width:100%;border-collapse:collapse;margin-bottom:12px">` +
@@ -151,10 +159,10 @@ export default async function PaktaPrintPage({ params, searchParams }: PageProps
     `<p style="margin:0 0 1px 0">PAKTA INTEGRITAS PEMANFAATAN BMD</p>` +
     `<p style="margin:0 0 12px 0">PEMERINTAH KABUPATEN TRENGGALEK</p>` +
     `<table style="margin-bottom:12px;border-collapse:collapse;font-size:10pt">` +
-    `<tr><td style="width:72px;padding:1px 0">Nama</td><td style="width:12px">:</td><td><b>${pakta.nama || ""}</b></td></tr>` +
-    `<tr><td style="padding:1px 0">Jabatan</td><td>:</td><td>${pakta.jabatan || ""}</td></tr>` +
+    `<tr><td style="width:72px;padding:1px 0">Nama</td><td style="width:12px">:</td><td><b>${esc(pakta.nama || "")}</b></td></tr>` +
+    `<tr><td style="padding:1px 0">Jabatan</td><td>:</td><td>${esc(pakta.jabatan || "")}</td></tr>` +
     (pakta.alamat
-      ? `<tr><td style="padding:1px 0">Alamat</td><td>:</td><td>${pakta.alamat || ""}</td></tr>`
+      ? `<tr><td style="padding:1px 0">Alamat</td><td>:</td><td>${esc(pakta.alamat || "")}</td></tr>`
       : "") +
     `</table>` +
     `<p style="margin:0 0 4px 0;font-weight:bold;font-size:10pt">Kendaraan Dinas</p>` +
@@ -177,38 +185,31 @@ export default async function PaktaPrintPage({ params, searchParams }: PageProps
     ) +
     `</div>`;
 
+  const modeChip = (active: boolean) =>
+    active
+      ? "border-blue-700 bg-blue-50 text-blue-800"
+      : "border-neutral-300 text-neutral-500 hover:bg-neutral-50";
+
   return (
     <div className="min-h-screen bg-white">
-      <div className="mx-auto max-w-[210mm] px-4 pt-4">
+      <div className="mx-auto max-w-[210mm] px-4 pt-4 print:hidden">
         <PrintTrigger />
-        <div className="print:hidden mb-4 flex flex-wrap items-center justify-center gap-2">
+        <div className="mb-4 flex flex-wrap items-center justify-center gap-2">
           <Link
             href={`/pakta/${pakta.id}/print`}
-            className={`rounded-none border px-3 py-1 text-xs ${
-              !onlyPakta && !onlyLampiran
-                ? "border-[var(--teal)] bg-[var(--teal3)] text-[var(--teal)]"
-                : "border-border text-muted-foreground hover:bg-muted"
-            }`}
+            className={`rounded border px-3 py-1 text-xs font-semibold ${modeChip(!onlyPakta && !onlyLampiran)}`}
           >
             Pakta + Lampiran
           </Link>
           <Link
             href={`/pakta/${pakta.id}/print?pakta=1`}
-            className={`rounded-none border px-3 py-1 text-xs ${
-              onlyPakta
-                ? "border-[var(--teal)] bg-[var(--teal3)] text-[var(--teal)]"
-                : "border-border text-muted-foreground hover:bg-muted"
-            }`}
+            className={`rounded border px-3 py-1 text-xs font-semibold ${modeChip(onlyPakta)}`}
           >
             Pakta saja
           </Link>
           <Link
             href={`/pakta/${pakta.id}/print?lampiran=1`}
-            className={`rounded-none border px-3 py-1 text-xs ${
-              onlyLampiran
-                ? "border-[var(--teal)] bg-[var(--teal3)] text-[var(--teal)]"
-                : "border-border text-muted-foreground hover:bg-muted"
-            }`}
+            className={`rounded border px-3 py-1 text-xs font-semibold ${modeChip(onlyLampiran)}`}
           >
             Lampiran BMD saja
           </Link>
@@ -217,19 +218,18 @@ export default async function PaktaPrintPage({ params, searchParams }: PageProps
             href={`/pakta/${pakta.id}`}
             className="text-sm text-neutral-500 underline hover:text-neutral-800"
           >
-            ← Kembali ke detail Pakta
+            {"\u2190"} Kembali ke detail Pakta
           </Link>
         </div>
       </div>
 
-      {/* Print-only styles */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
             @media print {
               @page { size: A4; margin: 14mm; }
               body { background: #fff !important; }
-              .no-print { display: none !important; }
+              .no-print, .print\\:hidden { display: none !important; }
               .pakta-lembar2 { page-break-before: always; }
             }
             .pakta-doc {
@@ -253,8 +253,8 @@ export default async function PaktaPrintPage({ params, searchParams }: PageProps
             .pakta-doc-identitas .td-sep { width: 12px; }
             .pakta-doc-menyatakan { margin: 0 0 8px 0; text-align: justify; }
             .pakta-doc-butir { margin: 0 0 8px 0; padding-left: 0; list-style: none; }
-            .pakta-doc-butir li { margin-bottom: 6px; text-align: justify; padding-left: 0; }
-            .pakta-doc-butir .no { font-weight: bold; }
+            .pakta-doc-butir li { margin-bottom: 6px; text-align: justify; padding-left: 0; display: flex; gap: 6px; }
+            .pakta-doc-butir .no { font-weight: bold; flex-shrink: 0; }
             .pakta-doc-penutup { margin: 0 0 16px 0; text-align: justify; }
             .pakta-doc-ttd { display: flex; margin-top: 12px; }
             .pakta-doc-ttd-kiri { width: 50%; }
@@ -268,178 +268,151 @@ export default async function PaktaPrintPage({ params, searchParams }: PageProps
         }}
       />
 
-      {/* ── LEMBAR 1: PAKTA INTEGRITAS ── */}
       {showPakta ? (
         <div className="pakta-doc">
-        {/* KOP SURAT */}
-        <table style={{ width: "100%", marginBottom: 0 }}>
-          <tbody>
-            <tr>
-              <td style={{ width: "95px", verticalAlign: "middle", padding: "4px 0" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/logo-puskesmas.svg"
-                  alt="Logo Puskesmas Baruharjo"
-                  style={{ width: "88px", height: "auto", display: "block" }}
-                  onError={(e) => {
-                    const t = e.currentTarget as HTMLImageElement;
-                    t.style.display = "none";
-                    const ph = t.nextElementSibling as HTMLElement | null;
-                    if (ph) ph.style.display = "flex";
-                  }}
-                />
-                <div
-                  style={{
-                    width: "88px",
-                    height: "88px",
-                    display: "none",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    border: "1px solid #000",
-                    fontSize: "9px",
-                    textAlign: "center",
-                  }}
-                >
-                  LOGO
-                </div>
-              </td>
-              <td style={{ textAlign: "center", verticalAlign: "middle", padding: "4px 0" }}>
-                <div style={{ fontSize: "10.5pt", lineHeight: 1.5 }}>
-                  PEMERINTAH KABUPATEN TRENGGALEK
-                </div>
-                <div style={{ fontSize: "10.5pt", lineHeight: 1.5 }}>
-                  DINAS KESEHATAN, PENGENDALIAN PENDUDUK DAN KELUARGA BERENCANA
-                </div>
-                <div style={{ fontSize: "10.5pt", fontWeight: "bold", lineHeight: 1.5 }}>
-                  PUSKESMAS BARUHARJO
-                </div>
-                <div style={{ fontSize: "10.5pt", lineHeight: 1.5 }}>
-                  Jl. Raya Desa Baruharjo Telp. (0355) 879630
-                </div>
-                <div style={{ fontSize: "10.5pt", lineHeight: 1.5 }}>
-                  Email : puskesmasbaruharjo@gmail.com
-                </div>
-                <div style={{ fontSize: "10.5pt", lineHeight: 1.5 }}>
-                  TRENGGALEK 66381
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <div className="kop-line-thin" />
-        <div className="kop-line-thick" />
-
-        {/* JUDUL */}
-        <div className="pakta-doc-judul">PAKTA INTEGRITAS PEMANFAATAN BMD</div>
-        <div className="pakta-doc-instansi">PEMERINTAH KABUPATEN TRENGGALEK</div>
-
-        {/* PEMBUKA */}
-        <div className="pakta-doc-pembuka">
-          Pada hari <b>{hariStr}</b> tanggal <b>{tglKata}</b> bulan <b>{bulanStr}</b>{" "}
-          tahun <b>{tahunKata}</b> saya yang bertanda tangan di bawah ini:
-        </div>
-
-        {/* IDENTITAS */}
-        <div className="pakta-doc-identitas">
-          <table>
+          <table style={{ width: "100%", marginBottom: 0 }}>
             <tbody>
               <tr>
-                <td className="td-label">Nama</td>
-                <td className="td-sep">:</td>
-                <td><b>{pakta.nama || ""}</b></td>
+                <td style={{ width: "95px", verticalAlign: "middle", padding: "4px 0" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/logo-puskesmas.svg"
+                    alt="Logo Puskesmas Baruharjo"
+                    style={{ width: "88px", height: "auto", display: "block" }}
+                  />
+                </td>
+                <td style={{ textAlign: "center", verticalAlign: "middle", padding: "4px 0" }}>
+                  <div style={{ fontSize: "10.5pt", lineHeight: 1.5 }}>
+                    PEMERINTAH KABUPATEN TRENGGALEK
+                  </div>
+                  <div style={{ fontSize: "10.5pt", lineHeight: 1.5 }}>
+                    DINAS KESEHATAN, PENGENDALIAN PENDUDUK DAN KELUARGA BERENCANA
+                  </div>
+                  <div style={{ fontSize: "10.5pt", fontWeight: "bold", lineHeight: 1.5 }}>
+                    PUSKESMAS BARUHARJO
+                  </div>
+                  <div style={{ fontSize: "10.5pt", lineHeight: 1.5 }}>
+                    Jl. Raya Desa Baruharjo Telp. (0355) 879630
+                  </div>
+                  <div style={{ fontSize: "10.5pt", lineHeight: 1.5 }}>
+                    Email : puskesmasbaruharjo@gmail.com
+                  </div>
+                  <div style={{ fontSize: "10.5pt", lineHeight: 1.5 }}>
+                    TRENGGALEK 66381
+                  </div>
+                </td>
               </tr>
-              <tr>
-                <td className="td-label">Jabatan</td>
-                <td className="td-sep">:</td>
-                <td>{pakta.jabatan || ""}</td>
-              </tr>
-              {pakta.alamat && (
-                <tr>
-                  <td className="td-label">Alamat</td>
-                  <td className="td-sep">:</td>
-                  <td>{pakta.alamat}</td>
-                </tr>
-              )}
-              {pakta.nip && (
-                <tr>
-                  <td className="td-label">NIP</td>
-                  <td className="td-sep">:</td>
-                  <td>{pakta.nip}</td>
-                </tr>
-              )}
             </tbody>
           </table>
-        </div>
+          <div className="kop-line-thin" />
+          <div className="kop-line-thick" />
 
-        {/* MENYATAKAN */}
-        <div className="pakta-doc-menyatakan">
-          Dengan penuh kesadaran dan komitmen tinggi dengan menjunjung nilai integritas
-          menyatakan:
-        </div>
+          <div className="pakta-doc-judul">PAKTA INTEGRITAS PEMANFAATAN BMD</div>
+          <div className="pakta-doc-instansi">PEMERINTAH KABUPATEN TRENGGALEK</div>
 
-        {/* BUTIR */}
-        <ol className="pakta-doc-butir">
-          <li>
-            <span className="no">1.</span>
-            <span>
-              Saya akan menjaga aset yang saya manfaatkan ketika saya bertugas sebagai{" "}
-              <b>{pakta.jabatan || "…"}</b> dengan penuh tanggungjawab, termasuk
-              bertanggungjawab apabila terjadi kerusakan atau kekurangan.
-            </span>
-          </li>
-          <li>
-            <span className="no">2.</span>
-            <span>
-              Setelah menjalankan tugas sebagai <b>{pakta.jabatan || "…"}</b>, saya akan
-              menyerahkan kembali semua aset milik/ tercatat sebagai Barang Milik Daerah yang
-              bergerak maupun tidak bergerak serta semua yang digunakan dalam rangka membantu
-              tugas jabatan.
-            </span>
-          </li>
-          <li>
-            <span className="no">3.</span>
-            <span>
-              Pakta Integritas ini berlaku sebagai Surat Kuasa kepada Pengelola Barang
-              melalui Kepala Badan Keuangan Daerah selaku Pejabat Penatausahaan Barang untuk
-              menarik kembali secara langsung Barang Milik Daerah bergerak dan tidak bergerak
-              seketika saat saya tidak menjabat.
-            </span>
-          </li>
-          <li>
-            <span className="no">4.</span>
-            <span>
-              Apabila saya melanggar pernyataan dalam Pakta Integritas ini, saya bersedia
-              bertanggungjawab mutlak dan siap dikenakan sanksi sesuai peraturan
-              perundang-undangan yang berlaku.
-            </span>
-          </li>
-        </ol>
-
-        {/* PENUTUP */}
-        <div className="pakta-doc-penutup">
-          Demikian Pakta Integritas dan Surat Kuasa ini saya buat dengan sebenar-benarnya
-          untuk dipergunakan sebagaimana mestinya.
-        </div>
-
-        {/* TANDA TANGAN */}
-        <div className="pakta-doc-ttd">
-          <div className="pakta-doc-ttd-kiri"></div>
-          <div className="pakta-doc-ttd-kanan">
-            <p>Trenggalek, {tglPendek}</p>
-            <p>Yang Membuat Pernyataan</p>
-            <div className="pakta-doc-ttd-space"></div>
-            <div className="pakta-doc-ttd-line"></div>
-            <p className="pakta-doc-ttd-nama">( {pakta.nama || ""} )</p>
-            {pakta.nip && <p className="pakta-doc-ttd-nip">NIP. {pakta.nip}</p>}
+          <div className="pakta-doc-pembuka">
+            Pada hari <b>{hariStr}</b> tanggal <b>{tglKata}</b> bulan <b>{bulanStr}</b>{" "}
+            tahun <b>{tahunKata}</b> saya yang bertanda tangan di bawah ini:
           </div>
-        </div>
+
+          <div className="pakta-doc-identitas">
+            <table>
+              <tbody>
+                <tr>
+                  <td className="td-label">Nama</td>
+                  <td className="td-sep">:</td>
+                  <td><b>{pakta.nama || ""}</b></td>
+                </tr>
+                <tr>
+                  <td className="td-label">Jabatan</td>
+                  <td className="td-sep">:</td>
+                  <td>{pakta.jabatan || ""}</td>
+                </tr>
+                {pakta.alamat ? (
+                  <tr>
+                    <td className="td-label">Alamat</td>
+                    <td className="td-sep">:</td>
+                    <td>{pakta.alamat}</td>
+                  </tr>
+                ) : null}
+                {pakta.nip ? (
+                  <tr>
+                    <td className="td-label">NIP</td>
+                    <td className="td-sep">:</td>
+                    <td>{pakta.nip}</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="pakta-doc-menyatakan">
+            Dengan penuh kesadaran dan komitmen tinggi dengan menjunjung nilai integritas
+            menyatakan:
+          </div>
+
+          <ol className="pakta-doc-butir">
+            <li>
+              <span className="no">1.</span>
+              <span>
+                Saya akan menjaga aset yang saya manfaatkan ketika saya bertugas sebagai{" "}
+                <b>{pakta.jabatan || "—"}</b> dengan penuh tanggungjawab, termasuk
+                bertanggungjawab apabila terjadi kerusakan atau kekurangan.
+              </span>
+            </li>
+            <li>
+              <span className="no">2.</span>
+              <span>
+                Setelah menjalankan tugas sebagai <b>{pakta.jabatan || "—"}</b>, saya akan
+                menyerahkan kembali semua aset milik/ tercatat sebagai Barang Milik Daerah yang
+                bergerak maupun tidak bergerak serta semua yang digunakan dalam rangka membantu
+                tugas jabatan.
+              </span>
+            </li>
+            <li>
+              <span className="no">3.</span>
+              <span>
+                Pakta Integritas ini berlaku sebagai Surat Kuasa kepada Pengelola Barang
+                melalui Kepala Badan Keuangan Daerah selaku Pejabat Penatausahaan Barang untuk
+                menarik kembali secara langsung Barang Milik Daerah bergerak dan tidak bergerak
+                seketika saat saya tidak menjabat.
+              </span>
+            </li>
+            <li>
+              <span className="no">4.</span>
+              <span>
+                Apabila saya melanggar pernyataan dalam Pakta Integritas ini, saya bersedia
+                bertanggungjawab mutlak dan siap dikenakan sanksi sesuai peraturan
+                perundang-undangan yang berlaku.
+              </span>
+            </li>
+          </ol>
+
+          <div className="pakta-doc-penutup">
+            Demikian Pakta Integritas dan Surat Kuasa ini saya buat dengan sebenar-benarnya
+            untuk dipergunakan sebagaimana mestinya.
+          </div>
+
+          <div className="pakta-doc-ttd">
+            <div className="pakta-doc-ttd-kiri" />
+            <div className="pakta-doc-ttd-kanan">
+              <p>Trenggalek, {tglPendek}</p>
+              <p>Yang Membuat Pernyataan</p>
+              <div className="pakta-doc-ttd-space" />
+              <div className="pakta-doc-ttd-line" />
+              <p className="pakta-doc-ttd-nama">( {pakta.nama || ""} )</p>
+              {pakta.nip ? <p className="pakta-doc-ttd-nip">NIP. {pakta.nip}</p> : null}
+            </div>
+          </div>
         </div>
       ) : null}
 
-        {/* ── LEMBAR 2: LAMPIRAN DAFTAR ASET ── */}
-        {showLampiran && (
-          <div className="pakta-lembar2" dangerouslySetInnerHTML={{ __html: lampiranHtml }} />
-        )}
-      </div>
+      {showLampiran ? (
+        <div
+          className={showPakta ? "pakta-lembar2 mx-auto max-w-[210mm] px-1" : "mx-auto max-w-[210mm] px-1"}
+          dangerouslySetInnerHTML={{ __html: lampiranHtml }}
+        />
+      ) : null}
+    </div>
   );
 }
