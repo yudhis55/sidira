@@ -50,3 +50,7 @@ const mockUsers: Profile[] = [
 export function getMockUsers(): Profile[] {
   return mockUsers;
 }
+
+export function getMockUserById(id: string): Profile | null {
+  return mockUsers.find((u) => u.id === id) ?? null;
+}
