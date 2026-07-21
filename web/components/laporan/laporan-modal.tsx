@@ -82,6 +82,18 @@ const SUMBER_BADGE: Record<
   },
 };
 
+/** GAS empty-sumber tips (lp-src-badge empty / empty table) */
+const SUMBER_TIPS: Record<LaporanSumber, string> = {
+  gabungan:
+    "Tidak ada item bermasalah di inventaris maupun ceklist bulan ini. Rekap di bawah menampilkan ringkasan kondisi per ruangan (mock).",
+  inventaris:
+    "Semua item inventaris dalam kondisi Baik - atau data mock belum memuat item bermasalah. Rekap per ruangan tetap ditampilkan.",
+  ceklist:
+    "Tidak ada catatan kerusakan di ceklist untuk periode terpilih. Gunakan mode ✏️ Isi Manual di GAS untuk mengisi langsung; di mock, rekap ruangan tetap tampil.",
+  manual:
+    "Mode Isi Manual: di GAS baris dapat diedit langsung. Di mock, gunakan rekap per ruangan di bawah sebagai ringkasan kondisi.",
+};
+
 const ROOM_COLUMNS: TableColumn[] = [
   { key: "no", label: "No", align: "center", width: "40px" },
   { key: "ruangan", label: "Ruangan" },
@@ -92,6 +104,10 @@ const ROOM_COLUMNS: TableColumn[] = [
   { key: "ta", label: "Tidak Ada", align: "center" },
 ];
 
+/** GAS `.laporan-select` classes (violet chrome) */
+const SELECT_CLASS =
+  "w-auto min-w-0 border-[1.5px] border-[#d8b4fe] rounded-lg px-3 py-[7px] text-[12.5px] font-semibold text-[#3b0764] bg-white focus:border-[#7c3aed] focus:shadow-[0_0_0_3px_#7c3aed20]";
+
 function buildTahunOptions(currentYear: number) {
   return Array.from({ length: 5 }, (_, i) => {
     const y = currentYear - 2 + i;
@@ -100,7 +116,7 @@ function buildTahunOptions(currentYear: number) {
 }
 
 /**
- * GAS `#laporanModal` parity — violet head, filters Bulan/Tahun/Sumber,
+ * GAS `#laporanModal` parity - violet head, filters Bulan/Tahun/Sumber,
  * summary + rekap per ruangan. Mock props only; client-side print.
  */
 function defaultLaporanFilters() {
@@ -110,6 +126,28 @@ function defaultLaporanFilters() {
     tahun: d.getFullYear(),
     sumber: "gabungan" as LaporanSumber,
   };
+}
+
+function CondCell({
+  value,
+  tone,
+}: {
+  value: number;
+  tone: "baik" | "rr" | "rb" | "ta";
+}) {
+  const tones = {
+    baik: "bg-teal4 text-teal",
+    rr: "bg-amber2 text-amber",
+    rb: "bg-red2 text-red",
+    ta: "bg-slate2 text-slate",
+  } as const;
+  return (
+    <span
+      className={`inline-flex min-w-[28px] items-center justify-center rounded px-1.5 py-0.5 text-[11px] font-bold font-mono tabular-nums ${tones[tone]}`}
+    >
+      {value}
+    </span>
+  );
 }
 
 export function LaporanModal({
@@ -131,43 +169,28 @@ export function LaporanModal({
 
   const periodLabel = `${BULAN_NAMES[bulan - 1]} ${tahun}`;
   const badge = SUMBER_BADGE[sumber];
+  const tip = SUMBER_TIPS[sumber];
 
-  // Mock data is static by period — still render controls + badge for parity
+  // Mock data is static by period - still render controls + badge for parity
   const roomRows = rooms.map((room, idx) => ({
-    no: <span className="font-mono font-bold">{idx + 1}</span>,
+    no: <span className="font-mono text-[12px] font-bold">{idx + 1}</span>,
     ruangan: (
       <span className="flex items-center gap-2">
-        <span className="text-lg" aria-hidden>
+        <span className="text-base leading-none" aria-hidden>
           {room.room_icon}
         </span>
-        <span className="font-semibold">{room.room_name}</span>
+        <span className="text-[13px] font-semibold">{room.room_name}</span>
       </span>
     ),
     total: (
-      <span className="font-mono font-bold tabular-nums">
+      <span className="font-mono text-[12px] font-bold tabular-nums">
         {room.summary.total}
       </span>
     ),
-    baik: (
-      <span className="inline-flex items-center justify-center rounded-[4px] px-2 py-0.5 text-[11px] font-bold bg-teal4 text-teal font-mono tabular-nums">
-        {room.summary.baik}
-      </span>
-    ),
-    rr: (
-      <span className="inline-flex items-center justify-center rounded-[4px] px-2 py-0.5 text-[11px] font-bold bg-amber2 text-amber font-mono tabular-nums">
-        {room.summary.rr}
-      </span>
-    ),
-    rb: (
-      <span className="inline-flex items-center justify-center rounded-[4px] px-2 py-0.5 text-[11px] font-bold bg-red2 text-red font-mono tabular-nums">
-        {room.summary.rb}
-      </span>
-    ),
-    ta: (
-      <span className="inline-flex items-center justify-center rounded-[4px] px-2 py-0.5 text-[11px] font-bold bg-slate2 text-slate font-mono tabular-nums">
-        {room.summary.ta}
-      </span>
-    ),
+    baik: <CondCell value={room.summary.baik} tone="baik" />,
+    rr: <CondCell value={room.summary.rr} tone="rr" />,
+    rb: <CondCell value={room.summary.rb} tone="rb" />,
+    ta: <CondCell value={room.summary.ta} tone="ta" />,
   }));
 
   const handlePrint = () => {
@@ -175,138 +198,187 @@ export function LaporanModal({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} size="xl" zIndex={3100}>
-      {/* Head — GAS .laporan-modal-head violet gradient */}
+    <Dialog
+      open={open}
+      onClose={onClose}
+      size="xl"
+      zIndex={3100}
+      panelClassName="max-w-[920px] rounded-2xl shadow-[0_28px_72px_rgba(0,0,0,0.28)]"
+      overlayClassName="items-start justify-center overflow-y-auto px-4 py-7 bg-[rgba(8,18,40,0.65)]"
+    >
+      {/* Head - GAS .laporan-modal-head */}
       <div
-        className="flex items-center gap-3.5 px-6 py-[18px] shrink-0"
+        className="flex shrink-0 items-center gap-3.5 px-6 py-[18px]"
         style={{
           background: "linear-gradient(135deg, #3b0764, #7c3aed)",
         }}
       >
-        <div className="text-[28px] leading-none shrink-0" aria-hidden>
+        <div className="shrink-0 text-[28px] leading-none" aria-hidden>
           📄
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="m-0 text-[16px] font-extrabold text-white leading-tight">
-            Laporan Monitoring
+          <h2 className="m-0 text-[16px] font-extrabold leading-tight text-white">
+            Laporan Monitoring Pemeliharaan Sarpras &amp; Alkes
           </h2>
-          <p className="m-0 mt-0.5 text-[11.5px] text-white/65 leading-snug">
-            Pemeliharaan Sarpras &amp; Alkes · {periodLabel} · Puskesmas
+          <p className="m-0 mt-0.5 text-[11.5px] leading-snug text-white/65">
+            Bukti Pelaksanaan Monitoring, Tindak Lanjut dan Evaluasi · Puskesmas
             Baruharjo
           </p>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="ml-auto shrink-0 rounded-lg border border-white/20 bg-white/12 px-[13px] py-1.5 text-xs font-bold text-white hover:bg-white/22 transition-colors"
+          className="ml-auto shrink-0 rounded-lg border border-white/20 bg-white/12 px-[13px] py-1.5 text-xs font-bold text-white transition-colors hover:bg-white/22"
           aria-label="Tutup modal laporan"
         >
           ✕ Tutup
         </button>
       </div>
 
-      {/* Options bar — GAS .laporan-options */}
-      <div className="flex flex-wrap items-end gap-3.5 border-b border-line bg-[#faf5ff] px-6 py-4 shrink-0">
-        <Select
-          label="Bulan"
-          value={String(bulan)}
-          onChange={(e) => setBulan(parseInt(e.target.value, 10))}
-          options={BULAN_OPTIONS}
-          className="w-40 border-[#d8b4fe] text-[#3b0764] font-semibold focus:border-[#7c3aed]"
-        />
-        <Select
-          label="Tahun"
-          value={String(tahun)}
-          onChange={(e) => setTahun(parseInt(e.target.value, 10))}
-          options={tahunOptions}
-          className="w-28 border-[#d8b4fe] text-[#3b0764] font-semibold focus:border-[#7c3aed]"
-        />
-        <Select
-          label="Sumber"
-          value={sumber}
-          onChange={(e) => setSumber(e.target.value as LaporanSumber)}
-          options={SUMBER_OPTIONS}
-          className="min-w-[220px] border-[#d8b4fe] text-[#3b0764] font-semibold focus:border-[#7c3aed]"
-        />
-        <Button
+      {/* Options bar - GAS .laporan-options (inline labels, violet selects) */}
+      <div className="flex shrink-0 flex-wrap items-end gap-3.5 border-b border-[#e2e8ef] bg-[#faf5ff] px-6 py-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <label
+            htmlFor="lp-sel-bulan"
+            className="min-w-[60px] whitespace-nowrap text-[11.5px] font-bold text-[#374151]"
+          >
+            Bulan:
+          </label>
+          <Select
+            id="lp-sel-bulan"
+            value={String(bulan)}
+            onChange={(e) => setBulan(parseInt(e.target.value, 10))}
+            options={BULAN_OPTIONS}
+            className={`${SELECT_CLASS} w-40`}
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label
+            htmlFor="lp-sel-tahun"
+            className="min-w-[60px] whitespace-nowrap text-[11.5px] font-bold text-[#374151]"
+          >
+            Tahun:
+          </label>
+          <Select
+            id="lp-sel-tahun"
+            value={String(tahun)}
+            onChange={(e) => setTahun(parseInt(e.target.value, 10))}
+            options={tahunOptions}
+            className={`${SELECT_CLASS} w-[7.5rem]`}
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label
+            htmlFor="lp-sel-sumber"
+            className="min-w-[60px] whitespace-nowrap text-[11.5px] font-bold text-[#374151]"
+          >
+            Sumber:
+          </label>
+          <Select
+            id="lp-sel-sumber"
+            value={sumber}
+            onChange={(e) => setSumber(e.target.value as LaporanSumber)}
+            options={SUMBER_OPTIONS}
+            className={`${SELECT_CLASS} min-w-[240px]`}
+          />
+        </div>
+        <button
           type="button"
           onClick={handlePrint}
-          className="ml-auto bg-[#7c3aed] text-white hover:bg-[#6d28d9] hover:opacity-100 px-[22px] py-[9px] gap-2"
+          className="ml-auto inline-flex items-center gap-2 rounded-lg bg-[#7c3aed] px-[22px] py-[9px] text-[13px] font-bold text-white transition-colors hover:bg-[#6d28d9]"
         >
           🖨️ Cetak / PDF
-        </Button>
+        </button>
       </div>
 
-      {/* Body — summary + room table */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
-        {/* Sumber badge (GAS .lp-src-badge) */}
+      {/* Preview body - GAS .laporan-preview */}
+      <div className="flex-1 space-y-3 overflow-y-auto px-6 py-6">
+        {/* Sumber badge - GAS .lp-src-badge */}
         <div
           className={`inline-flex items-center gap-1.5 rounded-2xl border px-2.5 py-1 text-[10.5px] font-semibold ${badge.className}`}
         >
           <span aria-hidden>{badge.emoji}</span>
           <span>{badge.text}</span>
-          <span className="text-ink3 font-normal">· {periodLabel}</span>
+          <span className="font-normal text-ink3">· {periodLabel}</span>
         </div>
 
-        {/* Summary stats */}
-        <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+        {/* Tip panel - GAS .lp-source-panel */}
+        <div className="rounded-lg border border-[#ddd6fe] bg-[#f5f3ff] px-3 py-3 text-xs leading-relaxed text-[#4c1d95]">
+          {tip}
+        </div>
+
+        {/* Summary stats - denser grid */}
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
           <StatCard
             emoji="🏥"
             value={summary.total_rooms}
             label="Total Ruangan"
+            className="p-2.5 gap-2.5"
           />
           <StatCard
             emoji="📦"
             value={summary.total_items}
             label="Total Barang"
+            className="p-2.5 gap-2.5"
           />
           <StatCard
             emoji="✅"
             value={summary.total_baik}
             label={`Baik (${summary.percentage_baik}%)`}
             variant="teal"
+            className="p-2.5 gap-2.5"
           />
           <StatCard
             emoji="⚠️"
             value={summary.total_rr}
             label={`RR (${summary.percentage_rr}%)`}
             variant="amber"
+            className="p-2.5 gap-2.5"
           />
           <StatCard
             emoji="❌"
             value={summary.total_rb}
             label={`RB (${summary.percentage_rb}%)`}
             variant="red"
+            className="p-2.5 gap-2.5"
           />
           <StatCard
             emoji="➖"
             value={summary.total_ta}
             label={`TA (${summary.percentage_ta}%)`}
             variant="slate"
+            className="p-2.5 gap-2.5"
           />
         </div>
 
-        {/* Room breakdown */}
-        <Card className="p-0 overflow-hidden">
-          <div className="px-4 py-3 border-b border-line">
-            <h3 className="font-mono text-sm font-bold uppercase tracking-wide m-0">
+        {/* Room breakdown - denser table chrome */}
+        <Card className="overflow-hidden p-0">
+          <div className="flex items-center justify-between gap-2 border-b border-line bg-[#faf5ff] px-3.5 py-2.5">
+            <h3 className="m-0 text-[12px] font-extrabold uppercase tracking-wide text-[#3b0764]">
               Rekap Per Ruangan
             </h3>
+            <span className="text-[10.5px] font-semibold text-ink3">
+              {rooms.length} ruangan · {periodLabel}
+            </span>
           </div>
           <Table
             columns={ROOM_COLUMNS}
             rows={roomRows}
             striped
             emptyMessage="Belum ada data ruangan"
+            className="text-[12.5px]"
           />
         </Card>
-      </div>
 
-      {/* Footer */}
-      <div className="flex items-center justify-end gap-2.5 border-t border-line px-6 py-3.5 shrink-0 bg-white">
-        <Button type="button" variant="modal-cancel" onClick={onClose}>
-          Tutup
-        </Button>
+        {/* Print note - GAS has full #laporanDoc; mock keeps room rekap + window.print */}
+        <p className="m-0 text-[10.5px] leading-snug text-ink3">
+          🖨️ Cetak / PDF memakai pratinjau browser. Dokumen formal (kop surat +
+          TTD) di GAS diisi lewat{" "}
+          <code className="rounded bg-line2 px-1 font-mono text-[10px]">
+            #laporanDoc
+          </code>
+          ; di mock data rekap ruangan di atas yang dicetak.
+        </p>
       </div>
     </Dialog>
   );

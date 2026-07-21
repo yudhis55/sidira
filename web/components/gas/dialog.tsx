@@ -12,6 +12,10 @@ interface DialogProps {
   closeOnBackdropClick?: boolean; // default true
   /** Stacking order for overlay parity with GAS (default 3500; laporan uses 3100). */
   zIndex?: number;
+  /** Extra classes on the fixed overlay (e.g. items-start for tall GAS modals). */
+  overlayClassName?: string;
+  /** Extra classes on the white panel (radius, max-width override, shadow). */
+  panelClassName?: string;
 }
 
 function subscribeNoop() {
@@ -34,6 +38,8 @@ export function Dialog({
   size = "md",
   closeOnBackdropClick = true,
   zIndex = 3500,
+  overlayClassName,
+  panelClassName,
 }: DialogProps) {
   const mounted = useIsClient();
 
@@ -75,7 +81,10 @@ export function Dialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 bg-ink/45 backdrop-blur-[4px] flex items-center justify-center p-4"
+      className={cn(
+        "fixed inset-0 bg-ink/45 backdrop-blur-[4px] flex items-center justify-center p-4",
+        overlayClassName
+      )}
       style={{ zIndex }}
       onClick={handleBackdropClick}
       role="dialog"
@@ -83,8 +92,11 @@ export function Dialog({
     >
       <div
         className={cn(
-          "bg-white rounded-lg shadow-[0_12px_40px_rgba(0,0,0,0.12)] w-full max-h-[calc(100vh-64px)] flex flex-col overflow-hidden",
-          sizeClasses[size]
+          "bg-white w-full max-h-[calc(100vh-64px)] flex flex-col overflow-hidden",
+          !panelClassName &&
+            "rounded-lg shadow-[0_12px_40px_rgba(0,0,0,0.12)]",
+          sizeClasses[size],
+          panelClassName
         )}
       >
         {children}
