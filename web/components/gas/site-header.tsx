@@ -68,20 +68,28 @@ export function SiteHeader() {
             style={{
               width: "72px",
               height: "72px",
-              background:
-                "linear-gradient(145deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
+              background: "transparent",
+              overflow: "hidden",
               border: "1.5px solid rgba(255,255,255,0.25)",
               borderRadius: "20px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: "34px",
               boxShadow:
                 "0 8px 24px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2)",
-              backdropFilter: "blur(4px)",
             }}
           >
-            🏥
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo-puskesmas.png"
+              alt="Puskesmas Baruharjo"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                borderRadius: "inherit",
+              }}
+            />
           </div>
           <span
             style={{
