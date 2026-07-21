@@ -46,6 +46,7 @@ export default async function RoomDetailPage({
           withDivider
           exportItems={items}
           roomName={room.name}
+          roomId={id}
         />
       </Suspense>
     </div>

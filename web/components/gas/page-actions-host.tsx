@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { PageActions } from "@/components/gas/page-actions";
 import { RiwayatModal } from "@/components/riwayat/riwayat-modal";
 import { LaporanModal } from "@/components/laporan/laporan-modal";
+import { RekapModal } from "@/components/rekap/rekap-modal";
 import type { Item, RiwayatPindah } from "@/types/database";
 import type { LaporanSummary, LaporanRoom } from "@/lib/mock-data/types";
 
@@ -18,6 +19,8 @@ export interface PageActionsHostProps {
   /** When set, export CSV uses these items (room scope). Else toast global mock. */
   exportItems?: Item[];
   roomName?: string;
+  /** Active room id for Rekap "Ruangan Aktif" scope (room detail pages). */
+  roomId?: string;
 }
 
 function cleanModalQuery(
@@ -59,9 +62,11 @@ export function PageActionsHost({
   withDivider = true,
   exportItems,
   roomName,
+  roomId,
 }: PageActionsHostProps) {
   const [openLaporan, setOpenLaporan] = React.useState(false);
   const [openRiwayat, setOpenRiwayat] = React.useState(false);
+  const [openRekap, setOpenRekap] = React.useState(false);
   /** Captured soft-open target; survives URL clean until user closes. */
   const [softModal, setSoftModal] = React.useState<"riwayat" | "laporan" | null>(
     null
@@ -130,9 +135,7 @@ export function PageActionsHost({
       <PageActions
         onOpenLaporan={() => setOpenLaporan(true)}
         onOpenRiwayat={() => setOpenRiwayat(true)}
-        onOpenRekap={() =>
-          toast.info("Rekap Kondisi (mock) — modal rekap belum di-port")
-        }
+        onOpenRekap={() => setOpenRekap(true)}
         onPrint={() => window.print()}
         onExportUsulan={() =>
           toast.success("Export Rekap Usulan (mock CSV)")
@@ -153,6 +156,12 @@ export function PageActionsHost({
         onClose={closeLaporan}
         summary={laporanSummary}
         rooms={laporanRooms}
+      />
+      <RekapModal
+        key={openRekap ? "rekap-open" : "rekap-closed"}
+        open={openRekap}
+        onClose={() => setOpenRekap(false)}
+        currentRoomId={roomId}
       />
     </>
   );
