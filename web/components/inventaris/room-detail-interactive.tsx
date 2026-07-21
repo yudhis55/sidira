@@ -4,8 +4,12 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/gas/badge";
 import { Button } from "@/components/gas/button";
+import { Dialog } from "@/components/gas/dialog";
+import { Input } from "@/components/gas/input";
 import { Modal } from "@/components/gas/modal";
 import { Select } from "@/components/gas/select";
+import { ChecklistRoomModal } from "@/components/inventaris/checklist-room-modal";
+import { MoveItemModal } from "@/components/inventaris/move-item-modal";
 import type {
   Item,
   ItemCategory,
@@ -110,13 +114,19 @@ export function RoomDetailInteractive({
 }: RoomDetailInteractiveProps) {
   const [items, setItems] = useState<Item[]>(initialItems);
 
-  // Move single item
+  // Move single item (GAS move-item-modal)
   const [moveItem, setMoveItem] = useState<Item | null>(null);
-  const [moveTargetRoomId, setMoveTargetRoomId] = useState("");
 
   // Move all
   const [moveAllOpen, setMoveAllOpen] = useState(false);
   const [moveAllTargetRoomId, setMoveAllTargetRoomId] = useState("");
+
+  // Add item (mock)
+  const [addCategory, setAddCategory] = useState<ItemCategory | null>(null);
+  const [addName, setAddName] = useState("");
+
+  // Ceklist harian modal (GAS openChecklist — room-scoped matrix)
+  const [checklistOpen, setChecklistOpen] = useState(false);
 
   const destinationRooms = useMemo(
     () => rooms.filter((r) => r.id !== room.id),
@@ -169,6 +179,21 @@ export function RoomDetailInteractive({
     toast.success("Semua kondisi di ruangan ini diset menjadi Baik");
   }
 
+  /** Per-category bulk set baik (GAS .btn-all-baik / setAllKondisiBaik) */
+  function handleCategorySemuaBaik(category: ItemCategory, label: string) {
+    const count = items.filter((it) => it.category === category).length;
+    if (count === 0) {
+      toast.info(`Tidak ada item di kategori ${label}`);
+      return;
+    }
+    setItems((prev) =>
+      prev.map((it) =>
+        it.category === category ? { ...it, condition: "baik" } : it
+      )
+    );
+    toast.success(`Semua kondisi ${label} diset menjadi Baik (${count} item)`);
+  }
+
   function handleEditMock() {
     toast.info("Mode edit ruangan (mock) — belum dihubungkan ke backend");
   }
@@ -179,24 +204,17 @@ export function RoomDetailInteractive({
 
   function openMoveItem(item: Item) {
     setMoveItem(item);
-    setMoveTargetRoomId(destinationRooms[0]?.id ?? "");
   }
 
   function closeMoveItem() {
     setMoveItem(null);
-    setMoveTargetRoomId("");
   }
 
-  function confirmMoveItem() {
+  function confirmMoveItem(destRoom: Room, _destKat: ItemCategory) {
     if (!moveItem) return;
-    if (!moveTargetRoomId) {
-      toast.error("Pilih ruangan tujuan");
-      return;
-    }
-    const dest = rooms.find((r) => r.id === moveTargetRoomId);
     setItems((prev) => prev.filter((it) => it.id !== moveItem.id));
     toast.success(
-      `${moveItem.name} dipindah ke ${dest?.name ?? "ruangan tujuan"} (mock)`
+      `${moveItem.name} dipindah ke ${destRoom.name} (mock)`
     );
     closeMoveItem();
   }
@@ -234,9 +252,62 @@ export function RoomDetailInteractive({
     toast.success(`${item.name} dihapus (mock)`);
   }
 
-  function handleChecklistMock(item: Item) {
-    toast.info(`Ceklist: ${item.name} (mock)`);
+  function openChecklist() {
+    setChecklistOpen(true);
   }
+
+  function closeChecklist() {
+    setChecklistOpen(false);
+  }
+
+  function openAddItem(category: ItemCategory) {
+    setAddCategory(category);
+    setAddName("");
+  }
+
+  function closeAddItem() {
+    setAddCategory(null);
+    setAddName("");
+  }
+
+  function confirmAddItem() {
+    if (!addCategory) return;
+    const name = addName.trim();
+    if (!name) {
+      toast.error("Nama barang wajib diisi");
+      return;
+    }
+    const now = new Date().toISOString();
+    const nextId =
+      items.reduce((max, it) => (it.id > max ? it.id : max), 0) + 1;
+    const indexInRoom =
+      items.filter((it) => it.category === addCategory).length;
+    const newItem: Item = {
+      id: nextId,
+      room_id: room.id,
+      category: addCategory,
+      name,
+      quantity: 1,
+      unit: "unit",
+      condition: "baik",
+      index_in_room: indexInRoom,
+      prio: "pendukung",
+      created_at: now,
+      updated_at: now,
+    };
+    setItems((prev) => [...prev, newItem]);
+    const label =
+      CATEGORY_CONFIG.find((c) => c.value === addCategory)?.label ??
+      addCategory;
+    toast.success(`${name} ditambahkan ke ${label} (mock)`);
+    closeAddItem();
+  }
+
+  const addCategoryLabel =
+    addCategory != null
+      ? (CATEGORY_CONFIG.find((c) => c.value === addCategory)?.label ??
+        addCategory)
+      : "";
 
   return (
     <>
@@ -351,6 +422,18 @@ export function RoomDetailInteractive({
                 >
                   {catItems.length} item
                 </span>
+                <button
+                  type="button"
+                  title="Set semua kondisi menjadi Baik"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleCategorySemuaBaik(cat.value, cat.label);
+                  }}
+                  className="relative z-[2] inline-flex items-center gap-[5px] px-2.5 py-[3px] rounded-[20px] text-[11px] font-bold whitespace-nowrap border-[1.5px] border-[rgba(14,124,107,0.35)] bg-[rgba(14,124,107,0.1)] text-teal hover:bg-teal hover:text-white hover:border-teal transition-colors"
+                >
+                  {"\u2705"} Semua Baik
+                </button>
                 <span className="text-[11px] ml-1.5">▾</span>
               </summary>
 
@@ -463,31 +546,34 @@ export function RoomDetailInteractive({
                             <td className="px-3.5 py-2.5 text-center">
                               <button
                                 type="button"
-                                onClick={() => handleChecklistMock(item)}
-                                className="text-xs px-2 py-1 rounded bg-line2 text-ink2 hover:bg-line font-semibold"
+                                onClick={openChecklist}
+                                className="inline-flex h-[26px] items-center gap-0.5 rounded-[5px] border border-line bg-line2 px-1.5 text-[11px] font-semibold text-ink2 transition-colors hover:bg-line"
+                                title="Ceklist harian"
                               >
-                                📋 Ceklist
+                                📋
                               </button>
                             </td>
                             <td className="px-3.5 py-2.5">
                               <div className="flex items-center gap-1">
+                                {/* GAS .mv-btn — compact blue outline, icon-only */}
                                 <button
                                   type="button"
                                   onClick={() => openMoveItem(item)}
-                                  className="w-6 h-6 flex items-center justify-center rounded bg-line2 text-ink2 hover:bg-line text-xs"
+                                  className="inline-flex h-[26px] w-[26px] items-center justify-center rounded-[5px] border-[1.5px] border-[#bfdbfe] bg-[#eff6ff] text-[13px] font-black leading-none text-[#1d4ed8] transition-all duration-150 hover:scale-110 hover:border-[#1d4ed8] hover:bg-[#1d4ed8] hover:text-white"
                                   title="Pindah ke ruangan lain"
                                   aria-label={`Pindah ${item.name}`}
                                 >
-                                  📦
+                                  ↗
                                 </button>
+                                {/* GAS .del-btn — compact red fill, icon-only */}
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteItem(item)}
-                                  className="w-6 h-6 flex items-center justify-center rounded bg-red2 text-red hover:opacity-90 text-xs"
+                                  className="inline-flex h-[26px] w-[26px] items-center justify-center rounded-[5px] border-0 bg-red2 text-xs text-red transition-colors hover:bg-[#fca5a5]"
                                   title="Hapus"
                                   aria-label={`Hapus ${item.name}`}
                                 >
-                                  🗑️
+                                  🗑
                                 </button>
                               </div>
                             </td>
@@ -497,71 +583,129 @@ export function RoomDetailInteractive({
                     </tbody>
                   </table>
                 </div>
+                <button
+                  type="button"
+                  className="add-btn flex w-full items-center justify-center gap-2 border border-t-0 border-dashed border-line bg-transparent px-[18px] py-[9px] text-xs font-semibold text-ink3 rounded-b-[var(--r)] transition-colors duration-[180ms] hover:border-teal3 hover:bg-teal4 hover:text-teal"
+                  onClick={() => openAddItem(cat.value)}
+                >
+                  ＋ Tambah {cat.label}
+                </button>
               </div>
             </details>
           );
         })}
       </div>
 
-      {/* Move single item modal */}
+      {/* Add item modal (mock) */}
       <Modal
-        open={!!moveItem}
-        onClose={closeMoveItem}
-        title="Pindah Barang"
-        subtitle={
-          moveItem
-            ? `Pindahkan "${moveItem.name}" ke ruangan lain`
-            : undefined
-        }
-        icon="📦"
-        iconVariant="blue"
+        open={!!addCategory}
+        onClose={closeAddItem}
+        title={`Tambah ${addCategoryLabel}`}
+        subtitle={`Item baru di kategori ${addCategoryLabel}`}
+        icon="＋"
+        iconVariant="teal"
         size="sm"
         footer={
           <>
-            <Button type="button" variant="modal-cancel" onClick={closeMoveItem}>
+            <Button type="button" variant="modal-cancel" onClick={closeAddItem}>
               Batal
             </Button>
-            <Button type="button" variant="modal-ok" onClick={confirmMoveItem}>
-              Pindah
+            <Button type="button" variant="modal-ok" onClick={confirmAddItem}>
+              Tambah
             </Button>
           </>
         }
       >
-        <Select
-          label="Ruangan Tujuan"
-          value={moveTargetRoomId}
-          onChange={(e) => setMoveTargetRoomId(e.target.value)}
-          options={roomOptions}
+        <Input
+          label="Nama Barang"
+          placeholder={`Nama ${addCategoryLabel.toLowerCase()}...`}
+          value={addName}
+          onChange={(e) => setAddName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              confirmAddItem();
+            }
+          }}
+          autoFocus
         />
       </Modal>
 
-      {/* Move all modal */}
-      <Modal
-        open={moveAllOpen}
-        onClose={closeMoveAll}
-        title="Pindah Semua Item"
-        subtitle={`Pindahkan ${items.length} item dari ${room.name}`}
-        icon="📦"
-        iconVariant="amber"
-        size="sm"
-        footer={
-          <>
-            <Button type="button" variant="modal-cancel" onClick={closeMoveAll}>
-              Batal
-            </Button>
-            <Button type="button" variant="modal-ok" onClick={confirmMoveAll}>
-              Pindah Semua
-            </Button>
-          </>
-        }
-      >
-        <Select
-          label="Ruangan Tujuan"
-          value={moveAllTargetRoomId}
-          onChange={(e) => setMoveAllTargetRoomId(e.target.value)}
-          options={roomOptions}
-        />
-      </Modal>
+      {/* Move single item — GAS #moveModalBg 1:1; remount resets form state */}
+      <MoveItemModal
+        key={moveItem?.id ?? "closed"}
+        open={!!moveItem}
+        onClose={closeMoveItem}
+        item={moveItem}
+        fromRoom={room}
+        rooms={rooms}
+        onConfirm={confirmMoveItem}
+      />
+
+      {/* Move all — GAS-ish chrome (blue head + room select) */}
+      <Dialog open={moveAllOpen} onClose={closeMoveAll} size="md" zIndex={3500}>
+        <div
+          className="flex shrink-0 items-center justify-between px-[22px] py-[18px] text-white"
+          style={{
+            background: "linear-gradient(135deg, #1e3a5f, #1d4ed8)",
+          }}
+        >
+          <div className="min-w-0">
+            <div className="text-base font-extrabold leading-tight">
+              📦 Pindah Semua Item
+            </div>
+            <div className="mt-[3px] text-[11px] opacity-75">
+              {items.length} item dari {room.icon} {room.name}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={closeMoveAll}
+            className="ml-3 shrink-0 rounded-lg border-[1.5px] border-white/30 bg-white/15 px-3.5 py-1.5 text-xs font-bold text-white transition-colors hover:bg-white/28"
+          >
+            ✕ Tutup
+          </button>
+        </div>
+        <div className="flex flex-col gap-3 overflow-y-auto px-5 py-4">
+          <div className="rounded-xl border-[1.5px] border-[#bfdbfe] bg-[#eff6ff] px-4 py-3 text-[13px] font-bold text-ink">
+            Pindahkan seluruh inventaris ruangan ini ke tujuan di bawah.
+          </div>
+          <Select
+            label="Ruangan Tujuan"
+            value={moveAllTargetRoomId}
+            onChange={(e) => setMoveAllTargetRoomId(e.target.value)}
+            options={roomOptions}
+          />
+        </div>
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-line bg-[#f8faff] px-5 py-3.5">
+          <button
+            type="button"
+            onClick={closeMoveAll}
+            className="rounded-[10px] border-[1.5px] border-line bg-white px-4 py-[9px] text-xs font-bold text-ink2 transition-colors hover:border-[#1d4ed8] hover:text-[#1d4ed8]"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={confirmMoveAll}
+            disabled={!moveAllTargetRoomId}
+            className="rounded-[10px] border-none px-[22px] py-[9px] text-[13px] font-extrabold text-white shadow-[0_4px_12px_rgba(29,78,216,0.3)] transition-[filter] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            style={{
+              background: "linear-gradient(135deg, #1e3a5f, #1d4ed8)",
+            }}
+          >
+            ✅ Pindahkan Semua
+          </button>
+        </div>
+      </Dialog>
+
+      {/* Ceklist Harian — GAS openChecklist / #clModalOverlay (mock matrix) */}
+      <ChecklistRoomModal
+        open={checklistOpen}
+        onClose={closeChecklist}
+        room={room}
+        items={items}
+      />
     </>
   );
 }
