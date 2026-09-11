@@ -55,3 +55,6 @@ supabase/.branches/
 .sisyphus/
 .claude/
 .impeccable/
+
+# Playwright MCP artifacts (screenshot & page snapshot lokal)
+.playwright-mcp/
