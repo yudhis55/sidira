@@ -11,41 +11,31 @@ export async function login(formData: FormData) {
   const username = formData.get("username") as string;
   const password = formData.get("password") as string;
 
-  console.log("🔐 Login attempt for username:", username);
-
   if (!username || !password) {
-    console.log("❌ Missing username or password");
     return { error: "Username dan password harus diisi" };
   }
 
   // Pakai admin client untuk lookup profile (bypass RLS)
   // Karena user belum login, anon client tidak bisa baca profiles
-  const { data: profile, error: profileError } = await admin
+  const { data: profile } = await admin
     .from("profiles")
     .select("id, username")
     .eq("username", username)
     .single();
 
-  console.log("📋 Profile lookup:", profileError ? `ERROR: ${profileError.message}` : `FOUND: ${profile?.username}`);
-
   if (!profile) {
-    console.log("❌ Profile not found");
     return { error: "Username atau password salah" };
   }
 
   // Login dengan email (username@sidira.local)
   const email = `${username}@sidira.local`;
-  console.log("📧 Attempting auth with email:", email);
 
   const { error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
-  console.log("🔑 Auth result:", error ? `ERROR: ${error.message}` : "SUCCESS");
-
   if (error) {
-    console.log("❌ Auth failed:", error.message);
     return { error: "Username atau password salah" };
   }
 
@@ -54,8 +44,6 @@ export async function login(formData: FormData) {
     .from("profiles")
     .update({ last_login: new Date().toISOString() })
     .eq("id", profile.id);
-
-  console.log("✅ Login successful, redirecting...");
 
   revalidatePath("/", "layout");
   redirect("/");
