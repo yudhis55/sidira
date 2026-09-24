@@ -1,18 +1,22 @@
 import { Button } from "@/components/gas/button";
 import { UtilitasForm } from "@/components/utilitas/utilitas-form";
-import { getMockUtilitasMeta } from "@/lib/mock-data";
+import { getUtilMetaById } from "@/lib/auth/utilitas";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 interface EditUtilitasPageProps {
-  params: { utilId: string };
+  params: Promise<{ utilId: string }>;
 }
 
 export default async function EditUtilitasPage({ params }: EditUtilitasPageProps) {
   const { utilId } = await params;
 
-  const metaList = getMockUtilitasMeta();
-  const utilMeta = metaList.find((m) => m.util_id === utilId);
+  let utilMeta: Awaited<ReturnType<typeof getUtilMetaById>> | null = null;
+  try {
+    utilMeta = await getUtilMetaById(utilId);
+  } catch {
+    utilMeta = null;
+  }
 
   if (!utilMeta) {
     notFound();

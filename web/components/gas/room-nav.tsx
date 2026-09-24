@@ -1,13 +1,31 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { getMockRooms, getMockUtilitasMeta } from "@/lib/mock-data";
+import { usePathname, useRouter } from "next/navigation";
+import { AddRoomModal } from "@/components/inventaris/add-room-modal";
+import { AddUtilitasModal } from "@/components/utilitas/add-utilitas-modal";
+import { useRoomList } from "@/lib/room-store";
+import { useUtilitasList } from "@/lib/utilitas-store";
+import type { Room, UtilMeta } from "@/types/database";
 
-export function RoomNav() {
+export interface RoomNavProps {
+  /** Daftar ruangan dari Supabase (via AppLayout). */
+  rooms?: Room[];
+  /** Daftar utilitas dari Supabase (via AppLayout). */
+  utilitas?: UtilMeta[];
+}
+
+export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: RoomNavProps) {
   const pathname = usePathname();
-  const rooms = getMockRooms();
-  const utilitas = getMockUtilitasMeta();
+  const router = useRouter();
+  // Ruangan/utilitas tambahan serta hasil sunting ikut tercermin di sidebar.
+  const rooms = useRoomList(baseRooms);
+  const utilitas = useUtilitasList(baseUtilitas);
+
+  // GAS membuka modal langsung dari sidebar (openModal / openUtilModal).
+  const [addRoomOpen, setAddRoomOpen] = React.useState(false);
+  const [addUtilOpen, setAddUtilOpen] = React.useState(false);
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
@@ -85,7 +103,10 @@ export function RoomNav() {
         borderRight: "1px solid rgba(255,255,255,0.1)",
         display: "flex",
         flexDirection: "column",
-        height: "100%",
+        // GAS `.room-nav-outer`: sidebar yang sticky, bukan header.
+        position: "sticky",
+        top: 0,
+        height: "100vh",
         overflow: "hidden",
       }}
       onMouseEnter={(e) => { e.currentTarget.style.overflowY = "auto"; }}
@@ -109,8 +130,9 @@ export function RoomNav() {
         {rooms.map((room) => makeTab(`/inventaris/${room.id}`, room.icon, room.name))}
       </div>
 
-      <Link
-        href="/admin/ruangan"
+      <button
+        type="button"
+        onClick={() => setAddRoomOpen(true)}
         onMouseEnter={(e) => {
           e.currentTarget.style.color = "rgba(255,255,255,0.9)";
           e.currentTarget.style.background = "rgba(255,255,255,0.07)";
@@ -127,14 +149,16 @@ export function RoomNav() {
           fontWeight: 600,
           borderRadius: 7,
           color: "rgba(255,255,255,0.35)",
-          textDecoration: "none",
+          background: "transparent",
+          border: "none",
+          textAlign: "left",
+          cursor: "pointer",
           transition: "all 0.15s",
           whiteSpace: "nowrap",
-          borderLeft: "3px solid transparent",
         }}
       >
         ＋ Tambah Ruangan
-      </Link>
+      </button>
 
       {/* ═══ Divider ═══ */}
       <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "6px 12px" }} />
@@ -157,8 +181,9 @@ export function RoomNav() {
         {utilitas.map((u) => makeTab(`/utilitas/${u.util_id}`, u.icon, u.label))}
       </div>
 
-      <Link
-        href="/admin/utilitas"
+      <button
+        type="button"
+        onClick={() => setAddUtilOpen(true)}
         onMouseEnter={(e) => {
           e.currentTarget.style.color = "rgba(255,255,255,0.9)";
           e.currentTarget.style.background = "rgba(255,255,255,0.07)";
@@ -175,14 +200,16 @@ export function RoomNav() {
           fontWeight: 600,
           borderRadius: 7,
           color: "rgba(255,255,255,0.35)",
-          textDecoration: "none",
+          background: "transparent",
+          border: "none",
+          textAlign: "left",
+          cursor: "pointer",
           transition: "all 0.15s",
           whiteSpace: "nowrap",
-          borderLeft: "3px solid transparent",
         }}
       >
         ＋ Tambah Utilitas
-      </Link>
+      </button>
 
       {/* ═══ Divider ═══ */}
       <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "6px 12px" }} />
@@ -223,7 +250,7 @@ export function RoomNav() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
-        {makeTab("/rekap", "📊", "Rekap")}
+        {makeTab("/rekap", "📊", "Pemegang Inventaris")}
       </div>
 
       {/* ═══ Divider ═══ */}
@@ -246,6 +273,41 @@ export function RoomNav() {
       <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
         {makeTab("/pakta", "📝", "Pakta")}
       </div>
+
+      {/* ═══ Divider ═══ */}
+      <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "6px 12px" }} />
+
+      {/* ═══ Seksi Admin ═══ */}
+      <div
+        style={{
+          padding: "10px 12px 4px",
+          fontSize: 9,
+          fontWeight: 800,
+          letterSpacing: "0.12em",
+          color: "rgba(255,255,255,0.35)",
+          textTransform: "uppercase",
+        }}
+      >
+        🛡️ Admin
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
+        {makeTab("/admin", "👥", "Users")}
+      </div>
+
+      {/* GAS #modalOverlay & #utilModalOverlay — dibuka dari sidebar */}
+      <AddRoomModal
+        key={addRoomOpen ? "room-open" : "room-closed"}
+        open={addRoomOpen}
+        onClose={() => setAddRoomOpen(false)}
+        onCreated={(roomId) => router.push(`/inventaris/${roomId}`)}
+      />
+      <AddUtilitasModal
+        key={addUtilOpen ? "util-open" : "util-closed"}
+        open={addUtilOpen}
+        onClose={() => setAddUtilOpen(false)}
+        onCreated={(utilId) => router.push(`/utilitas/${utilId}`)}
+      />
     </aside>
   );
 }

@@ -1,26 +1,20 @@
 "use client";
 
+/**
+ * Tombol Export CSV Pakta — port GAS `paktaExportCSV`
+ * (gas-legacy/index.html 26044+).
+ *
+ * Bentuk CSV persis GAS: SATU BARIS PER PAKTA
+ * (No, Nama, NIP, Jabatan, Alamat, Hari, Tanggal, JmlAset),
+ * BOM UTF-8, nama file sama, guard kosong + toast sama.
+ * Sumber data = daftar Supabase yang terlihat di tabel.
+ */
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/gas/button";
-import { getMockPakta } from "@/lib/mock-data";
-import type {
-  Pakta,
-  PaktaAsetKendaraan,
-  PaktaAsetLaptop,
-  PaktaAsetAlat,
-} from "@/types/database";
-
-const BULAN = [
-  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
-];
-
-function fmtDate(iso?: string): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return `${d.getDate()} ${BULAN[d.getMonth()]} ${d.getFullYear()}`;
-}
+import { getPaktaList } from "@/lib/auth/pakta";
+import { countAset } from "@/lib/pakta-utils";
+import type { Pakta } from "@/types/database";
 
 function escapeCsv(v: string | number): string {
   const s = String(v ?? "");
@@ -28,116 +22,58 @@ function escapeCsv(v: string | number): string {
   return s;
 }
 
-/** Build Pakta CSV from mock list (GAS paktaExportCSV parity). */
+/** Satu baris per pakta — kolom persis GAS (urutan + nama sama). */
 function buildPaktaCsv(list: Pakta[]): string {
   const header = [
     "No",
     "Nama",
     "NIP",
     "Jabatan",
-    "Tanggal",
+    "Alamat",
     "Hari",
-    "Jenis Aset",
-    "Merk/Type",
-    "Tahun",
-    "No Polisi/Seri",
-    "Harga",
-    "Keterangan",
+    "Tanggal",
+    "JmlAset",
   ];
   const rows: string[] = [header.join(",")];
-  let no = 0;
 
-  for (const p of list) {
-    const kend = (p.aset_kendaraan || []).filter(
-      (r: PaktaAsetKendaraan) => r && (r.merk || r.jenis),
+  list.forEach((d, i) => {
+    rows.push(
+      [
+        escapeCsv(i + 1),
+        escapeCsv(d.nama || ""),
+        escapeCsv(d.nip || ""),
+        escapeCsv(d.jabatan || ""),
+        escapeCsv(d.alamat || ""),
+        escapeCsv(d.hari || ""),
+        escapeCsv(d.tgl || ""),
+        escapeCsv(countAset(d)),
+      ].join(",")
     );
-    const lapt = (p.aset_laptop || []).filter(
-      (r: PaktaAsetLaptop) => r && (r.merk || r.type),
-    );
-    const alat = (p.aset_alat || []).filter(
-      (r: PaktaAsetAlat) => r && (r.merk || r.type),
-    );
-    const total = kend.length + lapt.length + alat.length;
-    const base = [
-      escapeCsv(p.nama || ""),
-      escapeCsv(p.nip || ""),
-      escapeCsv(p.jabatan || ""),
-      escapeCsv(fmtDate(p.tgl)),
-      escapeCsv(p.hari || ""),
-    ];
-
-    if (total === 0) {
-      no++;
-      rows.push(
-        [escapeCsv(no), ...base, "", "", "", "", "", ""].join(","),
-      );
-      continue;
-    }
-    for (const r of kend) {
-      no++;
-      rows.push(
-        [
-          escapeCsv(no),
-          ...base,
-          escapeCsv("Kendaraan"),
-          escapeCsv(r.merk || r.jenis || ""),
-          escapeCsv(r.tahun ?? ""),
-          escapeCsv(r.nopol || ""),
-          escapeCsv(r.harga || ""),
-          escapeCsv(r.ket || ""),
-        ].join(","),
-      );
-    }
-    for (const r of lapt) {
-      no++;
-      rows.push(
-        [
-          escapeCsv(no),
-          ...base,
-          escapeCsv("Laptop"),
-          escapeCsv([r.merk, r.type].filter(Boolean).join(" ") || ""),
-          escapeCsv(r.tahun ?? ""),
-          escapeCsv(r.seri || ""),
-          escapeCsv(r.harga || ""),
-          escapeCsv(r.ket || ""),
-        ].join(","),
-      );
-    }
-    for (const r of alat) {
-      no++;
-      rows.push(
-        [
-          escapeCsv(no),
-          ...base,
-          escapeCsv("Alat"),
-          escapeCsv([r.merk, r.type].filter(Boolean).join(" ") || ""),
-          escapeCsv(r.tahun ?? ""),
-          escapeCsv(r.seri || ""),
-          escapeCsv(r.harga || ""),
-          escapeCsv(r.ket || ""),
-        ].join(","),
-      );
-    }
-  }
+  });
 
   return rows.join("\r\n");
 }
 
-/**
- * Client button — mock CSV download (no auth backend).
- * Matches GAS Export CSV label.
- */
 export function PaktaCsvExport({
   className,
+  data,
 }: {
   className?: string;
+  /** Daftar dari Supabase (dioper dari halaman) — bila kosong, diambil sendiri. */
+  data?: Pakta[];
 }) {
   const [loading, setLoading] = useState(false);
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    // GAS: tolak saat kosong. Sumber = data Supabase yang terlihat di tabel.
+    const list = data ?? (await getPaktaList().catch(() => [] as Pakta[]));
+    if (list.length === 0) {
+      toast.warning("Belum ada data Pakta");
+      return;
+    }
     setLoading(true);
     try {
-      const csv = buildPaktaCsv(getMockPakta());
+      const csv = buildPaktaCsv(list);
       const blob = new Blob(["\uFEFF" + csv], {
         type: "text/csv;charset=utf-8",
       });
@@ -149,9 +85,10 @@ export function PaktaCsvExport({
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      toast.success("CSV berhasil diunduh");
     } catch (error) {
       console.error("Gagal export CSV Pakta:", error);
-      alert("Gagal mengekspor CSV");
+      toast.error("Gagal mengekspor CSV");
     } finally {
       setLoading(false);
     }
@@ -164,6 +101,7 @@ export function PaktaCsvExport({
       onClick={handleExport}
       disabled={loading}
       className={className ?? "text-xs"}
+      style={{ fontSize: "12px", cursor: "pointer" }}
     >
       {"\u{1F4E5}"} {loading ? "Mengekspor..." : "Export CSV"}
     </Button>

@@ -1,5 +1,11 @@
-import { getMockPaktaById } from "@/lib/mock-data";
+"use client";
+
+import * as React from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { getPaktaById } from "@/lib/auth/pakta";
+import type { Pakta } from "@/types/database";
 import { PrintTrigger } from "@/components/sbbk/print-trigger";
+import { useIsClient } from "@/lib/use-is-client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type {
@@ -7,8 +13,6 @@ import type {
   PaktaAsetLaptop,
   PaktaAsetAlat,
 } from "@/types/database";
-
-export const dynamic = "force-dynamic";
 
 const BULAN = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -56,24 +60,46 @@ function esc(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-interface PageProps {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ lampiran?: string; pakta?: string }>;
-}
-
-export default async function PaktaPrintPage({ params, searchParams }: PageProps) {
-  const { id } = await params;
-  const sp = await searchParams;
+export default function PaktaPrintPage() {
+  const mounted = useIsClient();
+  const { id } = useParams<{ id: string }>();
+  const sp = Object.fromEntries(useSearchParams().entries());
   // Print mode: default = both sheets. ?pakta=1 only Pakta. ?lampiran=1 only Lampiran.
   const onlyPakta = sp.pakta === "1";
   const onlyLampiran = sp.lampiran === "1";
   const showPakta = !onlyLampiran;
   const showLampiran = !onlyPakta;
 
-  const pakta = getMockPaktaById(id);
+  // Data live Supabase (hasil "Buat Pakta" dari rekap kini baris DB).
+  const [pakta, setPakta] = React.useState<Pakta | null>(null);
+  const [failed, setFailed] = React.useState(false);
+  React.useEffect(() => {
+    let cancelled = false;
+    getPaktaById(id)
+      .then((row) => {
+        if (!cancelled) {
+          if (row) setPakta(row);
+          else setFailed(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
-  if (!pakta) {
+  if (!mounted) return null;
+
+  if (failed) {
     notFound();
+  }
+
+  // Memuat dari Supabase — tampilkan halaman kosong sementara (di-print
+  // hanya setelah data tiba; PrintTrigger diklik manual oleh pengguna).
+  if (!pakta) {
+    return <div className="min-h-screen bg-white" />;
   }
 
   const tglObj = pakta.tgl ? new Date(pakta.tgl) : new Date();
@@ -215,10 +241,10 @@ export default async function PaktaPrintPage({ params, searchParams }: PageProps
           </Link>
           <span className="mx-2 text-neutral-300">|</span>
           <Link
-            href={`/pakta/${pakta.id}`}
+            href={`/pakta?lampiran=${pakta.id}`}
             className="text-sm text-neutral-500 underline hover:text-neutral-800"
           >
-            {"\u2190"} Kembali ke detail Pakta
+            {"\u2190"} Kembali ke daftar Pakta
           </Link>
         </div>
       </div>
@@ -276,7 +302,7 @@ export default async function PaktaPrintPage({ params, searchParams }: PageProps
                 <td style={{ width: "95px", verticalAlign: "middle", padding: "4px 0" }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="/logo-puskesmas.svg"
+                    src="/logo-puskesmas.png"
                     alt="Logo Puskesmas Baruharjo"
                     style={{ width: "88px", height: "auto", display: "block" }}
                   />

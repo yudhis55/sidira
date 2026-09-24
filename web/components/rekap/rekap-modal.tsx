@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { Dialog } from "@/components/gas/dialog";
-import { getMockRooms } from "@/lib/mock-data/rooms";
-import { getMockItems } from "@/lib/mock-data/items";
+import { getRooms } from "@/lib/auth/rooms";
+import { getAllItems } from "@/lib/auth/items";
+import { toast } from "sonner";
 import type { Item, ItemCategory, ItemCondition, Room } from "@/types/database";
 import { cn } from "@/lib/utils";
 
@@ -184,8 +185,28 @@ export function RekapModal({
 
   // Filter defaults reset via parent remount key={open ? "rekap-open" : "rekap-closed"}
 
-  const rooms = React.useMemo(() => getMockRooms(), []);
-  const items = React.useMemo(() => getMockItems(), []);
+  // Data live Supabase — diambil saat modal dibuka (pengganti mock).
+  const [rooms, setRooms] = React.useState<Room[]>([]);
+  const [items, setItems] = React.useState<Item[]>([]);
+  React.useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [r, it] = await Promise.all([getRooms(), getAllItems()]);
+        if (!cancelled) {
+          setRooms(r);
+          setItems(it);
+        }
+      } catch {
+        if (!cancelled)
+          toast.error("Gagal memuat data rekap. Silakan tutup lalu buka lagi.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   const data = React.useMemo(
     () =>
@@ -219,7 +240,14 @@ export function RekapModal({
     filter === "masalah" ? "Bermasalah Saja" : "Semua Kondisi";
 
   const handlePrint = () => {
+    // Isolasi cetak lewat class di <body> (pola SBBK): hanya
+    // #rekap-print-area yang tercetak — mengikuti scope/filter aktif.
+    document.body.classList.add("printing-rekap");
     window.print();
+    window.setTimeout(
+      () => document.body.classList.remove("printing-rekap"),
+      1200
+    );
   };
 
   return (

@@ -1,11 +1,24 @@
+"use client";
+
 import * as React from "react";
-import { getMockPakta } from "@/lib/mock-data";
+import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
+import {
+  createPaktaRecord,
+  deletePaktaRecord,
+  getPaktaList,
+} from "@/lib/auth/pakta";
+import { deleteAddedPakta, readAddedPakta } from "@/lib/pakta-store";
 import { countAset } from "@/lib/pakta-utils";
 import { Card } from "@/components/gas/card";
-import { Button } from "@/components/gas/button";
+import {
+  PaktaEntriButton,
+  PaktaEditButton,
+} from "@/components/pakta/pakta-modal-trigger";
+import { PaktaCsvExport } from "@/components/pakta/pakta-csv-export";
+import { LampiranEditor } from "@/components/pakta/lampiran-editor";
 import Link from "next/link";
-
-export const dynamic = "force-dynamic";
+import type { Pakta } from "@/types/database";
 
 const BULAN = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -73,16 +86,143 @@ function ActBtn({
   );
 }
 
-interface PageProps {
-  searchParams: Promise<{ filter?: string; q?: string }>;
+export default function PaktaPage() {
+  // `useSearchParams()` wajib berada di dalam Suspense saat prerender.
+  return (
+    <React.Suspense fallback={null}>
+      <PaktaPageInner />
+    </React.Suspense>
+  );
 }
 
-export default async function PaktaPage({ searchParams }: PageProps) {
-  const sp = await searchParams;
-  const filter = sp.filter || "all";
-  const q = (sp.q || "").trim().toLowerCase();
+function PaktaPageInner() {
+  const sp = Object.fromEntries(useSearchParams().entries());
+  const filter = (sp.filter as string) || "all";
+  const q = ((sp.q as string) || "").trim().toLowerCase();
 
-  const all = getMockPakta();
+  // Data dari Supabase (server action) — page "use client" memakai
+  // useEffect + state. Selama memuat, `all` kosong sehingga kartu kosong
+  // existing yang tampil (tanpa skeleton baru).
+  const [all, setAll] = React.useState<Pakta[]>([]);
+
+  const load = React.useCallback(async () => {
+    try {
+      setAll(await getPaktaList());
+    } catch {
+      toast.error("Gagal memuat data Pakta Integritas");
+    }
+  }, []);
+
+  // `?lampiran=<id>` membuka panel langsung — dipakai rekap `riBuatPakta`
+  // yang pindah ke panel Pakta lalu `openLampiranPanel(id)`.
+  // Dideklarasikan di sini (sebelum efek migrasi) agar bisa di-set dari sana.
+  const [openLampiran, setOpenLampiran] = React.useState<string | null>(
+    (sp.lampiran as string) || null
+  );
+
+  /**
+   * Jembatan alur buat-dari-rekap (`RekapPaktaButton` + `pakta-prefill`,
+   * tak diubah): rekap menitipkan record pre-filled di localStorage lalu
+   * pindah ke `/pakta?lampiran=<id>`. Saat halaman dimuat, titipan itu
+   * dimigrasikan SEKALI ke tabel `pakta` (cocok nama ala GAS `riHasPakta`
+   * agar tak ganda) lalu dibersihkan dari store.
+   */
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        let list = await getPaktaList();
+        const pending = readAddedPakta();
+        if (pending.length > 0) {
+          const byName = new Map(
+            list.map((p) => [(p.nama || "").trim().toLowerCase(), p] as const)
+          );
+          const remap = new Map<string, string>();
+          let changed = false;
+          for (const rec of pending) {
+            const key = (rec.nama || "").trim().toLowerCase();
+            const dupe = key ? byName.get(key) : undefined;
+            if (dupe) {
+              if (rec.id !== dupe.id) remap.set(rec.id, dupe.id);
+              deleteAddedPakta(rec.id);
+              continue;
+            }
+            const res = await createPaktaRecord({
+              hari: rec.hari,
+              tgl: rec.tgl,
+              nama: rec.nama,
+              nip: rec.nip,
+              jabatan: rec.jabatan,
+              alamat: rec.alamat,
+              aset_kendaraan: rec.aset_kendaraan ?? [],
+              aset_laptop: rec.aset_laptop ?? [],
+              aset_alat: rec.aset_alat ?? [],
+            });
+            if ("success" in res) {
+              remap.set(rec.id, res.id);
+              deleteAddedPakta(rec.id);
+              changed = true;
+            }
+          }
+          if (changed) list = await getPaktaList();
+          const want = (sp.lampiran as string) || null;
+          if (want && remap.has(want)) {
+            setOpenLampiran(remap.get(want) ?? null);
+          }
+        }
+        if (!cancelled) setAll(list);
+      } catch {
+        if (!cancelled) toast.error("Gagal memuat data Pakta Integritas");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * GAS `openLampiranPanel` — SATU panel di bawah tabel (bukan di bawah baris):
+   * `#lampiranAsetPanel` di-append ke akhir panel + scroll ke sana.
+   */
+  React.useEffect(() => {
+    if (!openLampiran) return;
+    const t = window.setTimeout(() => {
+      document
+        .getElementById("lampiranAsetPanel")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+    return () => window.clearTimeout(t);
+  }, [openLampiran]);
+  const toggleLampiran = (id: string) => {
+    setOpenLampiran((prev) => {
+      const next = prev === id ? null : id;
+      if (next) {
+        window.setTimeout(() => {
+          document
+            .getElementById("lampiranAsetPanel")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+      }
+      return next;
+    });
+  };
+  const lampiranPakta = openLampiran
+    ? all.find((p) => p.id === openLampiran) ?? null
+    : null;
+
+  /** GAS `paktaDelete` — confirm + toast; hapus via server action. */
+  const handleDelete = async (id: string, nama: string) => {
+    if (!confirm(`Hapus Pakta Integritas atas nama "${nama || "-"}"?`)) return;
+    const res = await deletePaktaRecord(id);
+    if ("error" in res) {
+      toast.error(res.error);
+      return;
+    }
+    toast.success("Pakta Integritas berhasil dihapus");
+    setOpenLampiran((prev) => (prev === id ? null : prev));
+    await load();
+  };
 
   let filtered = all;
   if (filter === "kendaraan") filtered = filtered.filter(hasKendaraan);
@@ -153,65 +293,13 @@ export default async function PaktaPage({ searchParams }: PageProps) {
               Total Pakta
             </div>
           </div>
-          <div
-            className="text-center px-3 py-2"
-            style={{ borderRadius: 8, background: "var(--line2)" }}
-          >
-            <div className="text-base font-black font-mono leading-none text-blue-800">
-              {nKend}
-            </div>
-            <div className="text-[10px] font-semibold mt-1 text-ink3">
-              {"\u{1F697}"} Kendaraan
-            </div>
-          </div>
-          <div
-            className="text-center px-3 py-2"
-            style={{ borderRadius: 8, background: "var(--line2)" }}
-          >
-            <div className="text-base font-black font-mono leading-none text-blue-800">
-              {nLapt}
-            </div>
-            <div className="text-[10px] font-semibold mt-1 text-ink3">
-              {"\u{1F4BB}"} Laptop
-            </div>
-          </div>
-          <div
-            className="text-center px-3 py-2"
-            style={{ borderRadius: 8, background: "var(--line2)" }}
-          >
-            <div className="text-base font-black font-mono leading-none text-blue-800">
-              {nAlat}
-            </div>
-            <div className="text-[10px] font-semibold mt-1 text-ink3">
-              {"\u{1F4F1}"} Alat
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Actions — GAS .pakta-btn-new + ghost */}
+      {/* Actions — GAS .pakta-btn-new + ghost (modal via client trigger) */}
       <div className="flex flex-wrap gap-2.5">
-        <Link href="/pakta/new">
-          <Button
-            className="text-[13px] font-bold px-5 py-2.5 text-white"
-            style={{
-              borderRadius: 10,
-              background: "linear-gradient(135deg, #1e3a5f, #2563eb)",
-              border: "none",
-              boxShadow: "0 4px 12px rgba(37,99,235,0.3)",
-            }}
-          >
-            {"\uFF0B"} Entri Pakta Integritas Baru
-          </Button>
-        </Link>
-        <Button
-          variant="ghost"
-          className="text-xs"
-          title="Mode demo — export CSV belum aktif"
-          type="button"
-        >
-          {"\u{1F4E5}"} Export CSV
-        </Button>
+        <PaktaEntriButton onSaved={load} />
+        <PaktaCsvExport data={all} />
       </div>
 
       {/* Filter chips + Search — aligned with SBBK pattern, blue theme */}
@@ -353,13 +441,13 @@ export default async function PaktaPage({ searchParams }: PageProps) {
                       <td
                         style={{ padding: "10px 14px", verticalAlign: "middle" }}
                       >
-                        <Link
-                          href={`/pakta/${pakta.id}`}
-                          className="font-bold hover:underline"
+                        {/* GAS `paktaRenderTable` — nama hanya teks, bukan link. */}
+                        <div
+                          className="font-bold"
                           style={{ color: "var(--ink)" }}
                         >
                           {pakta.nama || "-"}
-                        </Link>
+                        </div>
                         <div
                           className="mt-px"
                           style={{ fontSize: "10.5px", color: "var(--ink3)" }}
@@ -423,20 +511,37 @@ export default async function PaktaPage({ searchParams }: PageProps) {
                         style={{ padding: "10px 14px", verticalAlign: "middle" }}
                       >
                         <div className="flex items-center flex-wrap gap-1">
-                          <ActBtn href={`/pakta/${pakta.id}/edit`}>
-                            {"\u270F\uFE0F"} Edit
-                          </ActBtn>
-                          <ActBtn
-                            href={`/pakta/${pakta.id}/print?lampiran=1`}
-                            accent
+                          <PaktaEditButton pakta={pakta} onSaved={load} />
+                          <button
+                            type="button"
+                            title="Tampilkan lampiran aset di bawah"
+                            onClick={() => toggleLampiran(pakta.id)}
+                            className="inline-flex items-center font-semibold transition-colors hover:!border-[#2563eb] hover:!text-[#2563eb]"
+                            style={{
+                              padding: "4px 10px",
+                              borderRadius: 6,
+                              border: "1.5px solid #bfdbfe",
+                              background:
+                                openLampiran === pakta.id
+                                  ? "#dbeafe"
+                                  : "var(--white)",
+                              color: "#1e40af",
+                              fontSize: 11,
+                            }}
                           >
                             {"\u{1F4CB}"} Lampiran
+                          </button>
+                          <ActBtn href={`/pakta/${pakta.id}/print?pakta=1`}>
+                            {"\u{1F4C4}"} Pakta
                           </ActBtn>
                           <ActBtn href={`/pakta/${pakta.id}/print`}>
                             {"\u{1F5A8}\uFE0F"} Cetak
                           </ActBtn>
-                          <span
-                            className="inline-flex items-center font-semibold cursor-not-allowed opacity-50"
+                          <button
+                            type="button"
+                            title="Hapus pakta ini"
+                            onClick={() => handleDelete(pakta.id, pakta.nama)}
+                            className="inline-flex items-center font-semibold transition-colors hover:!border-red hover:!text-red"
                             style={{
                               padding: "4px 10px",
                               borderRadius: 6,
@@ -445,10 +550,9 @@ export default async function PaktaPage({ searchParams }: PageProps) {
                               color: "var(--ink2)",
                               fontSize: 11,
                             }}
-                            title="Mode demo — hapus tidak aktif"
                           >
                             {"\u2715"}
-                          </span>
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -458,6 +562,18 @@ export default async function PaktaPage({ searchParams }: PageProps) {
             </table>
           </div>
         </Card>
+      )}
+
+      {/* Panel lampiran — GAS `#lampiranAsetPanel`: satu panel di bawah tabel */}
+      {lampiranPakta && (
+        <div id="lampiranAsetPanel" style={{ scrollMarginTop: 12 }}>
+          <LampiranEditor
+            key={`${lampiranPakta.id}-${lampiranPakta.updated_at}`}
+            pakta={lampiranPakta}
+            onClose={() => setOpenLampiran(null)}
+            onSaved={load}
+          />
+        </div>
       )}
 
       {/* Summary chips */}

@@ -2,14 +2,22 @@
 
 import * as React from "react";
 import { Dialog } from "@/components/gas/dialog";
-import { Button } from "@/components/gas/button";
 import { Select } from "@/components/gas/select";
 import { StatCard } from "@/components/gas/stat-card";
 import { Table, type TableColumn } from "@/components/gas/table";
 import { Card } from "@/components/gas/card";
-import type { LaporanSummary, LaporanRoom } from "@/lib/mock-data/types";
+import { LaporanDoc } from "./laporan-doc";
+import type { LaporanSumber } from "@/lib/laporan-collect";
+import {
+  getLaporanPerRoom,
+  getLaporanSummary,
+  type LaporanRoom,
+  type LaporanSummary,
+} from "@/lib/auth/laporan";
+import { toast } from "sonner";
+import { useActiveYear } from "@/lib/year-store";
 
-export type LaporanSumber = "gabungan" | "inventaris" | "ceklist" | "manual";
+export type { LaporanSumber };
 
 export interface LaporanModalProps {
   open: boolean;
@@ -56,42 +64,16 @@ const SUMBER_OPTIONS: { value: LaporanSumber; label: string }[] = [
   { value: "manual", label: "✏️ Isi Manual" },
 ];
 
-const SUMBER_BADGE: Record<
-  LaporanSumber,
-  { emoji: string; text: string; className: string }
-> = {
-  gabungan: {
-    emoji: "🔗",
-    text: "Sumber: Gabungan (Inventaris + Ceklist)",
-    className: "bg-violet2 text-violet border-violet3",
-  },
-  inventaris: {
-    emoji: "📋",
-    text: "Sumber: Kondisi Inventaris per Ruangan",
-    className: "bg-blue2 text-blue border-blue3",
-  },
-  ceklist: {
-    emoji: "📅",
-    text: "Sumber: Data Ceklist Harian",
-    className: "bg-teal3 text-teal border-teal4",
-  },
-  manual: {
-    emoji: "✏️",
-    text: "Sumber: Isi Manual",
-    className: "bg-amber2 text-amber border-amber3",
-  },
-};
-
 /** GAS empty-sumber tips (lp-src-badge empty / empty table) */
 const SUMBER_TIPS: Record<LaporanSumber, string> = {
   gabungan:
-    "Tidak ada item bermasalah di inventaris maupun ceklist bulan ini. Rekap di bawah menampilkan ringkasan kondisi per ruangan (mock).",
+    "Tidak ada item bermasalah di inventaris maupun ceklist bulan ini. Rekap di bawah menampilkan ringkasan kondisi per ruangan.",
   inventaris:
-    "Semua item inventaris dalam kondisi Baik - atau data mock belum memuat item bermasalah. Rekap per ruangan tetap ditampilkan.",
+    "Semua item inventaris dalam kondisi Baik. Rekap per ruangan tetap ditampilkan.",
   ceklist:
-    "Tidak ada catatan kerusakan di ceklist untuk periode terpilih. Gunakan mode ✏️ Isi Manual di GAS untuk mengisi langsung; di mock, rekap ruangan tetap tampil.",
+    "Tidak ada catatan kerusakan di ceklist untuk periode terpilih. Gunakan mode ✏️ Isi Manual untuk mengisi langsung; rekap ruangan tetap tampil di bawah.",
   manual:
-    "Mode Isi Manual: di GAS baris dapat diedit langsung. Di mock, gunakan rekap per ruangan di bawah sebagai ringkasan kondisi.",
+    "Mode Isi Manual: baris dapat diedit langsung. Gunakan rekap per ruangan di bawah sebagai ringkasan kondisi.",
 };
 
 const ROOM_COLUMNS: TableColumn[] = [
@@ -157,22 +139,51 @@ export function LaporanModal({
   rooms,
 }: LaporanModalProps) {
   // Filters init once; parent remounts with key when re-opening to reset (GAS openLaporanModal).
+  // Tahun awal mengikuti tahun KIR global (bukan hari ini) — select lokal tetap bisa diubah.
+  const [activeYear] = useActiveYear();
   const initial = React.useMemo(() => defaultLaporanFilters(), []);
   const [bulan, setBulan] = React.useState(initial.bulan);
-  const [tahun, setTahun] = React.useState(initial.tahun);
+  const [tahun, setTahun] = React.useState<number>(activeYear);
   const [sumber, setSumber] = React.useState<LaporanSumber>(initial.sumber);
 
   const tahunOptions = React.useMemo(
-    () => buildTahunOptions(initial.tahun),
-    [initial.tahun]
+    () => buildTahunOptions(activeYear),
+    [activeYear]
   );
 
   const periodLabel = `${BULAN_NAMES[bulan - 1]} ${tahun}`;
-  const badge = SUMBER_BADGE[sumber];
   const tip = SUMBER_TIPS[sumber];
 
-  // Mock data is static by period - still render controls + badge for parity
-  const roomRows = rooms.map((room, idx) => ({
+  // Data live Supabase — props hanya nilai awal; diambil ulang tiap
+  // modal dibuka / periode berubah. Gagal → toast + pertahankan data lama.
+  const [live, setLive] = React.useState<{
+    summary: LaporanSummary;
+    rooms: LaporanRoom[];
+  } | null>(null);
+  React.useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [s, r] = await Promise.all([
+          getLaporanSummary({ bulan, tahun }),
+          getLaporanPerRoom({ bulan, tahun }),
+        ]);
+        if (!cancelled) setLive({ summary: s, rooms: r });
+      } catch {
+        if (!cancelled)
+          toast.error("Gagal memuat data laporan. Menampilkan data terakhir.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, bulan, tahun]);
+
+  const viewSummary = live?.summary ?? summary;
+  const viewRooms = live?.rooms ?? rooms;
+
+  const roomRows = viewRooms.map((room, idx) => ({
     no: <span className="font-mono text-[12px] font-bold">{idx + 1}</span>,
     ruangan: (
       <span className="flex items-center gap-2">
@@ -194,7 +205,13 @@ export function LaporanModal({
   }));
 
   const handlePrint = () => {
+    // GAS cetakLaporan(): isolasi cetak lewat class di <body>.
+    document.body.classList.add("printing-laporan");
     window.print();
+    window.setTimeout(
+      () => document.body.classList.remove("printing-laporan"),
+      1200
+    );
   };
 
   return (
@@ -293,59 +310,54 @@ export function LaporanModal({
 
       {/* Preview body - GAS .laporan-preview */}
       <div className="flex-1 space-y-3 overflow-y-auto px-6 py-6">
-        {/* Sumber badge - GAS .lp-src-badge */}
-        <div
-          className={`inline-flex items-center gap-1.5 rounded-2xl border px-2.5 py-1 text-[10.5px] font-semibold ${badge.className}`}
-        >
-          <span aria-hidden>{badge.emoji}</span>
-          <span>{badge.text}</span>
-          <span className="font-normal text-ink3">· {periodLabel}</span>
-        </div>
-
-        {/* Tip panel - GAS .lp-source-panel */}
-        <div className="rounded-lg border border-[#ddd6fe] bg-[#f5f3ff] px-3 py-3 text-xs leading-relaxed text-[#4c1d95]">
+        {/* Tip panel - GAS .lp-source-panel (tidak ikut tercetak) */}
+        <div className="rounded-lg border border-[#ddd6fe] bg-[#f5f3ff] px-3 py-3 text-xs leading-relaxed text-[#4c1d95] print:hidden">
           {tip}
         </div>
 
-        {/* Summary stats - denser grid */}
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+        {/* Dokumen formal siap cetak - GAS #laporanDoc */}
+        <LaporanDoc bulanIdx={bulan - 1} tahun={tahun} sumber={sumber} rooms={viewRooms} />
+
+        {/* Ringkasan tambahan (layar saja, bukan bagian dokumen GAS) */}
+        <div className="space-y-3 border-t border-line pt-4 print:hidden">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
           <StatCard
             emoji="🏥"
-            value={summary.total_rooms}
+            value={viewSummary.total_rooms}
             label="Total Ruangan"
             className="p-2.5 gap-2.5"
           />
           <StatCard
             emoji="📦"
-            value={summary.total_items}
+            value={viewSummary.total_items}
             label="Total Barang"
             className="p-2.5 gap-2.5"
           />
           <StatCard
             emoji="✅"
-            value={summary.total_baik}
-            label={`Baik (${summary.percentage_baik}%)`}
+            value={viewSummary.total_baik}
+            label={`Baik (${viewSummary.percentage_baik}%)`}
             variant="teal"
             className="p-2.5 gap-2.5"
           />
           <StatCard
             emoji="⚠️"
-            value={summary.total_rr}
-            label={`RR (${summary.percentage_rr}%)`}
+            value={viewSummary.total_rr}
+            label={`RR (${viewSummary.percentage_rr}%)`}
             variant="amber"
             className="p-2.5 gap-2.5"
           />
           <StatCard
             emoji="❌"
-            value={summary.total_rb}
-            label={`RB (${summary.percentage_rb}%)`}
+            value={viewSummary.total_rb}
+            label={`RB (${viewSummary.percentage_rb}%)`}
             variant="red"
             className="p-2.5 gap-2.5"
           />
           <StatCard
             emoji="➖"
-            value={summary.total_ta}
-            label={`TA (${summary.percentage_ta}%)`}
+            value={viewSummary.total_ta}
+            label={`TA (${viewSummary.percentage_ta}%)`}
             variant="slate"
             className="p-2.5 gap-2.5"
           />
@@ -372,13 +384,10 @@ export function LaporanModal({
 
         {/* Print note - GAS has full #laporanDoc; mock keeps room rekap + window.print */}
         <p className="m-0 text-[10.5px] leading-snug text-ink3">
-          🖨️ Cetak / PDF memakai pratinjau browser. Dokumen formal (kop surat +
-          TTD) di GAS diisi lewat{" "}
-          <code className="rounded bg-line2 px-1 font-mono text-[10px]">
-            #laporanDoc
-          </code>
-          ; di mock data rekap ruangan di atas yang dicetak.
+          🖨️ Cetak / PDF hanya mencetak dokumen di atas (kop surat, tabel, dan
+          blok tanda tangan). Ringkasan ini hanya tampil di layar.
         </p>
+        </div>
       </div>
     </Dialog>
   );

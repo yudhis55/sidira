@@ -217,3 +217,133 @@
     transition-timing-function: cubic-bezier(0.76, 0, 0.24, 1);
   }
 }
+/* ══════════════════════════════════════════════════════════════════
+   Cetak dokumen laporan — port GAS `@media print` untuk #laporanDoc.
+   Class `printing-laporan` dipasang di <body> oleh LaporanModal
+   tepat sebelum window.print() dan dilepas setelahnya.
+   ══════════════════════════════════════════════════════════════════ */
+@media print {
+  body.printing-laporan * {
+    visibility: hidden;
+  }
+  body.printing-laporan #laporanDoc,
+  body.printing-laporan #laporanDoc * {
+    visibility: visible;
+  }
+  body.printing-laporan #laporanDoc {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 14px 18px;
+    box-sizing: border-box;
+    background: #fff;
+    font-size: 10px;
+  }
+  body.printing-laporan #laporanDoc table {
+    font-size: 9.5px;
+  }
+  body.printing-laporan #laporanDoc th {
+    font-size: 9px;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Cetak dokumen SBBK & Pakta dari modal pratinjau — port GAS
+   `body.printing-sbbk` / `body.printing-pakta`. Class dipasang oleh
+   SbbkPrintModal / PaktaPrintModal tepat sebelum window.print().
+   ══════════════════════════════════════════════════════════════════ */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  body.printing-sbbk *,
+  body.printing-pakta * {
+    visibility: hidden;
+  }
+  body.printing-sbbk #sbbkPrintDoc,
+  body.printing-sbbk #sbbkPrintDoc *,
+  body.printing-pakta #paktaPrintDoc,
+  body.printing-pakta #paktaPrintDoc * {
+    visibility: visible;
+  }
+  body.printing-sbbk #sbbkPrintDoc,
+  body.printing-pakta #paktaPrintDoc {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: none;
+    padding: 12px 16px;
+    box-sizing: border-box;
+    background: #fff;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 10.5px;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Cetak halaman ruangan — port GAS `@media print` (index.html 1222):
+   `.room-nav-outer, .page-actions, .add-btn, .del-btn` disembunyikan,
+   panel ruangan tampil penuh di atas putih. Class `no-print`
+   dipasang pada tombol aksi interaktif (tambah/pindah/hapus/filter).
+   ══════════════════════════════════════════════════════════════════ */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  body {
+    background: #fff !important;
+  }
+  header,
+  aside,
+  .page-actions {
+    display: none !important;
+  }
+  .dashboard-shell {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  main {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Cetak rekap kondisi dari RekapModal — pola yang sama dengan
+   `body.printing-sbbk`: isolasi `#rekap-print-area` (yang SUDAH
+   mengikuti scope Semua Ruangan / Ruangan Aktif + filter kategori
+   dan kondisi) agar halaman dashboard di belakangnya tidak ikut
+   tercetak. Class dipasang oleh RekapModal tepat sebelum print.
+   ══════════════════════════════════════════════════════════════════ */
+@media print {
+  body.printing-rekap * {
+    visibility: hidden;
+  }
+  body.printing-rekap #rekap-print-area,
+  body.printing-rekap #rekap-print-area * {
+    visibility: visible;
+  }
+  body.printing-rekap #rekap-print-area {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: none;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 12px 16px;
+    box-sizing: border-box;
+    background: #fff;
+  }
+}
+

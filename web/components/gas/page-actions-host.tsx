@@ -7,8 +7,9 @@ import { PageActions } from "@/components/gas/page-actions";
 import { RiwayatModal } from "@/components/riwayat/riwayat-modal";
 import { LaporanModal } from "@/components/laporan/laporan-modal";
 import { RekapModal } from "@/components/rekap/rekap-modal";
+import { exportUsulanCSV } from "@/lib/auth/usulan";
 import type { Item, RiwayatPindah } from "@/types/database";
-import type { LaporanSummary, LaporanRoom } from "@/lib/mock-data/types";
+import type { LaporanSummary, LaporanRoom } from "@/lib/auth/laporan";
 
 export interface PageActionsHostProps {
   riwayatItems: RiwayatPindah[];
@@ -105,6 +106,33 @@ export function PageActionsHost({
     cleanModalQuery(searchParams, router);
   };
 
+  /**
+   * GAS `exportAllUsulanCSV` (index.html 22302) — rekap SEMUA ruangan
+   * (bukan ruangan aktif saja), BOM UTF-8, guard kosong.
+   * Sumber: tabel `usulan` Supabase via server action `exportUsulanCSV`.
+   */
+  const handleExportUsulan = async () => {
+    try {
+      const csv = await exportUsulanCSV();
+      if (csv.trim().split("\n").length <= 1) {
+        toast.warning("Tidak ada data usulan sama sekali.");
+        return;
+      }
+      const blob = new Blob(["\ufeff" + csv], {
+        type: "text/csv;charset=utf-8;",
+      });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `Rekap_Usulan_Semua_Ruangan_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast.success("CSV berhasil diunduh");
+    } catch (error) {
+      console.error("Gagal export CSV usulan:", error);
+      toast.error("Gagal mengekspor CSV");
+    }
+  };
+
   const handleExportCsv = () => {
     if (exportItems) {
       const rows: string[][] = [
@@ -137,9 +165,7 @@ export function PageActionsHost({
         onOpenRiwayat={() => setOpenRiwayat(true)}
         onOpenRekap={() => setOpenRekap(true)}
         onPrint={() => window.print()}
-        onExportUsulan={() =>
-          toast.success("Export Rekap Usulan (mock CSV)")
-        }
+        onExportUsulan={handleExportUsulan}
         onExportCsv={handleExportCsv}
         onSimpan={() => toast.success("✓ Data berhasil disimpan!")}
         withDivider={withDivider}

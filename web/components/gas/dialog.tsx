@@ -3,6 +3,7 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
+import { useIsClient } from "@/lib/use-is-client";
 
 interface DialogProps {
   open: boolean;
@@ -16,19 +17,6 @@ interface DialogProps {
   overlayClassName?: string;
   /** Extra classes on the white panel (radius, max-width override, shadow). */
   panelClassName?: string;
-}
-
-function subscribeNoop() {
-  return () => {};
-}
-
-/** SSR-safe client mount detection without setState-in-effect. */
-function useIsClient() {
-  return React.useSyncExternalStore(
-    subscribeNoop,
-    () => true,
-    () => false
-  );
 }
 
 export function Dialog({

@@ -149,6 +149,121 @@ export async function deletePakta(id: string): Promise<void> {
 }
 
 /**
+ * Varian tanpa redirect untuk dipakai komponen client (modal identitas,
+ * editor lampiran, tombol hapus di daftar). Mengembalikan bentuk
+ * `{ success: true }` / `{ error: "<pesan Indonesia>" }` sehingga modal
+ * bisa tetap terbuka saat gagal — pola yang sama dengan server actions lain.
+ */
+export async function createPaktaRecord(
+  data: PaktaInput,
+): Promise<{ success: true; id: string } | { error: string }> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Anda harus login untuk menyimpan pakta" };
+
+    if (!data.nama || data.nama.trim() === "") {
+      return { error: "Nama pemegang wajib diisi" };
+    }
+
+    const id = `pakta-${Date.now()}`;
+
+    const { error } = await supabase.from("pakta").insert({
+      id,
+      hari: data.hari ?? null,
+      tgl: data.tgl ?? null,
+      nama: data.nama.trim(),
+      nip: data.nip?.trim() || null,
+      jabatan: data.jabatan?.trim() || null,
+      alamat: data.alamat?.trim() || null,
+      aset_kendaraan: data.aset_kendaraan ?? [],
+      aset_laptop: data.aset_laptop ?? [],
+      aset_alat: data.aset_alat ?? [],
+    });
+
+    if (error) {
+      console.error("Error creating pakta:", error);
+      return { error: "Gagal menyimpan Pakta Integritas" };
+    }
+
+    revalidatePath("/pakta");
+    return { success: true, id };
+  } catch (e) {
+    console.error("Error creating pakta:", e);
+    return { error: "Gagal menyimpan Pakta Integritas" };
+  }
+}
+
+/** Varian update tanpa redirect — untuk modal identitas & editor lampiran. */
+export async function updatePaktaRecord(
+  id: string,
+  data: Partial<PaktaInput>,
+): Promise<{ success: true } | { error: string }> {
+  try {
+    const supabase = await createClient();
+
+    if (data.nama !== undefined && data.nama.trim() === "") {
+      return { error: "Nama pemegang wajib diisi" };
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (data.hari !== undefined) updateData.hari = data.hari || null;
+    if (data.tgl !== undefined) updateData.tgl = data.tgl || null;
+    if (data.nama !== undefined) updateData.nama = data.nama.trim();
+    if (data.nip !== undefined) updateData.nip = data.nip?.trim() || null;
+    if (data.jabatan !== undefined)
+      updateData.jabatan = data.jabatan?.trim() || null;
+    if (data.alamat !== undefined)
+      updateData.alamat = data.alamat?.trim() || null;
+    if (data.aset_kendaraan !== undefined)
+      updateData.aset_kendaraan = data.aset_kendaraan;
+    if (data.aset_laptop !== undefined)
+      updateData.aset_laptop = data.aset_laptop;
+    if (data.aset_alat !== undefined) updateData.aset_alat = data.aset_alat;
+
+    const { error } = await supabase
+      .from("pakta")
+      .update(updateData)
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error updating pakta:", error);
+      return { error: "Gagal menyimpan perubahan Pakta Integritas" };
+    }
+
+    revalidatePath("/pakta");
+    return { success: true };
+  } catch (e) {
+    console.error("Error updating pakta:", e);
+    return { error: "Gagal menyimpan perubahan Pakta Integritas" };
+  }
+}
+
+/** Varian hapus tanpa redirect — untuk tombol hapus di daftar. */
+export async function deletePaktaRecord(
+  id: string,
+): Promise<{ success: true } | { error: string }> {
+  try {
+    const supabase = await createClient();
+
+    const { error } = await supabase.from("pakta").delete().eq("id", id);
+
+    if (error) {
+      console.error("Error deleting pakta:", error);
+      return { error: "Gagal menghapus Pakta Integritas" };
+    }
+
+    revalidatePath("/pakta");
+    return { success: true };
+  } catch (e) {
+    console.error("Error deleting pakta:", e);
+    return { error: "Gagal menghapus Pakta Integritas" };
+  }
+}
+
+/**
  * Build CSV string seluruh pakta. Satu baris per aset item.
  * Kolom: No, Nama, NIP, Jabatan, Tanggal, Hari, Jenis Aset, Merk/Type,
  * Tahun, No Polisi/Seri, Harga, Keterangan.

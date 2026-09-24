@@ -22,8 +22,12 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           {
             "bg-teal text-white px-[18px] py-[10px] hover:opacity-92": variant === "primary",
             "bg-transparent border border-line text-ink hover:bg-line2": variant === "ghost",
-            "bg-line2 text-ink2 px-[16px] py-[10px] hover:bg-line": variant === "modal-cancel",
-            "bg-teal text-white px-[16px] py-[10px] hover:bg-teal2": variant === "modal-ok",
+            // GAS .btn-modal-cancel — putih bergaris, bukan abu solid.
+            "rounded-lg border-[1.5px] border-line bg-white text-ink2 px-5 py-[9px] font-bold hover:border-ink3":
+              variant === "modal-cancel",
+            // GAS .btn-modal-ok — gradasi teal + bayangan, terangkat saat hover.
+            "rounded-lg border-none bg-gradient-to-br from-teal2 to-teal text-white px-[22px] py-[9px] font-bold shadow-[0_4px_12px_rgba(14,124,107,0.3)] transition-all duration-[180ms] hover:-translate-y-px hover:shadow-[0_6px_18px_rgba(14,124,107,0.4)]":
+              variant === "modal-ok",
           },
           className
         )}

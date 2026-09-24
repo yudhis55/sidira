@@ -184,16 +184,16 @@ export function Toolbar({
  * LegendBar — kategori + prioritas legend (GAS .legend-bar).
  * ─────────────────────────────────────────────── */
 const KAT_LEGEND = [
-  { color: "var(--red)", label: "Alkes" },
+  { color: "var(--teal)", label: "Alat Kesehatan" },
   { color: "var(--amber)", label: "Meubelair" },
   { color: "var(--blue)", label: "Elektronik" },
   { color: "var(--slate)", label: "Lainnya" },
 ];
 
 const PRIO_LEGEND = [
-  { label: "Wajib", className: "bg-[var(--amber2)] text-[var(--amber)] ring-1 ring-[var(--amber)]/30" },
-  { label: "Penting", className: "bg-[var(--blue2)] text-[var(--blue)] ring-1 ring-[var(--blue)]/30" },
-  { label: "Pendukung", className: "bg-[var(--slate2)] text-[var(--slate)] ring-1 ring-[var(--slate)]/30" },
+  { label: "Wajib", className: "bg-[#fef3c7] text-[#92400e]" },
+  { label: "Penting", className: "bg-[var(--blue2)] text-[var(--blue)]" },
+  { label: "Pendukung", className: "bg-[var(--slate2)] text-[var(--slate)]" },
 ];
 
 export function LegendBar({ className }: { className?: string }) {
@@ -204,8 +204,9 @@ export function LegendBar({ className }: { className?: string }) {
         className
       )}
     >
+      <span className="mr-1 font-bold text-ink2">Keterangan:</span>
       {KAT_LEGEND.map((k) => (
-        <span key={k.label} className="inline-flex items-center gap-1.5">
+        <span key={k.label} className="inline-flex items-center gap-1.5 text-ink3">
           <span
             className="size-2.5 rounded-full"
             style={{ backgroundColor: k.color }}
@@ -217,7 +218,7 @@ export function LegendBar({ className }: { className?: string }) {
         {PRIO_LEGEND.map((p) => (
           <span
             key={p.label}
-            className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", p.className)}
+            className={cn("rounded-[20px] px-[9px] py-[3px] text-[10.5px] font-bold whitespace-nowrap", p.className)}
           >
             {p.label}
           </span>

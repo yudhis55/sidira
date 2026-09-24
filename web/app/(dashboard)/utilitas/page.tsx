@@ -2,18 +2,34 @@ import Link from "next/link";
 import { Button } from "@/components/gas/button";
 import { Card } from "@/components/gas/card";
 import { PageHeader } from "@/components/shared/page-elements";
-import {
-  getMockUtilitasMeta,
-  getMockUtilitasItems,
-  getMockUtilitasSummary,
-} from "@/lib/mock-data";
+import { getUtilItems } from "@/lib/auth/utilitas";
+import { getUtilSummaries } from "@/lib/auth/utilitas-summary";
 
 export const dynamic = "force-dynamic";
 
+type UtilListItem = { nama: string; ket?: string };
+
 export default async function UtilitasPage() {
-  const metas = getMockUtilitasMeta();
-  const allItems = getMockUtilitasItems();
-  const summaries = getMockUtilitasSummary();
+  // Ringkasan (meta + jumlah item + sudah dikerjakan bulan ini) dari Supabase.
+  // Tabel `util_state` yang kosong → ringkasan 0 — itu tampilan yang jujur.
+  const summaries = await getUtilSummaries().catch(() => []);
+  const metas = summaries.map((s) => s.meta);
+  // Daftar item per utilitas untuk tabel kartu — payload `items[]` milik `util_items`.
+  const allItems = await Promise.all(
+    summaries.map((s) =>
+      getUtilItems(s.meta.util_id)
+        .then((row) => ({
+          util_id: s.meta.util_id,
+          items: (row.items ?? []) as UtilListItem[],
+        }))
+        .catch(
+          (): { util_id: string; items: UtilListItem[] } => ({
+            util_id: s.meta.util_id,
+            items: [],
+          })
+        )
+    )
+  );
   const totalItems = summaries.reduce((s, x) => s + x.itemCount, 0);
   const totalDone = summaries.reduce((s, x) => s + x.doneThisMonth, 0);
 
@@ -23,11 +39,11 @@ export default async function UtilitasPage() {
       <PageHeader
         icon="🔧"
         title="Pemeliharaan Utilitas"
-        subtitle="Puskesmas Baruharjo · Checklist harian kebersihan, sterilisasi, AC"
+        subtitle="Puskesmas Baruharjo · Ceklist pemeliharaan ambulance, genset, IPAL"
         stats={[
           { value: metas.length, label: "Total Utilitas", tone: "teal" },
           { value: totalItems, label: "Item Pemeliharaan", tone: "blue" },
-          { value: totalDone, label: "Selesai Bulan Ini", tone: "amber" },
+          { value: totalDone, label: "Sudah Dikerjakan Bulan Ini", tone: "amber" },
         ]}
         actions={
           <Link href="/utilitas/new">
@@ -118,7 +134,7 @@ export default async function UtilitasPage() {
                           {doneThisMonth}
                         </div>
                         <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/70">
-                          Selesai
+                          Sudah Dikerjakan
                         </div>
                       </div>
                     </div>
@@ -170,10 +186,9 @@ export default async function UtilitasPage() {
                               </td>
                               <td className="border-b border-line2 px-3.5 py-2 text-center">
                                 <span
-                                  className="inline-flex items-center rounded-[10px] px-2 py-0.5 text-[10.5px] font-bold"
+                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[10.5px] font-bold text-white"
                                   style={{
-                                    background: meta.bg || "var(--teal3)",
-                                    color: meta.warna || "var(--teal)",
+                                    background: meta.warna || "var(--teal)",
                                   }}
                                 >
                                   {pct > 0 ? "✓ Terjadwal" : "○ Belum"}

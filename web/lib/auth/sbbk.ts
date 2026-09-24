@@ -10,6 +10,8 @@ export interface SbbkItem {
   satuan: string;
   harga: number;
   total: number;
+  /** Kolom "Keterangan" per barang — sama seperti SBBKItem.ket di types/database. */
+  ket?: string;
 }
 
 export interface Sbbk {
@@ -153,7 +155,7 @@ export async function exportSbbkCSV(): Promise<string> {
           escape(it.satuan),
           escape(it.harga),
           escape(it.total),
-          escape(""),
+          escape(it.ket),
         ].join(",")
       );
     }
@@ -188,6 +190,18 @@ export async function createSbbk(sbbkData: Omit<Sbbk, "id" | "created_at" | "upd
 
   if (!user) throw new Error("Unauthorized");
 
+  // Nomor SBBK harus unik — kolom `no` tidak punya UNIQUE constraint di DB,
+  // jadi dicek di sini sebelum insert.
+  const { data: existing } = await supabase
+    .from("sbbk")
+    .select("id")
+    .eq("no", sbbkData.no)
+    .limit(1);
+
+  if (existing && existing.length > 0) {
+    throw new Error(`Nomor SBBK "${sbbkData.no}" sudah digunakan. Gunakan nomor lain.`);
+  }
+
   // Generate ID
   const id = `sbbk-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
@@ -216,6 +230,20 @@ export async function createSbbk(sbbkData: Omit<Sbbk, "id" | "created_at" | "upd
 
 export async function updateSbbk(id: string, sbbkData: Partial<Omit<Sbbk, "id" | "created_at" | "updated_at">>) {
   const supabase = await createClient();
+
+  // Nomor SBBK harus unik — abaikan rekaman yang sedang disunting sendiri.
+  if (sbbkData.no !== undefined) {
+    const { data: clash } = await supabase
+      .from("sbbk")
+      .select("id")
+      .eq("no", sbbkData.no)
+      .neq("id", id)
+      .limit(1);
+
+    if (clash && clash.length > 0) {
+      throw new Error(`Nomor SBBK "${sbbkData.no}" sudah digunakan. Gunakan nomor lain.`);
+    }
+  }
 
   const { items, ...sbbkWithoutItems } = sbbkData;
 

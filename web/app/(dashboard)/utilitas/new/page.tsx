@@ -1,25 +1,25 @@
-import { Button } from "@/components/gas/button";
-import { UtilitasForm } from "@/components/utilitas/utilitas-form";
-import Link from "next/link";
+"use client";
+
+/**
+ * Rute `/utilitas/new` — sama seperti `/inventaris/new`: GAS memakai modal,
+ * rute ini hanya membukanya agar tautan lama tetap berfungsi.
+ */
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { AddUtilitasModal } from "@/components/utilitas/add-utilitas-modal";
 
 export default function NewUtilitasPage() {
-  return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/utilitas">
-          <Button variant="ghost">
-            <span className="h-4 w-4">←</span>
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold">Tambah Utilitas</h1>
-          <p className="text-muted-foreground">
-            Tambah utilitas baru untuk checklist harian
-          </p>
-        </div>
-      </div>
+  const router = useRouter();
+  const [open, setOpen] = React.useState(true);
 
-      <UtilitasForm />
-    </div>
+  return (
+    <AddUtilitasModal
+      open={open}
+      onClose={() => {
+        setOpen(false);
+        router.push("/utilitas");
+      }}
+      onCreated={(utilId) => router.push(`/utilitas/${utilId}`)}
+    />
   );
 }

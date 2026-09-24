@@ -59,7 +59,6 @@ export function PageActions({
         display: "flex",
         gap: "10px",
         justifyContent: "flex-end",
-        flexWrap: "wrap",
         ...(withDivider
           ? {
               marginTop: "28px",

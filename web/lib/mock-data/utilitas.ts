@@ -1,123 +1,210 @@
 import type { UtilMeta, UtilItems, UtilState, UtilItem } from "@/types/database";
 import type { UtilSummary } from "./types";
 
+// Data utilitas disamakan dengan GAS legacy (UTILITAS_DATA di index.html)
+// dan seed Supabase 20260625000001_seed_utilitas.sql: amb_apv, amb_kijang, genset, ipal.
 const utilMetaList: UtilMeta[] = [
   {
-    util_id: "util-kebersihan",
-    label: "Kebersihan Ruangan",
-    icon: "\u{1F9F9}",
-    warna: "#0e7c6b",
-    bg: "#ccfbf1",
+    util_id: "amb_apv",
+    label: "Ambulance APV",
+    icon: "\u{1F691}",
+    warna: "#b91c1c",
+    bg: "linear-gradient(135deg,#7f1d1d,#b91c1c)",
     custom: false,
     order_no: 1,
     created_at: "2025-01-15T08:00:00Z",
     updated_at: "2025-01-15T08:00:00Z",
   },
   {
-    util_id: "util-sterilisasi",
-    label: "Sterilisasi Alat",
-    icon: "\u{1F9EA}",
-    warna: "#6d28d9",
-    bg: "#ede9fe",
+    util_id: "amb_kijang",
+    label: "Ambulance Kijang",
+    icon: "\u{1F691}",
+    warna: "#c2410c",
+    bg: "linear-gradient(135deg,#7c2d12,#c2410c)",
     custom: false,
     order_no: 2,
     created_at: "2025-01-15T08:00:00Z",
     updated_at: "2025-01-15T08:00:00Z",
   },
   {
-    util_id: "util-ac",
-    label: "Perawatan AC",
-    icon: "\u{2744}\u{FE0F}",
-    warna: "#1d4ed8",
-    bg: "#dbeafe",
-    custom: true,
+    util_id: "genset",
+    label: "Genset",
+    icon: "⚡",
+    warna: "#b45309",
+    bg: "linear-gradient(135deg,#78350f,#b45309)",
+    custom: false,
     order_no: 3,
-    created_at: "2025-02-01T08:00:00Z",
-    updated_at: "2025-02-01T08:00:00Z",
+    created_at: "2025-01-15T08:00:00Z",
+    updated_at: "2025-01-15T08:00:00Z",
+  },
+  {
+    util_id: "ipal",
+    label: "IPAL",
+    icon: "\u{1F4A7}",
+    warna: "#1d4ed8",
+    bg: "linear-gradient(135deg,#1e3a8a,#1d4ed8)",
+    custom: false,
+    order_no: 4,
+    created_at: "2025-01-15T08:00:00Z",
+    updated_at: "2025-01-15T08:00:00Z",
   },
 ];
 
 const utilItemsList: UtilItems[] = [
   {
     id: 1,
-    util_id: "util-kebersihan",
+    util_id: "amb_apv",
     items: [
-      { nama: "Lobby Utama" },
-      { nama: "Koridor Lantai 1" },
-      { nama: "Toilet Umum" },
-      { nama: "Ruang Tunggu" },
-      { nama: "Halaman Depan" },
+      { nama: "Pemanasan mesin", ket: "Harian" },
+      { nama: "Cek Accu", ket: "Bulanan" },
+      { nama: "Cek Oli", ket: "Bulanan" },
+      { nama: "Ganti Oli", ket: "Setiap 5000 KM" },
+      { nama: "Cek Sirine", ket: "Bulanan" },
+      { nama: "Cek Air Radiator", ket: "Bulanan" },
+      { nama: "Cek Minyak Rem", ket: "Bulanan" },
+      { nama: "Cek Lampu", ket: "Bulanan" },
+      { nama: "Cek AC", ket: "Bulanan" },
+      { nama: "Cek Wiper Kaca", ket: "Bulanan" },
+      { nama: "Cek Oksigen", ket: "Harian" },
+      { nama: "Cek Dragbar", ket: "Mingguan" },
+      { nama: "Cek Kondisi dan Angin Ban", ket: "Mingguan" },
+      { nama: "Servis Kendaraan", ket: "Min. 1 Tahun 1x" },
+      { nama: "Mencuci Kendaraan", ket: "Mingguan" },
     ],
     created_at: "2025-01-15T08:00:00Z",
     updated_at: "2025-01-15T08:00:00Z",
   },
   {
     id: 2,
-    util_id: "util-sterilisasi",
+    util_id: "amb_kijang",
     items: [
-      { nama: "Instrumen Gigi Set A", ket: "Autoclave" },
-      { nama: "Instrumen Gigi Set B", ket: "Autoclave" },
-      { nama: "Alat Bedah Minor", ket: "Chemical" },
-      { nama: "Alat IGD Emergency", ket: "Autoclave" },
+      { nama: "Pemanasan mesin", ket: "Harian" },
+      { nama: "Cek Accu", ket: "Bulanan" },
+      { nama: "Cek Oli", ket: "Bulanan" },
+      { nama: "Ganti Oli", ket: "Setiap 5000 KM" },
+      { nama: "Cek Sirine", ket: "Bulanan" },
+      { nama: "Cek Air Radiator", ket: "Bulanan" },
+      { nama: "Cek Minyak Rem", ket: "Bulanan" },
+      { nama: "Cek Lampu", ket: "Bulanan" },
+      { nama: "Cek Wiper Kaca", ket: "Bulanan" },
+      { nama: "Cek Oksigen", ket: "Harian" },
+      { nama: "Cek Dragbar", ket: "Mingguan" },
+      { nama: "Cek Kondisi dan Angin Ban", ket: "Mingguan" },
+      { nama: "Servis Kendaraan", ket: "Min. 1 Tahun 1x" },
+      { nama: "Mencuci Kendaraan", ket: "Mingguan" },
     ],
     created_at: "2025-01-15T08:00:00Z",
     updated_at: "2025-01-15T08:00:00Z",
   },
   {
     id: 3,
-    util_id: "util-ac",
+    util_id: "genset",
     items: [
-      { nama: "AC IGD (2 PK)" },
-      { nama: "AC Poli Umum (1.5 PK)" },
-      { nama: "AC Poli Gigi (1 PK)" },
-      { nama: "AC Farmasi (1.5 PK)" },
-      { nama: "AC Laboratorium (2 PK)" },
-      { nama: "AC Rekam Medis (1 PK)" },
+      { nama: "Pemanasan mesin Genset", ket: "Harian" },
+      { nama: "Cek BBM / Solar", ket: "Harian" },
+      { nama: "Cek Accu", ket: "Bulanan" },
+      { nama: "Cek Oli", ket: "Bulanan" },
+      { nama: "Ganti Oli", ket: "Min. 1 Tahun" },
+      { nama: "Ganti Filter", ket: "Min. 1 Tahun" },
+      { nama: "Cek Air Radiator", ket: "Bulanan" },
+      { nama: "Cek Instalasi", ket: "Bulanan" },
+      { nama: "Cek Bok Panel", ket: "Bulanan" },
+      { nama: "Membersihkan Genset", ket: "Mingguan" },
     ],
-    created_at: "2025-02-01T08:00:00Z",
-    updated_at: "2025-02-01T08:00:00Z",
+    created_at: "2025-01-15T08:00:00Z",
+    updated_at: "2025-01-15T08:00:00Z",
+  },
+  {
+    id: 4,
+    util_id: "ipal",
+    items: [
+      { nama: "Cek Bok Panel", ket: "Mingguan" },
+      { nama: "Cek Instalasi Listrik", ket: "Mingguan" },
+      { nama: "Cek Pompa Air Inlet", ket: "Bulanan" },
+      { nama: "Cek Pompa Air Sirkulasi", ket: "Bulanan" },
+      { nama: "Cek Pompa Air Transfer", ket: "Bulanan" },
+      { nama: "Cek Pompa Air Filter", ket: "Bulanan" },
+      { nama: "Cek Instalasi Pipa Air Limbah", ket: "Bulanan" },
+      { nama: "Cek Tabung Reaktor", ket: "Bulanan" },
+      { nama: "Cek Lampu Catalist Destructor", ket: "Bulanan" },
+      { nama: "Cek Tabung Filter", ket: "Bulanan" },
+    ],
+    created_at: "2025-01-15T08:00:00Z",
+    updated_at: "2025-01-15T08:00:00Z",
   },
 ];
 
-const utilStateList: UtilState[] = [
-  // ── 2025-07 (historical sample) ──────────────────────────────────
-  { id: 1, kind: "check", util_id: "util-kebersihan", item_index: "0", state_key: "2025-07-01", value: "done", updated_at: "2025-07-01T07:30:00Z", updated_by: "user-admin" },
-  { id: 2, kind: "check", util_id: "util-kebersihan", item_index: "1", state_key: "2025-07-01", value: "done", updated_at: "2025-07-01T07:45:00Z", updated_by: "user-admin" },
-  { id: 3, kind: "check", util_id: "util-kebersihan", item_index: "2", state_key: "2025-07-01", value: "done", updated_at: "2025-07-01T08:00:00Z", updated_by: "user-admin" },
-  { id: 4, kind: "note", util_id: "util-kebersihan", item_index: "4", state_key: "2025-07-01", value: "Halaman sudah disapu, ada genangan air setelah hujan", updated_at: "2025-07-01T08:15:00Z", updated_by: "user-admin" },
-  { id: 5, kind: "check", util_id: "util-sterilisasi", item_index: "0", state_key: "2025-07-02", value: "done", updated_at: "2025-07-02T09:00:00Z", updated_by: "user-editor1" },
-  { id: 6, kind: "check", util_id: "util-sterilisasi", item_index: "1", state_key: "2025-07-02", value: "done", updated_at: "2025-07-02T09:15:00Z", updated_by: "user-editor1" },
-  { id: 7, kind: "check", util_id: "util-ac", item_index: "0", state_key: "2025-07-05", value: "done", updated_at: "2025-07-05T10:00:00Z", updated_by: "user-admin" },
-  { id: 8, kind: "note", util_id: "util-ac", item_index: "0", state_key: "2025-07-05", value: "Filter sudah dibersihkan, freon masih normal", updated_at: "2025-07-05T10:05:00Z", updated_by: "user-admin" },
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
 
-  // ── 2026-07 (current year-month — matrix not empty when viewing July 2026) ──
-  { id: 9, kind: "check", util_id: "util-kebersihan", item_index: "0", state_key: "2026-07-01", value: "done", updated_at: "2026-07-01T07:30:00Z", updated_by: "user-admin" },
-  { id: 10, kind: "check", util_id: "util-kebersihan", item_index: "1", state_key: "2026-07-01", value: "done", updated_at: "2026-07-01T07:45:00Z", updated_by: "user-admin" },
-  { id: 11, kind: "check", util_id: "util-kebersihan", item_index: "2", state_key: "2026-07-01", value: "done", updated_at: "2026-07-01T08:00:00Z", updated_by: "user-admin" },
-  { id: 12, kind: "check", util_id: "util-kebersihan", item_index: "3", state_key: "2026-07-01", value: "done", updated_at: "2026-07-01T08:10:00Z", updated_by: "user-admin" },
-  { id: 13, kind: "check", util_id: "util-kebersihan", item_index: "0", state_key: "2026-07-07", value: "done", updated_at: "2026-07-07T07:30:00Z", updated_by: "user-admin" },
-  { id: 14, kind: "check", util_id: "util-kebersihan", item_index: "1", state_key: "2026-07-07", value: "done", updated_at: "2026-07-07T07:40:00Z", updated_by: "user-admin" },
-  { id: 15, kind: "check", util_id: "util-kebersihan", item_index: "4", state_key: "2026-07-07", value: "done", updated_at: "2026-07-07T08:00:00Z", updated_by: "user-admin" },
-  { id: 16, kind: "check", util_id: "util-kebersihan", item_index: "0", state_key: "2026-07-14", value: "done", updated_at: "2026-07-14T07:30:00Z", updated_by: "user-editor1" },
-  { id: 17, kind: "check", util_id: "util-kebersihan", item_index: "2", state_key: "2026-07-14", value: "done", updated_at: "2026-07-14T07:50:00Z", updated_by: "user-editor1" },
-  { id: 18, kind: "note", util_id: "util-kebersihan", state_key: "2026-07-01", value: "Pembersihan rutin minggu pertama Juli 2026", updated_at: "2026-07-01T08:20:00Z", updated_by: "user-admin" },
-  { id: 19, kind: "check", util_id: "util-sterilisasi", item_index: "0", state_key: "2026-07-02", value: "done", updated_at: "2026-07-02T09:00:00Z", updated_by: "user-editor1" },
-  { id: 20, kind: "check", util_id: "util-sterilisasi", item_index: "1", state_key: "2026-07-02", value: "done", updated_at: "2026-07-02T09:15:00Z", updated_by: "user-editor1" },
-  { id: 21, kind: "check", util_id: "util-sterilisasi", item_index: "2", state_key: "2026-07-02", value: "done", updated_at: "2026-07-02T09:30:00Z", updated_by: "user-editor1" },
-  { id: 22, kind: "check", util_id: "util-sterilisasi", item_index: "3", state_key: "2026-07-09", value: "done", updated_at: "2026-07-09T09:00:00Z", updated_by: "user-admin" },
-  { id: 23, kind: "note", util_id: "util-sterilisasi", state_key: "2026-07-02", value: "Siklus autoclave normal", updated_at: "2026-07-02T09:45:00Z", updated_by: "user-editor1" },
-  { id: 24, kind: "check", util_id: "util-ac", item_index: "0", state_key: "2026-07-05", value: "done", updated_at: "2026-07-05T10:00:00Z", updated_by: "user-admin" },
-  { id: 25, kind: "check", util_id: "util-ac", item_index: "1", state_key: "2026-07-05", value: "done", updated_at: "2026-07-05T10:20:00Z", updated_by: "user-admin" },
-  { id: 26, kind: "check", util_id: "util-ac", item_index: "2", state_key: "2026-07-12", value: "done", updated_at: "2026-07-12T10:00:00Z", updated_by: "user-admin" },
-  { id: 27, kind: "check", util_id: "util-ac", item_index: "3", state_key: "2026-07-12", value: "done", updated_at: "2026-07-12T10:15:00Z", updated_by: "user-admin" },
-  { id: 28, kind: "note", util_id: "util-ac", state_key: "2026-07-05", value: "Perawatan berkala AC IGD & Poli Umum", updated_at: "2026-07-05T10:30:00Z", updated_by: "user-admin" },
-];
+// Sample state dibangkitkan deterministik relatif terhadap tanggal hari ini,
+// supaya matriks bulan berjalan & jadwal tahunan tidak kosong kapan pun dilihat.
+function buildSampleState(): UtilState[] {
+  const rows: UtilState[] = [];
+  let id = 1;
+  const now = new Date();
+  const year = now.getFullYear();
+  const curMonth0 = now.getMonth();
+  const todayDate = now.getDate();
 
-const utilSummaries: UtilSummary[] = [
-  { meta: utilMetaList[0], itemCount: 5, doneThisMonth: 3 },
-  { meta: utilMetaList[1], itemCount: 4, doneThisMonth: 2 },
-  { meta: utilMetaList[2], itemCount: 6, doneThisMonth: 1 },
-];
+  for (const util of utilItemsList) {
+    const itemCount = util.items.length;
+
+    // Bulan-bulan sebelumnya tahun ini: beberapa item selesai (untuk matriks tahunan).
+    for (let m0 = 0; m0 < curMonth0; m0++) {
+      for (let idx = 0; idx < itemCount; idx++) {
+        // Pola deterministik: sebagian besar item punya minimal satu hari selesai.
+        if ((idx + m0) % 4 === 3) continue;
+        const day = ((idx * 3 + m0 * 5) % 26) + 1;
+        rows.push({
+          id: id++,
+          kind: "check",
+          util_id: util.util_id,
+          item_index: String(idx),
+          state_key: `${year}-${pad2(m0 + 1)}-${pad2(day)}`,
+          value: "1",
+          updated_at: `${year}-${pad2(m0 + 1)}-${pad2(day)}T08:00:00Z`,
+          updated_by: "user-admin",
+        });
+      }
+    }
+
+    // Bulan berjalan: item harian/mingguan tercentang di beberapa hari terakhir.
+    for (let idx = 0; idx < itemCount; idx++) {
+      for (let back = 1; back <= 6; back++) {
+        const day = todayDate - back;
+        if (day < 1) break;
+        if ((idx + day) % 3 !== 0) continue;
+        rows.push({
+          id: id++,
+          kind: "check",
+          util_id: util.util_id,
+          item_index: String(idx),
+          state_key: `${year}-${pad2(curMonth0 + 1)}-${pad2(day)}`,
+          value: "1",
+          updated_at: `${year}-${pad2(curMonth0 + 1)}-${pad2(day)}T08:00:00Z`,
+          updated_by: "user-admin",
+        });
+      }
+    }
+
+    // Catatan bulanan (per YYYY-MM, meniru key uid_tahun_bulan di GAS).
+    rows.push({
+      id: id++,
+      kind: "note",
+      util_id: util.util_id,
+      state_key: `${year}-${pad2(curMonth0 + 1)}`,
+      value: "Pemeliharaan rutin berjalan normal.",
+      updated_at: now.toISOString(),
+      updated_by: "user-admin",
+    });
+  }
+
+  return rows;
+}
+
+const utilStateList: UtilState[] = buildSampleState();
 
 export function getMockUtilitasMeta(): UtilMeta[] {
   return utilMetaList;
@@ -132,7 +219,19 @@ export function getMockUtilitasState(): UtilState[] {
 }
 
 export function getMockUtilitasSummary(): UtilSummary[] {
-  return utilSummaries;
+  const now = new Date();
+  const prefix = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}`;
+  return utilMetaList.map((meta) => {
+    const itemCount =
+      utilItemsList.find((r) => r.util_id === meta.util_id)?.items.length ?? 0;
+    const doneThisMonth = utilStateList.filter(
+      (s) =>
+        s.util_id === meta.util_id &&
+        s.kind === "check" &&
+        s.state_key.startsWith(prefix)
+    ).length;
+    return { meta, itemCount, doneThisMonth };
+  });
 }
 
 export function getMockUtilMetaById(utilId: string): UtilMeta | null {
@@ -158,4 +257,22 @@ export function getMockUtilStateForMonth(
   const checks = monthRows.filter((s) => s.kind === "check");
   const noteRow = monthRows.find((s) => s.kind === "note");
   return { checks, note: noteRow?.value ?? "" };
+}
+
+/**
+ * Seluruh state (semua bulan) untuk satu utilitas — dipakai matriks ceklist
+ * lintas-bulan dan kartu Jadwal Pemeliharaan Tahunan.
+ */
+export function getMockUtilStateForUtil(utilId: string): {
+  checks: UtilState[];
+  notesByMonth: Record<string, string>;
+} {
+  const rows = getMockUtilitasState().filter((s) => s.util_id === utilId);
+  const checks = rows.filter((s) => s.kind === "check");
+  const notesByMonth: Record<string, string> = {};
+  for (const r of rows) {
+    if (r.kind !== "note") continue;
+    notesByMonth[r.state_key.slice(0, 7)] = r.value ?? "";
+  }
+  return { checks, notesByMonth };
 }

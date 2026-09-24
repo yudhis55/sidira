@@ -1,5 +1,5 @@
 import React from "react";
-import { getMockSbbkById } from "@/lib/mock-data";
+import { getSbbkById } from "@/lib/auth/sbbk";
 import { Card } from "@/components/gas/card";
 import { Button } from "@/components/gas/button";
 import Link from "next/link";
@@ -31,7 +31,7 @@ interface PageProps {
 
 export default async function SbbkDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const sbbk = getMockSbbkById(id);
+  const sbbk = await getSbbkById(id).catch(() => null);
 
   if (!sbbk) {
     return (
@@ -45,7 +45,7 @@ export default async function SbbkDetailPage({ params }: PageProps) {
               SBBK Tidak Ditemukan
             </p>
             <p className="text-xs mb-4" style={{ color: "var(--ink3)" }}>
-              Data mock tidak tersedia untuk ID ini.
+              Data tidak tersedia untuk ID ini.
             </p>
             <Link href="/sbbk">
               <Button size="sm" variant="ghost">

@@ -93,11 +93,12 @@ export function PemegangFormDialog({
         title={isEdit ? "Edit Pemegang" : "Tambah Pemegang"}
         subtitle={
           isEdit
-            ? "Ubah data pemegang inventaris."
+            ? "Ubah identitas pemegang inventaris."
             : "Tambah pemegang inventaris baru."
         }
-        icon={isEdit ? "\u270F\uFE0F" : "\u2795"}
+        icon={isEdit ? "\u270F\uFE0F" : "\uD83D\uDC64"}
         iconVariant="teal"
+        headVariant="gas"
         size="md"
         footer={
           <div className="flex justify-end gap-2 w-full">

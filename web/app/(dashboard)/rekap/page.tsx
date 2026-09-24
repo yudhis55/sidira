@@ -1,9 +1,32 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import Link from "next/link";
-import { getMockPemegang, getMockAsetPemegang } from "@/lib/mock-data";
+import { useState, useMemo, useEffect } from "react";
+import { toast } from "sonner";
+import {
+  getMockPemegang,
+  getMockAsetPemegang,
+  getMockAsetByPemegang,
+} from "@/lib/mock-data";
+import { getPaktaList } from "@/lib/auth/pakta";
+import type { Pakta } from "@/types/database";
+import {
+  addPaktaRecords,
+  buildPaktaFromPemegang,
+  findPaktaForPemegang,
+  useAddedPakta,
+  useHiddenPaktaIds,
+} from "@/lib/pakta-store";
+import {
+  addPemegang,
+  getMergedPemegang,
+  savePemegangIdentity,
+  useAddedPemegang,
+  usePemegangOverrides,
+  type PemegangIdentity,
+} from "@/lib/pemegang-store";
 import { Button } from "@/components/gas/button";
+import { PemegangFormDialog } from "@/components/rekap/pemegang-form-dialog";
+import { RekapPaktaButton } from "@/components/rekap/pakta-button";
 import type {
   AsetPemegang,
   AsetPemegangJenis,
@@ -57,9 +80,28 @@ const JENIS_ORDER: AsetPemegangJenis[] = [
   "rumah",
 ];
 
-/** Mock pakta map — all belum (parity with mock data). */
-function mockHasPakta(_pemegangId: string): boolean {
-  return false;
+/** Status pakta per pemegang — GAS `riHasPakta(nama)`: cocok via nama. */
+function usePaktaLookup() {
+  const [addedPakta] = useAddedPakta();
+  const [hiddenIds] = useHiddenPaktaIds();
+  // Daftar arsip live Supabase (pengganti mock) untuk status + cegah ganda.
+  const [staticPakta, setStaticPakta] = useState<Pakta[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getPaktaList()
+      .then((list) => {
+        if (!cancelled) setStaticPakta(list);
+      })
+      .catch(() => {
+        if (!cancelled) setStaticPakta([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const hasPakta = (p: PemegangInventaris) =>
+    !!findPaktaForPemegang(p.nama, staticPakta, addedPakta, hiddenIds);
+  return { hasPakta };
 }
 
 function countByJenis(asetList: AsetPemegang[]) {
@@ -78,8 +120,14 @@ export default function RekapPage() {
   const [filter, setFilter] = useState<string>("all");
   const [openRows, setOpenRows] = useState<Set<string>>(new Set());
 
-  const pemegangList = useMemo(() => getMockPemegang(), []);
+  const [addedPemegang] = useAddedPemegang();
+  const [pemegangOverrides] = usePemegangOverrides();
+  const pemegangList = useMemo(
+    () => getMergedPemegang(getMockPemegang(), addedPemegang, pemegangOverrides),
+    [addedPemegang, pemegangOverrides]
+  );
   const allAset = useMemo(() => getMockAsetPemegang(), []);
+  const { hasPakta } = usePaktaLookup();
 
   const asetGrouped = useMemo(() => {
     const map: Record<string, AsetPemegang[]> = {};
@@ -92,7 +140,7 @@ export default function RekapPage() {
 
   const totalPemegang = pemegangList.length;
   const totalAset = allAset.length;
-  const sudahPakta = pemegangList.filter((p) => mockHasPakta(p.id)).length;
+  const sudahPakta = pemegangList.filter((p) => hasPakta(p)).length;
   const belumPakta = totalPemegang - sudahPakta;
 
   const filtered = useMemo(() => {
@@ -107,18 +155,48 @@ export default function RekapPage() {
       if (filter === "all") return true;
       if (filter === "PNS") return p.status === "PNS";
       if (filter === "PPPK") return p.status === "PPPK";
-      if (filter === "sudah") return mockHasPakta(p.id);
-      if (filter === "belum") return !mockHasPakta(p.id);
+      if (filter === "sudah") return hasPakta(p);
+      if (filter === "belum") return !hasPakta(p);
       return true;
     });
-  }, [pemegangList, search, filter]);
+  }, [pemegangList, search, filter, hasPakta]);
 
   const toggleRow = (id: string) => {
     setOpenRows((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
+  };
+
+  /** GAS `riBuatSemuaPakta` — buat pre-filled untuk semua yg belum (yg terfilter). */
+  const handleBuatSemuaPakta = () => {
+    const belum = filtered.filter((p) => !hasPakta(p));
+    if (belum.length === 0) {
+      toast.info("Semua pemegang sudah memiliki Pakta");
+      return;
+    }
+    if (
+      !confirm(
+        `Buat Pakta Integritas untuk ${belum.length} pemegang yang belum?\nData lampiran diisi otomatis.`
+      )
+    )
+      return;
+    const recs = belum.map((p, i) =>
+      buildPaktaFromPemegang(
+        p,
+        asetGrouped[p.id] || getMockAsetByPemegang(p.id),
+        `pakta-${Date.now()}-${i}`
+      )
+    );
+    addPaktaRecords(recs);
+    toast.success(
+      `${recs.length} pakta + lampiran dibuat otomatis dari rekap (mode demo)`
+    );
   };
 
   return (
@@ -138,7 +216,7 @@ export default function RekapPage() {
 
         <div className="flex flex-col min-w-0">
           <div className="text-lg font-extrabold text-ink">
-            Rekap Pemegang Inventaris {new Date().getFullYear()}
+            Rekap Pemegang Inventaris 2025
           </div>
           <div className="text-xs text-ink3 mt-0.5">
             Puskesmas Baruharjo · Peralatan Mesin & Rumah Dinas
@@ -223,9 +301,13 @@ export default function RekapPage() {
           </button>
         ))}
 
-        <Link href="/pakta/new" className="ml-auto">
+        <div
+          className="flex items-center gap-2 flex-wrap"
+          style={{ marginLeft: "auto" }}
+        >
           <Button
             type="button"
+            onClick={handleBuatSemuaPakta}
             style={{
               background: "linear-gradient(135deg, #1e3a5f, #2563eb)",
               color: "#fff",
@@ -237,9 +319,36 @@ export default function RekapPage() {
               borderRadius: "10px",
             }}
           >
-            {"\uD83D\uDCDC"} Buat Pakta Semua Belum
+            {"\uD83D\uDCDC"} Buat Pakta Semua
           </Button>
-        </Link>
+
+          <PemegangFormDialog
+            key="pemegang-new"
+            trigger={
+              <Button
+                type="button"
+                className="text-[12px]"
+                style={{
+                  background: "linear-gradient(135deg, #059669, #047857)",
+                  color: "#fff",
+                  border: "none",
+                  boxShadow: "0 3px 10px rgba(5,150,105,0.25)",
+                }}
+              >
+                <span className="mr-1" aria-hidden>
+                  {"\u2795"}
+                </span>
+                Tambah Pemegang
+              </Button>
+            }
+            onSaved={(values: PemegangIdentity) => {
+              const rec = addPemegang(values);
+              toast.success(
+                `Pemegang "${rec.nama}" ditambahkan (mode demo — tersimpan lokal)`
+              );
+            }}
+          />
+        </div>
       </div>
 
       {/* ── Table (GAS .ri-wrap + .ri-tbl) ── */}
@@ -248,10 +357,10 @@ export default function RekapPage() {
         style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
       >
         {filtered.length === 0 ? (
-          <div className="text-center py-12 text-ink3 text-[13px]">
-            <div className="text-3xl mb-2" aria-hidden>
-              {"\uD83D\uDCE6"}
-            </div>
+          <div
+            className="text-center text-ink3 text-[13px]"
+            style={{ padding: "48px" }}
+          >
             Tidak ada data yang cocok
           </div>
         ) : (
@@ -259,24 +368,27 @@ export default function RekapPage() {
             <table className="w-full border-collapse text-[12.5px]">
               <thead>
                 <tr>
-                  {[
-                    "Nama / NIP",
-                    "Jabatan",
-                    "Status",
-                    "Inventaris Dipegang",
-                    "Pakta",
-                    "Aksi",
-                  ].map((h) => (
+                  {(
+                    [
+                      { label: "Nama / NIP" },
+                      { label: "Jabatan" },
+                      { label: "Status" },
+                      { label: "Inventaris Dipegang" },
+                      { label: "Pakta" },
+                      { label: "Aksi", minWidth: "140px" },
+                    ] as { label: string; minWidth?: string }[]
+                  ).map((h) => (
                     <th
-                      key={h}
+                      key={h.label}
                       className="px-3 py-[10px] text-[10px] font-bold uppercase tracking-[0.4px] text-left whitespace-nowrap"
                       style={{
                         background: "#ecfdf5",
                         color: "#065f46",
                         borderBottom: "2px solid #a7f3d0",
+                        ...(h.minWidth ? { minWidth: h.minWidth } : null),
                       }}
                     >
-                      {h}
+                      {h.label}
                     </th>
                   ))}
                 </tr>
@@ -293,8 +405,14 @@ export default function RekapPage() {
                       asetList={asetList}
                       counts={counts}
                       isOpen={isOpen}
-                      hasPakta={mockHasPakta(pemegang.id)}
+                      hasPakta={hasPakta(pemegang)}
                       onToggle={() => toggleRow(pemegang.id)}
+                      onEdit={(values: PemegangIdentity) => {
+                        savePemegangIdentity(pemegang.id, values);
+                        toast.success(
+                          `Identitas "${values.nama.trim()}" disimpan (mode demo — tersimpan lokal). Selebihnya edit di menu Pakta.`
+                        );
+                      }}
                     />
                   );
                 })}
@@ -316,6 +434,7 @@ function RekapRow({
   isOpen,
   hasPakta,
   onToggle,
+  onEdit,
 }: {
   pemegang: PemegangInventaris;
   asetList: AsetPemegang[];
@@ -323,6 +442,7 @@ function RekapRow({
   isOpen: boolean;
   hasPakta: boolean;
   onToggle: () => void;
+  onEdit: (values: PemegangIdentity) => void;
 }) {
   const isPppk = pemegang.status.toUpperCase() === "PPPK";
   const statusBadgeStyle = isPppk
@@ -384,7 +504,7 @@ const paktaBadge = hasPakta ? (
         </td>
         <td className="px-3 py-[10px] align-middle">
           <span
-            className="inline-block py-0.5 px-2 rounded-lg text-[10.5px] font-bold"
+            className="inline-block py-0.5 px-2 rounded-[8px] text-[10.5px] font-bold"
             style={statusBadgeStyle}
           >
             {pemegang.status}
@@ -410,22 +530,20 @@ const paktaBadge = hasPakta ? (
             >
               {"\uD83D\uDCCB"} Detail
             </button>
-            <Link href={`/rekap/${pemegang.id}`}>
-              <button
-                type="button"
-                className="py-1 px-2.5 rounded-md border-[1.5px] border-line text-[11px] font-semibold text-ink2 bg-white transition-colors hover:border-[#059669] hover:text-[#059669]"
-              >
-                {"\u270F\uFE0F"} Edit
-              </button>
-            </Link>
-            <Link href="/pakta/new">
-              <button
-                type="button"
-                className="py-1 px-2.5 rounded-md border-[1.5px] border-line text-[11px] font-semibold text-ink2 bg-white transition-colors hover:border-[#1e40af] hover:text-[#1e40af]"
-              >
-                {"\uD83D\uDCDC"} Pakta
-              </button>
-            </Link>
+            <PemegangFormDialog
+              key={`pemegang-edit-${pemegang.id}`}
+              pemegang={pemegang}
+              trigger={
+                <button
+                  type="button"
+                  className="py-1 px-2.5 rounded-md border-[1.5px] border-[#059669] text-[11px] font-semibold text-[#059669] bg-[#ecfdf5] transition-colors hover:bg-[#059669] hover:text-white"
+                >
+                  {"\u270F\uFE0F"} Edit
+                </button>
+              }
+              onSaved={onEdit}
+            />
+            <RekapPaktaButton pemegang={pemegang} asetList={asetList} />
           </div>
         </td>
       </tr>

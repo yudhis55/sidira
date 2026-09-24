@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { UtilMeta, UtilState } from "@/types/database";
+import type { UtilMeta } from "@/types/database";
 import { cn } from "@/lib/utils";
 
 const MONTH_NAMES_SHORT = [
@@ -65,47 +65,39 @@ function daysInMonth(year: number, month0: number) {
   return new Date(year, month0 + 1, 0).getDate();
 }
 
-function buildDoneSet(checks: UtilState[]): Set<string> {
-  const set = new Set<string>();
-  for (const c of checks) {
-    if (c.kind !== "check") continue;
-    const idx = c.item_index ?? "";
-    set.add(`${idx}|${c.state_key}`);
-  }
-  return set;
-}
-
 export interface UtilChecklistMatrixProps {
-  utilId: string;
   utilMeta: Pick<UtilMeta, "icon" | "label" | "warna" | "bg">;
   items: Array<{ nama: string; ket?: string }>;
   year: number;
   /** 0-based month (0 = Januari). */
   month0: number;
-  initialChecks: UtilState[];
-  initialNote: string;
+  /** Set berisi key `${itemIndex}|YYYY-MM-DD` sel yang sudah dikerjakan (semua bulan). */
+  doneSet: Set<string>;
+  note: string;
+  onToggle: (itemIndex: number, stateKey: string) => void;
+  onMarkDates: (dates: string[]) => void;
+  onNoteChange: (value: string) => void;
+  onYearChange: (delta: number) => void;
+  onMonthSelect: (month0: number) => void;
 }
 
 /**
- * GAS-like monthly checklist matrix for utilitas.
- * Mock-only: all toggles / bulk / notes stay in local state.
+ * GAS-like monthly checklist matrix for utilitas (controlled).
+ * Mock-only: state dipegang parent (UtilDetailPanels), tidak persist ke server.
  */
 export function UtilChecklistMatrix({
-  utilId: _utilId,
   utilMeta,
   items,
-  year: initialYear,
-  month0: initialMonth0,
-  initialChecks,
-  initialNote,
+  year,
+  month0,
+  doneSet,
+  note,
+  onToggle,
+  onMarkDates,
+  onNoteChange,
+  onYearChange,
+  onMonthSelect,
 }: UtilChecklistMatrixProps) {
-  void _utilId;
-
-  const [year, setYear] = useState(initialYear);
-  const [month0, setMonth0] = useState(initialMonth0);
-  const [doneSet, setDoneSet] = useState(() => buildDoneSet(initialChecks));
-  const [noteText, setNoteText] = useState(initialNote);
-
   const today = todayString();
   const dim = daysInMonth(year, month0);
 
@@ -133,34 +125,9 @@ export function UtilChecklistMatrix({
   const summaryPct =
     summary.cells > 0 ? Math.round((summary.done / summary.cells) * 100) : 0;
 
-  const toggleCell = (itemIndex: number, stateKey: string) => {
-    if (stateKey > today) return;
-    const key = checkKey(itemIndex, stateKey);
-    setDoneSet((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
-  const markAllOnDates = (dates: string[]) => {
-    if (items.length === 0 || dates.length === 0) return;
-    setDoneSet((prev) => {
-      const next = new Set(prev);
-      for (const ds of dates) {
-        if (ds > today) continue;
-        for (let idx = 0; idx < items.length; idx++) {
-          next.add(checkKey(idx, ds));
-        }
-      }
-      return next;
-    });
-  };
-
   const handleApplyDate = () => {
     if (!bulkDate) return;
-    markAllOnDates([bulkDate]);
+    onMarkDates([bulkDate]);
   };
 
   const handleApplyRange = () => {
@@ -173,7 +140,7 @@ export function UtilChecklistMatrix({
         `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
       );
     }
-    markAllOnDates(dates);
+    onMarkDates(dates);
   };
 
   const handleApplyMonth = () => {
@@ -181,16 +148,8 @@ export function UtilChecklistMatrix({
     for (let day = 1; day <= dim; day++) {
       dates.push(dateKey(year, month0, day));
     }
-    markAllOnDates(dates);
+    onMarkDates(dates);
   };
-
-  const handleCheckToday = () => {
-    markAllOnDates([today]);
-  };
-
-  const goYear = (delta: number) => setYear((y) => y + delta);
-
-  const selectMonth = (m0: number) => setMonth0(m0);
 
   return (
     <div className="util-card overflow-hidden rounded-[10px] border border-line bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
@@ -219,7 +178,7 @@ export function UtilChecklistMatrix({
       <div className="flex flex-wrap items-center gap-1.5 border-b border-line bg-[#fafafa] px-5 py-2.5">
         <button
           type="button"
-          onClick={() => goYear(-1)}
+          onClick={() => onYearChange(-1)}
           className="rounded-md border-[1.5px] border-line bg-white px-2.5 py-0.5 text-[13px] font-bold text-ink2 transition-colors hover:border-ink3"
           aria-label="Tahun sebelumnya"
         >
@@ -230,7 +189,7 @@ export function UtilChecklistMatrix({
         </span>
         <button
           type="button"
-          onClick={() => goYear(1)}
+          onClick={() => onYearChange(1)}
           className="rounded-md border-[1.5px] border-line bg-white px-2.5 py-0.5 text-[13px] font-bold text-ink2 transition-colors hover:border-ink3"
           aria-label="Tahun berikutnya"
         >
@@ -244,7 +203,7 @@ export function UtilChecklistMatrix({
               <button
                 key={label}
                 type="button"
-                onClick={() => selectMonth(mi)}
+                onClick={() => onMonthSelect(mi)}
                 className={cn(
                   "rounded-2xl border-[1.5px] px-2.5 py-1 text-[11px] font-bold transition-colors",
                   active
@@ -321,14 +280,6 @@ export function UtilChecklistMatrix({
         >
           📅 Seluruh Bulan
         </button>
-
-        <button
-          type="button"
-          onClick={handleCheckToday}
-          className="inline-flex items-center gap-1 whitespace-nowrap rounded-2xl border-[1.5px] border-teal/40 bg-teal4 px-2.5 py-1 text-[11px] font-bold text-teal transition-colors hover:border-teal hover:bg-teal hover:text-white"
-        >
-          ✓ Centang semua hari ini
-        </button>
       </div>
 
       {/* Matrix table */}
@@ -387,7 +338,7 @@ export function UtilChecklistMatrix({
                         <button
                           type="button"
                           disabled={isFuture}
-                          onClick={() => toggleCell(idx, ds)}
+                          onClick={() => onToggle(idx, ds)}
                           title={
                             `${it.nama} — ${DAY_NAMES[dow]}, ${day} ${MONTH_NAMES_FULL[month0]} ${year}: ` +
                             (isFuture
@@ -416,7 +367,7 @@ export function UtilChecklistMatrix({
                               "outline outline-2 outline-teal -outline-offset-2"
                           )}
                         >
-                          {done ? "\u2714" : isFuture ? "" : "\u00b7"}
+                          {done ? "✔" : isFuture ? "" : "·"}
                         </button>
                       </td>
                     );
@@ -434,17 +385,17 @@ export function UtilChecklistMatrix({
       {/* Summary chips — GAS .util-summary */}
       <div className="flex flex-wrap gap-2 border-t border-line bg-[#fafafa] px-5 py-2.5">
         <span className="inline-flex items-center gap-1 rounded-full bg-[#d1fae5] px-3 py-1 text-[11px] font-bold text-[#065f46]">
-          {"\u2714"} {summary.done} sudah dikerjakan
+          {"✔"} {summary.done} sudah dikerjakan
         </span>
         <span className="inline-flex items-center gap-1 rounded-full bg-[#f1f5f9] px-3 py-1 text-[11px] font-bold text-ink3">
-          {"\u00b7"} {Math.max(0, summary.cells - summary.done)} belum
+          {"·"} {Math.max(0, summary.cells - summary.done)} belum
         </span>
         <span className="inline-flex items-center gap-1 rounded-full bg-teal4 px-3 py-1 text-[11px] font-bold text-teal">
           {"\u{1F4CA}"} {summaryPct}% selesai bulan ini
         </span>
       </div>
 
-      {/* Notes — local only (GAS .util-notes) */}
+      {/* Notes — per bulan (GAS .util-notes, key uid_tahun_bulan) */}
       <div className="border-t border-line px-5 py-3">
         <label
           htmlFor="utilNotesTa"
@@ -454,18 +405,12 @@ export function UtilChecklistMatrix({
         </label>
         <textarea
           id="utilNotesTa"
-          value={noteText}
-          onChange={(e) => setNoteText(e.target.value)}
+          value={note}
+          onChange={(e) => onNoteChange(e.target.value)}
           placeholder="Tuliskan catatan pemeliharaan, kendala, atau tindakan yang dilakukan..."
           rows={3}
           className="min-h-[56px] w-full resize-y rounded-lg border-[1.5px] border-line bg-white px-2.5 py-2 text-xs text-ink outline-none transition-colors focus:border-teal"
         />
-      </div>
-
-      {/* Quiet mock hint — no server persist */}
-      <div className="border-t border-line bg-[#fafafa] px-5 py-2 text-[10px] text-ink3">
-        Mode mock — perubahan tidak disimpan ke server.
-        <span className="ml-1 font-semibold text-ink2">{utilMeta.label}</span>
       </div>
     </div>
   );
