@@ -68,21 +68,18 @@ async function checkDatabaseConnection(): Promise<boolean> {
 }
 
 async function getTableCounts(): Promise<Record<string, number>> {
-  const counts: Record<string, number> = {};
+  // Paralel — keep-alive harian tak perlu bayar latency 13x sekuensial
+  const entries = await Promise.all(
+    TABLES.map(async (table) => {
+      const { count, error } = await supabase
+        .from(table)
+        .select("*", { count: "exact", head: true });
 
-  for (const table of TABLES) {
-    const { count, error } = await supabase
-      .from(table)
-      .select("*", { count: "exact", head: true });
+      return [table, error ? -1 : count || 0] as const;
+    })
+  );
 
-    if (error) {
-      counts[table] = -1; // Error
-    } else {
-      counts[table] = count || 0;
-    }
-  }
-
-  return counts;
+  return Object.fromEntries(entries);
 }
 
 async function getUserStats() {

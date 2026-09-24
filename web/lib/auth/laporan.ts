@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import type { ChecklistPayload } from "@/types/database";
 
 export interface LaporanFilter {
   bulan: number;
@@ -36,16 +37,36 @@ export interface LaporanRoom {
   };
 }
 
+export interface LaporanChecklistEntry {
+  date_key: string;
+  condition: string;
+  /** Payload mentah entri ceklist (uraian kerusakan/tindakan, petugas, …). */
+  payload?: ChecklistPayload | null;
+}
+
+/** Kolom inventaris pendukung baris dokumen sumber "inventaris". */
+export interface LaporanItemDetail {
+  merk?: string | null;
+  type?: string | null;
+  year?: number | null;
+  quantity?: number | null;
+  unit?: string | null;
+  notes?: string | null;
+  no_seri?: string | null;
+  kode_barang?: string | null;
+  bahan?: string | null;
+}
+
 export interface LaporanItem {
   item_id: number;
   nama: string;
   kategori: string;
   kondisi_terbaru: string;
   tanggal_terbaru: string;
-  riwayat_checklist: Array<{
-    date_key: string;
-    condition: string;
-  }>;
+  /** Kondisi inventaris saat ini (kolom items.condition). */
+  kondisi_item: string;
+  detail: LaporanItemDetail;
+  riwayat_checklist: LaporanChecklistEntry[];
 }
 
 export async function getLaporanSummary(filter: LaporanFilter): Promise<LaporanSummary> {
@@ -60,49 +81,59 @@ export async function getLaporanSummary(filter: LaporanFilter): Promise<LaporanS
   if (filter.room_id) {
     roomsQuery = roomsQuery.eq("id", filter.room_id);
   }
-  const { data: rooms } = await roomsQuery;
+  const { data: rooms, error: roomsError } = await roomsQuery;
+  if (roomsError) throw roomsError;
   const roomIds = rooms?.map((r) => r.id) || [];
 
-  // Query items
-  let itemsQuery = supabase.from("items").select("id, room_id, name, category");
+  // Query items (condition ikut diambil sebagai fallback bila tak ada ceklist)
+  let itemsQuery = supabase
+    .from("items")
+    .select("id, room_id, name, category, condition");
   if (filter.room_id) {
     itemsQuery = itemsQuery.eq("room_id", filter.room_id);
   }
   if (filter.kategori) {
     itemsQuery = itemsQuery.eq("category", filter.kategori);
   }
-  const { data: items } = await itemsQuery;
+  const { data: items, error: itemsError } = await itemsQuery;
+  if (itemsError) throw itemsError;
 
-  // Query checklist for the period
-  const { data: checklists } = await supabase
+  // Query checklist for the period — filter by room_id + date range
+  // (bukan .in(item_id, [...]) agar URL tak membengkak saat item banyak)
+  const checklistQuery = supabase
     .from("checklist")
     .select("item_id, date_key, payload")
-    .in("item_id", items?.map((i) => i.id) || [])
+    .in("room_id", roomIds.length > 0 ? roomIds : ["__none__"])
     .gte("date_key", startDate)
     .lte("date_key", endDate);
+  const { data: checklists, error: checklistError } = await checklistQuery;
+  if (checklistError) throw checklistError;
 
-  // Calculate summary
+  // Kelompokkan checklist per item + cari kondisi terbaru sekali jalan
+  const latestByItem = new Map<number, { date_key: string; status: string }>();
+  for (const c of checklists ?? []) {
+    const status = c.payload?.status || "baik";
+    const prev = latestByItem.get(c.item_id);
+    if (!prev || c.date_key.localeCompare(prev.date_key) > 0) {
+      latestByItem.set(c.item_id, { date_key: c.date_key, status });
+    }
+  }
+
+  // Calculate summary — kondisi terbaru ceklist periode ini, fallback ke
+  // kondisi inventaris saat ini (jujur saat checklist masih kosong).
   let total_baik = 0;
   let total_rr = 0;
   let total_rb = 0;
   let total_ta = 0;
 
   items?.forEach((item) => {
-    const itemChecklists = checklists?.filter((c) => c.item_id === item.id) || [];
+    const latest = latestByItem.get(item.id);
+    const condition = latest ? latest.status : item.condition || "baik";
 
-    if (itemChecklists.length === 0) {
-      // No checklist, assume baik
-      total_baik++;
-    } else {
-      // Get latest condition
-      const latest = itemChecklists.sort((a, b) => b.date_key.localeCompare(a.date_key))[0];
-      const condition = latest.payload?.status || "baik";
-
-      if (condition === "baik") total_baik++;
-      else if (condition === "rr") total_rr++;
-      else if (condition === "rb") total_rb++;
-      else if (condition === "ta") total_ta++;
-    }
+    if (condition === "baik") total_baik++;
+    else if (condition === "rr") total_rr++;
+    else if (condition === "rb") total_rb++;
+    else if (condition === "ta") total_ta++;
   });
 
   const total_items = items?.length || 0;
@@ -137,44 +168,72 @@ export async function getLaporanPerRoom(filter: LaporanFilter): Promise<LaporanR
     roomsQuery = roomsQuery.eq("id", filter.room_id);
   }
 
-  const { data: rooms } = await roomsQuery;
+  const { data: rooms, error: roomsError } = await roomsQuery;
+  if (roomsError) throw roomsError;
+  const roomList = rooms || [];
+  const roomIds = roomList.map((r) => r.id);
+
+  // Batch: semua item + checklist diambil dalam 2 query (bukan 2N+1),
+  // lalu dikelompokkan di JS. Checklist difilter room_id + rentang
+  // tanggal agar URL tak membengkak oleh .in(item_id, [...]).
+  let itemsQuery = supabase
+    .from("items")
+    .select(
+      "id, room_id, name, category, condition, merk, type, year, quantity, unit, notes, no_seri, kode_barang, bahan",
+    )
+    .in("room_id", roomIds.length > 0 ? roomIds : ["__none__"]);
+
+  if (filter.kategori) {
+    itemsQuery = itemsQuery.eq("category", filter.kategori);
+  }
+
+  const { data: items, error: itemsError } = await itemsQuery;
+  if (itemsError) throw itemsError;
+
+  const { data: checklists, error: checklistError } = await supabase
+    .from("checklist")
+    .select("item_id, date_key, payload")
+    .in("room_id", roomIds.length > 0 ? roomIds : ["__none__"])
+    .gte("date_key", startDate)
+    .lte("date_key", endDate);
+  if (checklistError) throw checklistError;
+
+  const itemsByRoom = new Map<string, typeof items>();
+  for (const item of items ?? []) {
+    const list = itemsByRoom.get(item.room_id);
+    if (list) list.push(item);
+    else itemsByRoom.set(item.room_id, [item]);
+  }
+
+  const checksByItem = new Map<number, typeof checklists>();
+  for (const c of checklists ?? []) {
+    const list = checksByItem.get(c.item_id);
+    if (list) list.push(c);
+    else checksByItem.set(c.item_id, [c]);
+  }
 
   const result: LaporanRoom[] = [];
 
-  for (const room of rooms || []) {
-    // Get items for this room
-    let itemsQuery = supabase
-      .from("items")
-      .select("id, name, category")
-      .eq("room_id", room.id);
-
-    if (filter.kategori) {
-      itemsQuery = itemsQuery.eq("category", filter.kategori);
-    }
-
-    const { data: items } = await itemsQuery;
-
-    // Get checklist for these items
-    const { data: checklists } = await supabase
-      .from("checklist")
-      .select("item_id, date_key, payload")
-      .in("item_id", items?.map((i) => i.id) || [])
-      .gte("date_key", startDate)
-      .lte("date_key", endDate);
+  for (const room of roomList) {
+    const roomItems = itemsByRoom.get(room.id) ?? [];
 
     let baik = 0;
     let rr = 0;
     let rb = 0;
     let ta = 0;
 
-    const laporanItems: LaporanItem[] = (items || []).map((item) => {
-      const itemChecklists = checklists?.filter((c) => c.item_id === item.id) || [];
+    const laporanItems: LaporanItem[] = roomItems.map((item) => {
+      const itemChecklists = checksByItem.get(item.id) ?? [];
 
-      let kondisi_terbaru = "baik";
+      // Fallback jujur: tanpa ceklist periode ini, pakai kondisi inventaris.
+      let kondisi_terbaru = item.condition || "baik";
       let tanggal_terbaru = "";
 
       if (itemChecklists.length > 0) {
-        const latest = itemChecklists.sort((a, b) => b.date_key.localeCompare(a.date_key))[0];
+        let latest = itemChecklists[0];
+        for (const c of itemChecklists) {
+          if (c.date_key.localeCompare(latest.date_key) > 0) latest = c;
+        }
         kondisi_terbaru = latest.payload?.status || "baik";
         tanggal_terbaru = latest.date_key;
       }
@@ -190,9 +249,22 @@ export async function getLaporanPerRoom(filter: LaporanFilter): Promise<LaporanR
         kategori: item.category,
         kondisi_terbaru,
         tanggal_terbaru,
+        kondisi_item: item.condition || "baik",
+        detail: {
+          merk: item.merk,
+          type: item.type,
+          year: item.year,
+          quantity: item.quantity,
+          unit: item.unit,
+          notes: item.notes,
+          no_seri: item.no_seri,
+          kode_barang: item.kode_barang,
+          bahan: item.bahan,
+        },
         riwayat_checklist: itemChecklists.map((c) => ({
           date_key: c.date_key,
           condition: c.payload?.status || "baik",
+          payload: (c.payload ?? null) as ChecklistPayload | null,
         })),
       };
     });
@@ -203,7 +275,7 @@ export async function getLaporanPerRoom(filter: LaporanFilter): Promise<LaporanR
       room_icon: room.icon,
       items: laporanItems,
       summary: {
-        total: items?.length || 0,
+        total: roomItems.length,
         baik,
         rr,
         rb,

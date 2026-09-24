@@ -25,12 +25,12 @@ export async function getInventarisStats(): Promise<InventarisStats> {
   const supabase = await createClient();
 
   const [roomsRes, itemsRes, usulanRes] = await Promise.all([
-    supabase.from("rooms").select("id"),
+    supabase.from("rooms").select("id", { count: "exact", head: true }),
     supabase.from("items").select("category, quantity, condition"),
     supabase.from("usulan").select("payload"),
   ]);
 
-  const totalRooms = roomsRes.data?.length ?? 0;
+  const totalRooms = roomsRes.count ?? 0;
 
   const items = (itemsRes.data ?? []) as Pick<
     Item,
@@ -109,8 +109,15 @@ export async function getRoomSummaries(): Promise<RoomSummary[]> {
     "room_id" | "category" | "quantity" | "condition"
   >[];
 
+  const itemsByRoom = new Map<string, typeof itemList>();
+  for (const it of itemList) {
+    const list = itemsByRoom.get(it.room_id);
+    if (list) list.push(it);
+    else itemsByRoom.set(it.room_id, [it]);
+  }
+
   return (rooms as Room[]).map((room) => {
-    const roomItems = itemList.filter((i) => i.room_id === room.id);
+    const roomItems = itemsByRoom.get(room.id) ?? [];
     let total = 0;
     let perluPerhatian = 0;
     const byKat: Record<ItemCategory, number> = {
