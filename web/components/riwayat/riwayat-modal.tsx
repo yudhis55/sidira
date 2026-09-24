@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { Dialog } from "@/components/gas/dialog";
+import { MOVE_LOG_KEY } from "@/lib/storage-keys";
+import { useLocalStorageState } from "@/lib/use-local-storage";
 import type { ItemCategory, RiwayatPindah } from "@/types/database";
 
 export interface RiwayatModalProps {
@@ -45,20 +47,34 @@ function resolveKat(kat?: ItemCategory): ItemCategory {
 
 /**
  * GAS `#mvLogModal` parity — riwayat perpindahan aset (timeline list, no filters).
+ *
+ * Daftar mock digabung dengan catatan perpindahan yang dibuat lewat modal
+ * Pindah Item (localStorage `sidira_mv_log`), terbaru di atas.
  */
 export function RiwayatModal({ open, onClose, items }: RiwayatModalProps) {
-  // Local override for "Hapus Semua" (UI-only clear). Null = use props.
+  const [logged, setLogged] = useLocalStorageState<RiwayatPindah[]>(
+    MOVE_LOG_KEY,
+    []
+  );
+  // Local override untuk "Hapus Semua" pada baris mock (UI-only). Null = pakai props.
   const [override, setOverride] = React.useState<RiwayatPindah[] | null>(null);
-  const list = override ?? items;
+  const [confirmingClear, setConfirmingClear] = React.useState(false);
+
+  const list = React.useMemo(
+    () => [...logged, ...(override ?? items)],
+    [logged, override, items]
+  );
 
   const handleClose = () => {
     setOverride(null);
+    setConfirmingClear(false);
     onClose();
   };
 
   const handleClearAll = () => {
-    if (!confirm("Hapus semua riwayat perpindahan?")) return;
+    setLogged([]);
     setOverride([]);
+    setConfirmingClear(false);
   };
 
   return (
@@ -81,7 +97,7 @@ export function RiwayatModal({ open, onClose, items }: RiwayatModalProps) {
         <div className="ml-3 flex shrink-0 gap-2">
           <button
             type="button"
-            onClick={handleClearAll}
+            onClick={() => setConfirmingClear(true)}
             className="rounded-[10px] border-[1.5px] border-[#b91c1c] bg-white px-4 py-[9px] text-xs font-bold text-[#b91c1c] transition-colors hover:border-[#991b1b] hover:text-[#991b1b]"
           >
             🗑 Hapus Semua
@@ -96,6 +112,31 @@ export function RiwayatModal({ open, onClose, items }: RiwayatModalProps) {
         </div>
       </div>
 
+      {/* Konfirmasi hapus — pengganti confirm() bawaan browser */}
+      {confirmingClear && (
+        <div className="flex shrink-0 flex-wrap items-center gap-2.5 border-b border-[#fecaca] bg-[#fef2f2] px-5 py-3">
+          <span className="text-[12.5px] font-bold text-[#b91c1c]">
+            Hapus semua riwayat perpindahan?
+          </span>
+          <div className="ml-auto flex gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirmingClear(false)}
+              className="rounded-lg border-[1.5px] border-line bg-white px-3.5 py-1.5 text-xs font-bold text-ink2 transition-colors hover:border-ink3"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={handleClearAll}
+              className="rounded-lg border-none bg-[#b91c1c] px-3.5 py-1.5 text-xs font-bold text-white transition-colors hover:bg-[#991b1b]"
+            >
+              🗑 Ya, hapus
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Body — max-h 60vh, min-h 120px */}
       <div
         className="overflow-y-auto px-5 py-4"
@@ -106,13 +147,13 @@ export function RiwayatModal({ open, onClose, items }: RiwayatModalProps) {
             📭 Belum ada riwayat perpindahan
           </div>
         ) : (
-          list.map((entry) => {
+          list.map((entry, idx) => {
             const kat = resolveKat(entry.kat);
             const dari = entry.dari_name || entry.dari || "?";
             const ke = entry.ke_name || entry.ke || "?";
             return (
               <div
-                key={entry.id}
+                key={`${entry.ts}-${entry.id}-${idx}`}
                 className="flex items-center gap-3 border-b border-line py-2.5 last:border-b-0"
               >
                 <div

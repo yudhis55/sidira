@@ -1,4 +1,4 @@
-import { getMockRooms } from "@/lib/mock-data";
+import { getRoomById } from "@/lib/auth/rooms";
 import { Card } from "@/components/gas/card";
 import { Button } from "@/components/gas/button";
 import Link from "next/link";
@@ -10,7 +10,12 @@ interface EditRoomPageProps {
 
 export default async function EditRoomPage({ params }: EditRoomPageProps) {
   const { id } = await params;
-  const room = getMockRooms().find((r) => r.id === id);
+  let room;
+  try {
+    room = await getRoomById(id);
+  } catch {
+    room = null;
+  }
 
   if (!room) {
     return (

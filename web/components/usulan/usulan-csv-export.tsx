@@ -2,12 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { getMockUsulan } from "@/lib/mock-data";
-import {
-  USULAN_KATEGORI_LABELS,
-  USULAN_PRIORITAS_LABELS,
-  USULAN_STATUS_LABELS,
-} from "@/lib/usulan-types";
+import { exportUsulanCSV } from "@/lib/auth/usulan";
 
 interface UsulanCsvExportProps {
   /** When provided, export only usulan for this room. */
@@ -18,81 +13,9 @@ interface UsulanCsvExportProps {
   variant?: "default" | "outline";
 }
 
-function buildCsv(roomId?: string): string {
-  const list = getMockUsulan(roomId);
-  const header = [
-    "ID Usulan",
-    "Ruangan",
-    "Tanggal",
-    "Nama Barang",
-    "Kategori",
-    "Prioritas",
-    "Qty",
-    "Satuan",
-    "Harga",
-    "Total",
-    "Status",
-    "Keterangan",
-  ];
-  const rows: string[][] = [header];
-
-  for (const u of list) {
-    const roomName = u.rooms?.name || u.room_id;
-    const date = u.created_at?.slice(0, 10) || "";
-    const items = u.payload?.items || [];
-    if (items.length === 0) {
-      rows.push([
-        String(u.id),
-        roomName,
-        date,
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-      ]);
-      continue;
-    }
-    for (const item of items) {
-      rows.push([
-        String(u.id),
-        roomName,
-        date,
-        item.nama,
-        USULAN_KATEGORI_LABELS[item.kategori] || item.kategori,
-        USULAN_PRIORITAS_LABELS[item.prioritas] || item.prioritas,
-        String(item.qty),
-        item.satuan,
-        String(item.harga),
-        String(item.total),
-        USULAN_STATUS_LABELS[item.status] || item.status,
-        item.keterangan || "",
-      ]);
-    }
-  }
-
-  return rows
-    .map((row) =>
-      row
-        .map((cell) => {
-          const s = String(cell ?? "");
-          if (s.includes(",") || s.includes('"') || s.includes("\n")) {
-            return `"${s.replace(/"/g, '""')}"`;
-          }
-          return s;
-        })
-        .join(",")
-    )
-    .join("\n");
-}
-
 /**
- * Client button that builds CSV from mock usulan data
- * and triggers a browser download.
+ * Client button that builds CSV from Supabase usulan data
+ * (via the `exportUsulanCSV` server action) and triggers a browser download.
  */
 export function UsulanCsvExport({
   roomId,
@@ -105,7 +28,7 @@ export function UsulanCsvExport({
   const handleExport = async () => {
     setLoading(true);
     try {
-      const csv = buildCsv(roomId);
+      const csv = await exportUsulanCSV(roomId);
       // Prepend BOM so Excel reads UTF-8 correctly.
       const blob = new Blob(["\uFEFF" + csv], {
         type: "text/csv;charset=utf-8",

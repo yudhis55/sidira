@@ -1,4 +1,4 @@
-import { getMockItems } from "@/lib/mock-data";
+import { getItems } from "@/lib/auth/items";
 import { Card } from "@/components/gas/card";
 import { Button } from "@/components/gas/button";
 import Link from "next/link";
@@ -10,7 +10,13 @@ interface EditItemPageProps {
 
 export default async function EditItemPage({ params }: EditItemPageProps) {
   const { itemId, id } = await params;
-  const item = getMockItems().find((i) => i.id === parseInt(itemId, 10));
+  let item;
+  try {
+    const items = await getItems(id);
+    item = items.find((i) => i.id === parseInt(itemId, 10));
+  } catch {
+    item = undefined;
+  }
 
   if (!item) {
     return (

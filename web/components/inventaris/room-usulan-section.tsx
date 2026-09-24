@@ -1,13 +1,36 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
-import type { Usulan, UsulanItem, UsulanPrioritas } from "@/lib/usulan-types";
+import { useMemo, useState, type CSSProperties } from "react";
+import { Dialog } from "@/components/gas/dialog";
+import { useLocalStorageState } from "@/lib/use-local-storage";
+import { usulanStorageKey } from "@/lib/storage-keys";
+import type {
+  Usulan,
+  UsulanPrioritas,
+  UsulanStatus,
+} from "@/lib/usulan-types";
 import type { ItemCategory } from "@/types/database";
 
 interface RoomUsulanSectionProps {
   roomId: string;
   roomName: string;
   usulanList: Usulan[];
+}
+
+/** Satu baris usulan yang bisa diedit — setara item di `usulanData[roomId]` GAS. */
+interface UsulanRow {
+  /** Kunci stabil untuk React; GAS memakai index array. */
+  id: string;
+  nama: string;
+  kategori: ItemCategory;
+  qty: number;
+  satuan: string;
+  prioritas: UsulanPrioritas;
+  status: UsulanStatus;
+  alasan: string;
+  keterangan: string;
+  /** Tanggal diajukan, format dd/mm/yyyy seperti GAS. */
+  tgl: string;
 }
 
 type FilterKey =
@@ -27,12 +50,26 @@ const FILTER_BUTTONS: { key: FilterKey; label: string }[] = [
   { key: "disetujui", label: "✅ Disetujui" },
 ];
 
-const KAT_ICONS: Record<ItemCategory, string> = {
-  alkes: "🩺",
-  meubelair: "🪑",
-  elektronik: "💻",
-  lainnya: "📦",
-};
+const KAT_OPTIONS: { value: ItemCategory; label: string }[] = [
+  { value: "alkes", label: "🩺 Alkes" },
+  { value: "meubelair", label: "🪑 Meubelair" },
+  { value: "elektronik", label: "💻 Elektronik" },
+  { value: "lainnya", label: "📦 Lainnya" },
+];
+
+const PRIO_OPTIONS: { value: UsulanPrioritas; label: string }[] = [
+  { value: "mendesak", label: "🔴 Mendesak" },
+  { value: "penting", label: "🟡 Penting" },
+  { value: "rencana", label: "🔵 Rencana" },
+];
+
+const STATUS_OPTIONS: { value: UsulanStatus; label: string }[] = [
+  { value: "diajukan", label: "📤 Diajukan" },
+  { value: "disetujui", label: "✅ Disetujui" },
+  { value: "ditolak", label: "❌ Ditolak" },
+  { value: "proses", label: "🔄 Diproses" },
+  { value: "selesai", label: "🎉 Selesai" },
+];
 
 const KAT_LABELS: Record<ItemCategory, string> = {
   alkes: "Alkes",
@@ -41,152 +78,83 @@ const KAT_LABELS: Record<ItemCategory, string> = {
   lainnya: "Lainnya",
 };
 
-function fmtDate(iso: string): string {
+/** GAS `.uprio-*` — warna select prioritas mengikuti nilainya. */
+const PRIO_TINT: Record<UsulanPrioritas, CSSProperties> = {
+  mendesak: { background: "#fee2e2", color: "#b91c1c", borderColor: "#fca5a5" },
+  penting: { background: "#fef3c7", color: "#92400e", borderColor: "#fcd34d" },
+  rencana: { background: "#dbeafe", color: "#1e40af", borderColor: "#93c5fd" },
+};
+
+/** GAS `.ustatus-*`. */
+const STATUS_TINT: Record<UsulanStatus, CSSProperties> = {
+  diajukan: { background: "#fef9c3", color: "#854d0e", borderColor: "#fde047" },
+  disetujui: { background: "#dcfce7", color: "#166534", borderColor: "#86efac" },
+  ditolak: { background: "#fee2e2", color: "#b91c1c", borderColor: "#fca5a5" },
+  proses: { background: "#e0f2fe", color: "#0369a1", borderColor: "#7dd3fc" },
+  selesai: { background: "#d4f0eb", color: "#0e7c6b", borderColor: "#6ee7b7" },
+};
+
+/* ── Gaya sel (GAS .usulan-tbl input/select/textarea) ── */
+
+const CELL: CSSProperties = {
+  padding: "8px 10px",
+  borderBottom: "1px solid #f3f4f6",
+  verticalAlign: "top",
+};
+
+const FIELD: CSSProperties = {
+  width: "100%",
+  fontFamily: "inherit",
+  fontSize: 12,
+  padding: "5px 8px",
+  borderRadius: 6,
+  border: "1.5px solid #e5e7eb",
+  background: "#fff",
+  color: "#111827",
+  outline: "none",
+};
+
+const TINTED_SELECT: CSSProperties = {
+  ...FIELD,
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+/** dd/mm/yyyy — sama dengan GAS addUsulan (toLocaleDateString id-ID). */
+function fmtTgl(iso: string): string {
   if (!iso) return "-";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
 
-/* ── GAS-exact badge components ── */
-
-function PrioBadge({ prio }: { prio: UsulanPrioritas }) {
-  const styles: Record<
-    UsulanPrioritas,
-    { bg: string; color: string; border: string; label: string }
-  > = {
-    mendesak: {
-      bg: "#fee2e2",
-      color: "#b91c1c",
-      border: "#fca5a5",
-      label: "🔴 Mendesak",
-    },
-    penting: {
-      bg: "#fef3c7",
-      color: "#92400e",
-      border: "#fcd34d",
-      label: "🟡 Penting",
-    },
-    rencana: {
-      bg: "#dbeafe",
-      color: "#1e40af",
-      border: "#93c5fd",
-      label: "🔵 Rencana",
-    },
-  };
-  const s = styles[prio] || styles.penting;
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "2px 9px",
-        borderRadius: 10,
-        fontSize: "10.5px",
-        fontWeight: 700,
-        whiteSpace: "nowrap",
-        background: s.bg,
-        color: s.color,
-        border: `1px solid ${s.border}`,
-      }}
-    >
-      {s.label}
-    </span>
-  );
+/** Ratakan semua item usulan ruangan menjadi baris-baris yang bisa diedit. */
+function seedRows(usulanList: Usulan[]): UsulanRow[] {
+  const rows: UsulanRow[] = [];
+  for (const u of usulanList) {
+    (u.payload?.items || []).forEach((it, i) => {
+      rows.push({
+        id: `${u.id}-${i}`,
+        nama: it.nama,
+        kategori: it.kategori,
+        qty: it.qty,
+        satuan: it.satuan,
+        prioritas: it.prioritas,
+        status: it.status,
+        alasan: it.alasan ?? it.keterangan ?? "",
+        keterangan: it.alasan ? (it.keterangan ?? "") : "",
+        tgl: fmtTgl(u.created_at),
+      });
+    });
+  }
+  return rows;
 }
 
-function UStatusBadge({ status }: { status: string }) {
-  const styles: Record<
-    string,
-    { bg: string; color: string; border: string; label: string }
-  > = {
-    diajukan: {
-      bg: "#fef9c3",
-      color: "#854d0e",
-      border: "#fde047",
-      label: "📤 Diajukan",
-    },
-    disetujui: {
-      bg: "#dcfce7",
-      color: "#166534",
-      border: "#86efac",
-      label: "✅ Disetujui",
-    },
-    ditolak: {
-      bg: "#fee2e2",
-      color: "#b91c1c",
-      border: "#fca5a5",
-      label: "❌ Ditolak",
-    },
-    proses: {
-      bg: "#e0f2fe",
-      color: "#0369a1",
-      border: "#7dd3fc",
-      label: "🔄 Diproses",
-    },
-    selesai: {
-      bg: "#d4f0eb",
-      color: "#0e7c6b",
-      border: "#6ee7b7",
-      label: "🎉 Selesai",
-    },
-  };
-  const s = styles[status] || styles.diajukan;
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "2px 9px",
-        borderRadius: 10,
-        fontSize: "10.5px",
-        fontWeight: 700,
-        background: s.bg,
-        color: s.color,
-        border: `1px solid ${s.border}`,
-      }}
-    >
-      {s.label}
-    </span>
-  );
-}
-
-function UKatBadge({ kat }: { kat: ItemCategory }) {
-  const styles: Record<
-    ItemCategory,
-    { bg: string; color: string }
-  > = {
-    alkes: { bg: "#d4f0eb", color: "#0e7c6b" },
-    meubelair: { bg: "#fef3c7", color: "#92400e" },
-    elektronik: { bg: "#dbeafe", color: "#1e40af" },
-    lainnya: { bg: "#f1f5f9", color: "#475569" },
-  };
-  const s = styles[kat] || styles.lainnya;
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "2px 8px",
-        borderRadius: 8,
-        fontSize: "10.5px",
-        fontWeight: 600,
-        background: s.bg,
-        color: s.color,
-      }}
-    >
-      {KAT_ICONS[kat]} {KAT_LABELS[kat]}
-    </span>
-  );
-}
-
-/* ── CSV export helper ── */
-
-function buildCsv(
-  items: { item: UsulanItem; usulanDate: string }[],
-  roomName: string
-) {
+function exportCsv(rows: UsulanRow[], roomName: string) {
   const headers = [
     "No",
     "Nama Barang",
@@ -195,26 +163,28 @@ function buildCsv(
     "Satuan",
     "Prioritas",
     "Status",
-    "Keterangan",
+    "Alasan / Justifikasi",
+    "Keterangan Tambahan",
     "Tgl Diajukan",
   ];
-  const rows = items.map(({ item, usulanDate }, i) =>
+  const body = rows.map((r, i) =>
     [
       i + 1,
-      item.nama,
-      KAT_LABELS[item.kategori] || item.kategori,
-      item.qty,
-      item.satuan,
-      item.prioritas,
-      item.status,
-      item.keterangan || "",
-      fmtDate(usulanDate),
+      r.nama,
+      KAT_LABELS[r.kategori] || r.kategori,
+      r.qty,
+      r.satuan,
+      r.prioritas,
+      r.status,
+      r.alasan,
+      r.keterangan,
+      r.tgl,
     ]
       .map((v) => `"${String(v).replace(/"/g, '""')}"`)
       .join(",")
   );
-  const csv = [headers.join(","), ...rows].join("\n");
-  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+  const csv = [headers.join(","), ...body].join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -223,46 +193,127 @@ function buildCsv(
   URL.revokeObjectURL(url);
 }
 
-/* ── Main component ── */
+/* ── Kartu ringkasan (GAS .usum-card, updateUsulanStats ~22164) ── */
 
+function SummaryCard({
+  icon,
+  value,
+  label,
+  bg,
+  color,
+}: {
+  icon: string;
+  value: number;
+  label: string;
+  bg: string;
+  color: string;
+}) {
+  return (
+    <div
+      style={{
+        flex: 1,
+        minWidth: 120,
+        padding: "10px 14px",
+        borderRadius: 10,
+        border: "1px solid #ede9fe",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        background: bg,
+      }}
+    >
+      <div style={{ fontSize: 20 }} aria-hidden>
+        {icon}
+      </div>
+      <div>
+        <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1, color }}>
+          {value}
+        </div>
+        <div
+          style={{
+            fontSize: "10.5px",
+            color: "#6b7280",
+            fontWeight: 600,
+            marginTop: 2,
+          }}
+        >
+          {label}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Komponen utama ── */
+
+/**
+ * Usulan Sarana Prasarana & Alkes per ruangan — port GAS renderUsulanRow /
+ * addUsulan / deleteUsulan (~21962–22140). Seluruh sel dapat diedit dan
+ * disimpan ke localStorage (`sidira_usulan_<roomId>`) selama fase mock.
+ */
 export function RoomUsulanSection({
   roomId,
   roomName,
   usulanList,
 }: RoomUsulanSectionProps) {
+  const seeded = useMemo(() => seedRows(usulanList), [usulanList]);
+  const [rows, setRows] = useLocalStorageState<UsulanRow[]>(
+    usulanStorageKey(roomId),
+    seeded
+  );
+
   const [collapsed, setCollapsed] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
+  const [pendingDelete, setPendingDelete] = useState<UsulanRow | null>(null);
 
-  // Flatten all usulan items for this room
-  const allItems = useMemo(() => {
-    const flat: { item: UsulanItem; usulanId: number; usulanDate: string }[] =
-      [];
-    for (const u of usulanList) {
-      for (const it of u.payload?.items || []) {
-        flat.push({ item: it, usulanId: u.id, usulanDate: u.created_at });
-      }
+  const total = rows.length;
+  const mendesak = rows.filter((r) => r.prioritas === "mendesak").length;
+  const penting = rows.filter((r) => r.prioritas === "penting").length;
+  const rencana = rows.filter((r) => r.prioritas === "rencana").length;
+  const disetujui = rows.filter((r) => r.status === "disetujui").length;
+
+  const filtered = useMemo(() => {
+    if (activeFilter === "all") return rows;
+    if (
+      activeFilter === "mendesak" ||
+      activeFilter === "penting" ||
+      activeFilter === "rencana"
+    ) {
+      return rows.filter((r) => r.prioritas === activeFilter);
     }
-    return flat;
-  }, [usulanList]);
+    return rows.filter((r) => r.status === activeFilter);
+  }, [rows, activeFilter]);
 
-  const totalItems = allItems.length;
-  const mendesakCount = allItems.filter(
-    ({ item }) => item.prioritas === "mendesak"
-  ).length;
+  function updateRow(id: string, patch: Partial<UsulanRow>) {
+    setRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, ...patch } : r))
+    );
+  }
 
-  // Filter logic: priority filters match on item.prioritas, status filters match on item.status
-  const filteredItems = useMemo(() => {
-    if (activeFilter === "all") return allItems;
-    const prioFilters = ["mendesak", "penting", "rencana"];
-    if (prioFilters.includes(activeFilter)) {
-      return allItems.filter(({ item }) => item.prioritas === activeFilter);
-    }
-    return allItems.filter(({ item }) => item.status === activeFilter);
-  }, [allItems, activeFilter]);
+  /** GAS addUsulan (~22064) — baris kosong siap ketik di akhir tabel. */
+  function addRow() {
+    const now = new Date();
+    const row: UsulanRow = {
+      id: `new-${now.getTime()}-${Math.round(performance.now())}`,
+      nama: "",
+      kategori: "alkes",
+      qty: 1,
+      satuan: "Unit",
+      prioritas: "penting",
+      status: "diajukan",
+      alasan: "",
+      keterangan: "",
+      tgl: `${pad2(now.getDate())}/${pad2(now.getMonth() + 1)}/${now.getFullYear()}`,
+    };
+    setActiveFilter("all");
+    setRows((prev) => [...prev, row]);
+  }
 
-  const handleExport = useCallback(() => {
-    buildCsv(filteredItems, roomName);
-  }, [filteredItems, roomName]);
+  function confirmDelete() {
+    if (!pendingDelete) return;
+    setRows((prev) => prev.filter((r) => r.id !== pendingDelete.id));
+    setPendingDelete(null);
+  }
 
   return (
     <div
@@ -286,16 +337,7 @@ export function RoomUsulanSection({
           cursor: "pointer",
           userSelect: "none",
         }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background =
-            "linear-gradient(135deg, #4c1d9518, #7c3aed22)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background =
-            "linear-gradient(135deg, #4c1d9510, #7c3aed15)";
-        }}
       >
-        {/* Purple dot */}
         <span
           style={{
             width: 10,
@@ -306,7 +348,6 @@ export function RoomUsulanSection({
           }}
         />
 
-        {/* Label */}
         <span
           style={{
             fontSize: 12,
@@ -319,7 +360,6 @@ export function RoomUsulanSection({
           📋 Usulan Sarana Prasarana &amp; Alkes
         </span>
 
-        {/* Total badge */}
         <span
           style={{
             fontSize: 11,
@@ -331,30 +371,24 @@ export function RoomUsulanSection({
             marginLeft: 6,
           }}
         >
-          {totalItems} usulan
+          {total} usulan
         </span>
 
-        {/* Mendesak badge (ml-auto) */}
-        {mendesakCount > 0 && (
-          <span
-            style={{
-              marginLeft: "auto",
-              fontSize: 11,
-              fontWeight: 700,
-              padding: "2px 10px",
-              borderRadius: 20,
-              background: "#7c3aed",
-              color: "#fff",
-            }}
-          >
-            {mendesakCount} mendesak
-          </span>
-        )}
+        {/* GAS mewarnai badge ini merah saat ada usulan mendesak (~22178). */}
+        <span
+          style={{
+            marginLeft: "auto",
+            fontSize: 11,
+            fontWeight: 700,
+            padding: "2px 10px",
+            borderRadius: 20,
+            background: mendesak > 0 ? "#b91c1c" : "#7c3aed",
+            color: "#fff",
+          }}
+        >
+          {mendesak} mendesak
+        </span>
 
-        {/* If no mendesak, still need spacer for chevron */}
-        {mendesakCount === 0 && <span style={{ marginLeft: "auto" }} />}
-
-        {/* Chevron */}
         <span
           style={{
             fontSize: 11,
@@ -372,22 +406,57 @@ export function RoomUsulanSection({
       {/* ── Body (GAS .usulan-body) ── */}
       {!collapsed && (
         <div style={{ background: "#fff", padding: "16px 18px" }}>
-          {totalItems === 0 ? (
-            /* Empty state (GAS .usulan-empty) */
-            <div
-              style={{
-                textAlign: "center",
-                padding: "32px 0",
-                color: "#9ca3af",
-              }}
-            >
-              <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
-              <div>Belum ada usulan untuk ruangan ini.</div>
-            </div>
-          ) : (
+          {total > 0 && (
             <>
+              {/* Ringkasan 5 kartu */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  flexWrap: "wrap",
+                  marginBottom: 14,
+                }}
+              >
+                <SummaryCard
+                  icon="📋"
+                  value={total}
+                  label="Total Usulan"
+                  bg="#f5f3ff"
+                  color="#7c3aed"
+                />
+                <SummaryCard
+                  icon="🔴"
+                  value={mendesak}
+                  label="Mendesak"
+                  bg="#fef2f2"
+                  color="#b91c1c"
+                />
+                <SummaryCard
+                  icon="🟡"
+                  value={penting}
+                  label="Penting"
+                  bg="#fffbeb"
+                  color="#92400e"
+                />
+                <SummaryCard
+                  icon="🔵"
+                  value={rencana}
+                  label="Rencana"
+                  bg="#eff6ff"
+                  color="#1e40af"
+                />
+                <SummaryCard
+                  icon="✅"
+                  value={disetujui}
+                  label="Disetujui"
+                  bg="#dcfce7"
+                  color="#166534"
+                />
+              </div>
+
               {/* ── Toolbar (GAS .usulan-toolbar) ── */}
               <div
+                className="no-print"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -421,10 +490,9 @@ export function RoomUsulanSection({
                   );
                 })}
 
-                {/* Export CSV button (GAS .usulan-export-btn) */}
                 <button
                   type="button"
-                  onClick={handleExport}
+                  onClick={() => exportCsv(filtered, roomName)}
                   style={{
                     marginLeft: "auto",
                     padding: "5px 13px",
@@ -436,22 +504,13 @@ export function RoomUsulanSection({
                     fontWeight: 700,
                     cursor: "pointer",
                     fontFamily: "inherit",
-                    transition: "0.15s",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "#7c3aed";
-                    e.currentTarget.style.color = "#fff";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "#ede9fe";
-                    e.currentTarget.style.color = "#6d28d9";
                   }}
                 >
                   ⬇ Export CSV
                 </button>
               </div>
 
-              {/* ── Table (GAS .usulan-tbl) ── */}
+              {/* ── Tabel (GAS .usulan-tbl) ── */}
               <div
                 style={{
                   overflowX: "auto",
@@ -473,22 +532,23 @@ export function RoomUsulanSection({
                         [
                           ["No", 34, "center"],
                           ["Nama Barang / Sarana", 180, "left"],
-                          ["Kategori", 100, "left"],
+                          ["Kategori", 110, "left"],
                           ["Jumlah Diusulkan", 90, "center"],
-                          ["Satuan", 110, "left"],
-                          ["Prioritas", 110, "left"],
-                          ["Status", 110, "left"],
+                          ["Satuan", 90, "left"],
+                          ["Prioritas", 120, "left"],
+                          ["Status", 120, "left"],
                           ["Alasan / Justifikasi", 200, "left"],
                           ["Keterangan Tambahan", 150, "left"],
                           ["Tgl Diajukan", 110, "left"],
                           ["", 36, "center"],
-                        ] as [string, number, string][]
+                        ] as [string, number, CSSProperties["textAlign"]][]
                       ).map(([label, minW, align]) => (
                         <th
                           key={label || "action"}
+                          className={label ? undefined : "no-print"}
                           style={{
                             padding: "9px 10px",
-                            textAlign: align as React.CSSProperties["textAlign"],
+                            textAlign: align,
                             fontSize: 11,
                             fontWeight: 700,
                             color: "#6d28d9",
@@ -505,30 +565,11 @@ export function RoomUsulanSection({
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredItems.map(({ item, usulanDate }, idx) => (
-                      <tr
-                        key={`${item.nama}-${idx}`}
-                        style={{ transition: "background 0.1s" }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget
-                            .querySelectorAll("td")
-                            .forEach((td) => {
-                              (td as HTMLElement).style.background = "#faf5ff";
-                            });
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget
-                            .querySelectorAll("td")
-                            .forEach((td) => {
-                              (td as HTMLElement).style.background = "";
-                            });
-                        }}
-                      >
-                        {/* No */}
+                    {filtered.map((row, idx) => (
+                      <tr key={row.id}>
                         <td
                           style={{
-                            padding: "8px 10px",
-                            borderBottom: "1px solid #f3f4f6",
+                            ...CELL,
                             textAlign: "center",
                             fontWeight: 700,
                             color: "#7c3aed",
@@ -538,117 +579,171 @@ export function RoomUsulanSection({
                           {idx + 1}
                         </td>
 
-                        {/* Nama Barang */}
-                        <td
-                          style={{
-                            padding: "8px 10px",
-                            borderBottom: "1px solid #f3f4f6",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {item.nama}
+                        {/* Nama */}
+                        <td style={CELL}>
+                          <input
+                            type="text"
+                            value={row.nama}
+                            placeholder="Nama barang / sarana..."
+                            onChange={(e) =>
+                              updateRow(row.id, { nama: e.target.value })
+                            }
+                            style={{
+                              ...FIELD,
+                              fontWeight: 600,
+                              minWidth: 160,
+                            }}
+                          />
                         </td>
 
                         {/* Kategori */}
-                        <td
-                          style={{
-                            padding: "8px 10px",
-                            borderBottom: "1px solid #f3f4f6",
-                          }}
-                        >
-                          <UKatBadge kat={item.kategori} />
+                        <td style={CELL}>
+                          <select
+                            value={row.kategori}
+                            aria-label="Kategori usulan"
+                            onChange={(e) =>
+                              updateRow(row.id, {
+                                kategori: e.target.value as ItemCategory,
+                              })
+                            }
+                            style={{ ...FIELD, cursor: "pointer" }}
+                          >
+                            {KAT_OPTIONS.map((o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </select>
                         </td>
 
                         {/* Jumlah */}
-                        <td
-                          style={{
-                            padding: "8px 10px",
-                            borderBottom: "1px solid #f3f4f6",
-                            textAlign: "center",
-                            fontWeight: 700,
-                          }}
-                        >
-                          {item.qty}
+                        <td style={CELL}>
+                          <input
+                            type="number"
+                            min={1}
+                            value={row.qty}
+                            aria-label="Jumlah diusulkan"
+                            onChange={(e) =>
+                              updateRow(row.id, {
+                                qty: Number(e.target.value) || 0,
+                              })
+                            }
+                            style={{
+                              ...FIELD,
+                              width: 70,
+                              textAlign: "center",
+                              fontWeight: 700,
+                            }}
+                          />
                         </td>
 
                         {/* Satuan */}
-                        <td
-                          style={{
-                            padding: "8px 10px",
-                            borderBottom: "1px solid #f3f4f6",
-                          }}
-                        >
-                          {item.satuan}
+                        <td style={CELL}>
+                          <input
+                            type="text"
+                            value={row.satuan}
+                            aria-label="Satuan"
+                            onChange={(e) =>
+                              updateRow(row.id, { satuan: e.target.value })
+                            }
+                            style={{ ...FIELD, width: 80 }}
+                          />
                         </td>
 
                         {/* Prioritas */}
-                        <td
-                          style={{
-                            padding: "8px 10px",
-                            borderBottom: "1px solid #f3f4f6",
-                          }}
-                        >
-                          <PrioBadge prio={item.prioritas} />
+                        <td style={CELL}>
+                          <select
+                            value={row.prioritas}
+                            aria-label="Prioritas usulan"
+                            onChange={(e) =>
+                              updateRow(row.id, {
+                                prioritas: e.target.value as UsulanPrioritas,
+                              })
+                            }
+                            style={{
+                              ...TINTED_SELECT,
+                              ...PRIO_TINT[row.prioritas],
+                            }}
+                          >
+                            {PRIO_OPTIONS.map((o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </select>
                         </td>
 
                         {/* Status */}
-                        <td
-                          style={{
-                            padding: "8px 10px",
-                            borderBottom: "1px solid #f3f4f6",
-                          }}
-                        >
-                          <UStatusBadge status={item.status} />
+                        <td style={CELL}>
+                          <select
+                            value={row.status}
+                            aria-label="Status usulan"
+                            onChange={(e) =>
+                              updateRow(row.id, {
+                                status: e.target.value as UsulanStatus,
+                              })
+                            }
+                            style={{
+                              ...TINTED_SELECT,
+                              ...STATUS_TINT[row.status],
+                            }}
+                          >
+                            {STATUS_OPTIONS.map((o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </select>
                         </td>
 
                         {/* Alasan / Justifikasi */}
-                        <td
-                          style={{
-                            padding: "8px 10px",
-                            borderBottom: "1px solid #f3f4f6",
-                            fontSize: 12,
-                            color: "#6b7280",
-                          }}
-                        >
-                          {item.keterangan || "—"}
+                        <td style={CELL}>
+                          <textarea
+                            rows={2}
+                            value={row.alasan}
+                            placeholder="Alasan pengadaan / justifikasi kebutuhan..."
+                            onChange={(e) =>
+                              updateRow(row.id, { alasan: e.target.value })
+                            }
+                            style={{
+                              ...FIELD,
+                              minWidth: 180,
+                              resize: "vertical",
+                            }}
+                          />
                         </td>
 
                         {/* Keterangan Tambahan */}
-                        <td
-                          style={{
-                            padding: "8px 10px",
-                            borderBottom: "1px solid #f3f4f6",
-                            fontSize: 12,
-                            color: "#6b7280",
-                          }}
-                        >
-                          —
+                        <td style={CELL}>
+                          <input
+                            type="text"
+                            value={row.keterangan}
+                            placeholder="Keterangan tambahan..."
+                            onChange={(e) =>
+                              updateRow(row.id, { keterangan: e.target.value })
+                            }
+                            style={{ ...FIELD, minWidth: 130 }}
+                          />
                         </td>
 
                         {/* Tgl Diajukan */}
                         <td
                           style={{
-                            padding: "8px 10px",
-                            borderBottom: "1px solid #f3f4f6",
+                            ...CELL,
                             fontSize: 12,
                             color: "#6b7280",
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {fmtDate(usulanDate)}
+                          {row.tgl}
                         </td>
 
-                        {/* Action (delete) */}
-                        <td
-                          style={{
-                            padding: "8px 10px",
-                            borderBottom: "1px solid #f3f4f6",
-                            textAlign: "center",
-                          }}
-                        >
+                        {/* Hapus */}
+                        <td className="no-print" style={{ ...CELL, textAlign: "center" }}>
                           <button
                             type="button"
-                            title="Hapus usulan"
+                            title="Hapus usulan ini"
+                            onClick={() => setPendingDelete(row)}
                             style={{
                               width: 24,
                               height: 24,
@@ -657,6 +752,7 @@ export function RoomUsulanSection({
                               background: "#fee2e2",
                               color: "#b91c1c",
                               fontSize: 12,
+                              fontWeight: 700,
                               cursor: "pointer",
                               display: "inline-flex",
                               alignItems: "center",
@@ -670,7 +766,7 @@ export function RoomUsulanSection({
                       </tr>
                     ))}
 
-                    {filteredItems.length === 0 && (
+                    {filtered.length === 0 && (
                       <tr>
                         <td
                           colSpan={11}
@@ -690,8 +786,120 @@ export function RoomUsulanSection({
               </div>
             </>
           )}
+
+          {/* Empty state (GAS .usulan-empty) */}
+          {total === 0 && (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "32px 0",
+                color: "#9ca3af",
+              }}
+            >
+              <div style={{ fontSize: 32, marginBottom: 8 }} aria-hidden>
+                📋
+              </div>
+              <div>Belum ada usulan untuk ruangan ini.</div>
+              <div style={{ fontSize: 12, color: "#c4b5fd", marginTop: 4 }}>
+                Klik tombol di bawah untuk menambahkan usulan.
+              </div>
+            </div>
+          )}
+
+          {/* GAS .usulan-add-btn */}
+          <button
+            type="button"
+            onClick={addRow}
+            className="no-print"
+            style={{
+              width: "100%",
+              padding: "10px 18px",
+              borderRadius: 10,
+              border: "1.5px dashed #c4b5fd",
+              background: "#faf5ff",
+              color: "#6d28d9",
+              fontSize: 12,
+              fontWeight: 700,
+              fontFamily: "inherit",
+              cursor: "pointer",
+            }}
+          >
+            ＋ Tambah Usulan Baru
+          </button>
         </div>
       )}
+
+      {/* Konfirmasi hapus — pengganti confirm() bawaan di GAS deleteUsulan */}
+      <Dialog
+        open={!!pendingDelete}
+        onClose={() => setPendingDelete(null)}
+        size="sm"
+        zIndex={3600}
+      >
+        <div
+          style={{
+            padding: "18px 22px",
+            background: "linear-gradient(135deg, #4c1d95, #7c3aed)",
+            color: "#fff",
+          }}
+        >
+          <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}>
+            🗑 Hapus Usulan
+          </div>
+          <div style={{ fontSize: 11, opacity: 0.75, marginTop: 3 }}>
+            {roomName}
+          </div>
+        </div>
+        <div style={{ padding: "18px 22px", fontSize: 13, color: "#374151" }}>
+          Hapus <strong>{pendingDelete?.nama || "usulan ini"}</strong> dari
+          daftar usulan? Tindakan ini tidak dapat dibatalkan.
+        </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 8,
+            padding: "14px 22px",
+            borderTop: "1px solid #ede9fe",
+            background: "#faf5ff",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setPendingDelete(null)}
+            style={{
+              padding: "9px 16px",
+              borderRadius: 10,
+              border: "1.5px solid #e5e7eb",
+              background: "#fff",
+              color: "#374151",
+              fontSize: 12,
+              fontWeight: 700,
+              fontFamily: "inherit",
+              cursor: "pointer",
+            }}
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={confirmDelete}
+            style={{
+              padding: "9px 22px",
+              borderRadius: 10,
+              border: "none",
+              background: "#b91c1c",
+              color: "#fff",
+              fontSize: 13,
+              fontWeight: 800,
+              fontFamily: "inherit",
+              cursor: "pointer",
+            }}
+          >
+            ✕ Hapus
+          </button>
+        </div>
+      </Dialog>
     </div>
   );
 }

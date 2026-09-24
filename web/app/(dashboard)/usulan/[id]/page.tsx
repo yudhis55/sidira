@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/gas/button";
 import { Card } from "@/components/gas/card";
-import { getMockUsulan } from "@/lib/mock-data";
+import { getUsulanById } from "@/lib/auth/usulan";
 import { USULAN_KATEGORI_LABELS } from "@/lib/usulan-types";
 import type { UsulanItem } from "@/lib/usulan-types";
 import { ItemStatusActions } from "@/components/usulan/item-status-actions";
@@ -51,8 +51,12 @@ export default async function UsulanDetailPage({
   const prioritasFilter = sp.prioritas || "all";
   const statusFilter = sp.status || "all";
 
-  const usulan = getMockUsulan().find((u) => u.id === id);
-  if (!usulan) notFound();
+  let usulan: Awaited<ReturnType<typeof getUsulanById>>;
+  try {
+    usulan = await getUsulanById(id);
+  } catch {
+    notFound();
+  }
 
   const roomName = usulan.rooms?.name || usulan.room_id;
   const roomIcon = usulan.rooms?.icon || "📦";

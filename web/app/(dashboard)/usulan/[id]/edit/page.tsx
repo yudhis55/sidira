@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/gas/button";
 import { Card } from "@/components/gas/card";
-import { getMockUsulan, getMockRooms } from "@/lib/mock-data";
+import { getMockRooms } from "@/lib/mock-data";
+import { getUsulanById } from "@/lib/auth/usulan";
 import { UsulanForm } from "@/components/usulan/usulan-form";
 
 function CardContent({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -18,8 +19,12 @@ export default async function EditUsulanPage({ params }: PageProps) {
   const id = parseInt(idStr, 10);
   if (Number.isNaN(id)) notFound();
 
-  const usulan = getMockUsulan().find((u) => u.id === id);
-  if (!usulan) notFound();
+  let usulan: Awaited<ReturnType<typeof getUsulanById>>;
+  try {
+    usulan = await getUsulanById(id);
+  } catch {
+    notFound();
+  }
 
   const rooms = getMockRooms();
 

@@ -3,7 +3,8 @@ import { Card } from "@/components/gas/card";
 import { Button } from "@/components/gas/button";
 import { PageHeader } from "@/components/shared/page-elements";
 import { ChecklistCalendar } from "@/components/checklist/checklist-calendar";
-import { getMockRooms, getMockItemsByRoom } from "@/lib/mock-data";
+import { getRooms } from "@/lib/auth/rooms";
+import { getAllItems } from "@/lib/auth/items";
 import { cn } from "@/lib/utils";
 
 interface ChecklistPageProps {
@@ -12,7 +13,7 @@ interface ChecklistPageProps {
 
 export default async function ChecklistPage({ searchParams }: ChecklistPageProps) {
   const params = await searchParams;
-  const rooms = getMockRooms();
+  const rooms = await getRooms();
 
   if (rooms.length === 0) {
     return (
@@ -46,6 +47,7 @@ export default async function ChecklistPage({ searchParams }: ChecklistPageProps
   const selectedRoom = rooms.find((r) => r.id === selectedRoomId) || rooms[0];
 
   const now = new Date();
+  const hasExplicitYear = !!params.year;
   const year = params.year
     ? parseInt(params.year, 10) || now.getFullYear()
     : now.getFullYear();
@@ -54,7 +56,8 @@ export default async function ChecklistPage({ searchParams }: ChecklistPageProps
     : now.getMonth() + 1;
   const month = Math.min(Math.max(monthParam, 1), 12) - 1;
 
-  const items = getMockItemsByRoom(selectedRoom.id);
+  const allItems = await getAllItems();
+  const items = allItems.filter((i) => i.room_id === selectedRoom.id);
 
   const roomHref = (roomId: string) =>
     `/checklist?room=${encodeURIComponent(roomId)}&year=${year}&month=${month + 1}`;
@@ -113,6 +116,7 @@ export default async function ChecklistPage({ searchParams }: ChecklistPageProps
           roomName={selectedRoom.name}
           roomIcon={selectedRoom.icon}
           year={year}
+          followGlobalYear={!hasExplicitYear}
           month={month}
           items={items.map((i) => ({
             id: i.id,

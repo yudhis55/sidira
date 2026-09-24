@@ -8,7 +8,12 @@ import type { ItemCategory } from "@/types/database";
 //  components import.
 // ══════════════════════════════════════════════════════════════════════
 export type UsulanPrioritas = "mendesak" | "penting" | "rencana";
-export type UsulanStatus = "diajukan" | "disetujui" | "ditolak";
+export type UsulanStatus =
+  | "diajukan"
+  | "disetujui"
+  | "ditolak"
+  | "proses"
+  | "selesai";
 
 export interface UsulanItem {
   nama: string;
@@ -19,6 +24,9 @@ export interface UsulanItem {
   harga: number;
   total: number;
   status: UsulanStatus;
+  /** Alasan pengadaan / justifikasi kebutuhan (GAS `alasan`). */
+  alasan?: string;
+  /** Keterangan tambahan (GAS `ket`). */
   keterangan?: string;
 }
 
@@ -59,4 +67,6 @@ export const USULAN_STATUS_LABELS: Record<UsulanStatus, string> = {
   diajukan: "Diajukan",
   disetujui: "Disetujui",
   ditolak: "Ditolak",
+  proses: "Diproses",
+  selesai: "Selesai",
 };

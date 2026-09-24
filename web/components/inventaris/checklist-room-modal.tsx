@@ -4,6 +4,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { ChecklistCalendar } from "@/components/checklist/checklist-calendar";
 import { Button } from "@/components/gas/button";
+import { useIsClient } from "@/lib/use-is-client";
 import type { Item, Room } from "@/types/database";
 
 export interface ChecklistRoomModalProps {
@@ -12,18 +13,6 @@ export interface ChecklistRoomModalProps {
   room: Room;
   /** Room items — scoped matrix (GAS openChecklist room.items). */
   items: Item[];
-}
-
-function subscribeNoop() {
-  return () => {};
-}
-
-function useIsClient() {
-  return React.useSyncExternalStore(
-    subscribeNoop,
-    () => true,
-    () => false
-  );
 }
 
 /**
@@ -100,10 +89,15 @@ export function ChecklistRoomModal({
           </div>
         </div>
 
-        {/* GAS .cl-footer */}
+        {/* GAS .cl-footer — Export CSV + Tutup + Simpan */}
         <div className="flex shrink-0 items-center justify-end gap-2.5 border-t border-line bg-white px-6 py-3">
           <Button type="button" variant="modal-cancel" onClick={onClose}>
             Tutup
+          </Button>
+          {/* Entri sudah tersimpan per klik (localStorage, meniru GAS clData);
+              Simpan hanya menutup modal — visual 1:1 GAS .cl-footer. */}
+          <Button type="button" variant="modal-ok" onClick={onClose}>
+            💾 Simpan
           </Button>
         </div>
       </div>

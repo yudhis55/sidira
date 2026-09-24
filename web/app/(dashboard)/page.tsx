@@ -1,24 +1,74 @@
 import { Suspense } from "react";
-import {
-  getMockItems,
-  getMockUsulan,
-  getMockRiwayat,
-  getMockLaporanSummary,
-  getMockLaporanRooms,
-} from "@/lib/mock-data";
+import { getMockItems } from "@/lib/mock-data";
+import { getUsulanList } from "@/lib/auth/usulan";
+import { getRiwayatList } from "@/lib/auth/riwayat";
+import { getLaporanSummary, getLaporanPerRoom } from "@/lib/auth/laporan";
+import type { ItemCategory, RiwayatPindah } from "@/types/database";
 import { PageActionsHost } from "@/components/gas/page-actions-host";
+
+type RiwayatRow = Awaited<ReturnType<typeof getRiwayatList>>[number];
+
+function isItemCategory(v: string | undefined): v is ItemCategory {
+  return (
+    v === "alkes" || v === "meubelair" || v === "elektronik" || v === "lainnya"
+  );
+}
+
+function toRiwayatPindah(row: RiwayatRow): RiwayatPindah {
+  return {
+    id: row.id,
+    ts: row.ts,
+    nama: row.nama,
+    kat: isItemCategory(row.kat) ? row.kat : "lainnya",
+    dari: row.dari,
+    ke: row.ke,
+    dari_name: row.dari_name,
+    ke_name: row.ke_name,
+    user_id: row.user_id,
+    created_at: row.created_at,
+  };
+}
 
 /**
  * Dashboard shell — GAS v3 parity:
  * legend-bar + 6 gstats + PageActionsHost (Laporan/Riwayat modals).
  * Density/colors match gas-legacy .legend-bar / .gstats / .page-actions.
  */
-export default function DashboardPage() {
+export default async function DashboardPage() {
   const items = getMockItems();
-  const usulan = getMockUsulan();
-  const riwayatItems = getMockRiwayat();
-  const laporanSummary = getMockLaporanSummary();
-  const laporanRooms = getMockLaporanRooms();
+  let usulan: Awaited<ReturnType<typeof getUsulanList>>;
+  try {
+    usulan = await getUsulanList();
+  } catch {
+    usulan = [];
+  }
+  let riwayatItems: RiwayatPindah[];
+  let riwayatError = false;
+  try {
+    riwayatItems = (await getRiwayatList()).map(toRiwayatPindah);
+  } catch {
+    riwayatItems = [];
+    riwayatError = true;
+  }
+  // Nilai awal untuk modal laporan (diambil ulang live saat dibuka).
+  // Gagal → nol; dashboard tetap tampil, modal menampilkan toast.
+  const now = new Date();
+  const laporanFilter = { bulan: now.getMonth() + 1, tahun: now.getFullYear() };
+  const [laporanSummary, laporanRooms] = await Promise.all([
+    getLaporanSummary(laporanFilter).catch(() => ({
+      total_rooms: 0,
+      total_items: 0,
+      total_baik: 0,
+      total_rr: 0,
+      total_rb: 0,
+      total_ta: 0,
+      percentage_baik: 0,
+      percentage_rr: 0,
+      percentage_rb: 0,
+      percentage_ta: 0,
+    })),
+    getLaporanPerRoom(laporanFilter).catch(() => []),
+  ]);
 
   const totalItems = items.length;
   const alkes = items.filter((i) => i.category === "alkes").length;
@@ -172,14 +222,11 @@ export default function DashboardPage() {
         </span>
       </div>
 
-      {/* ── Global Stats — GAS .gstats (6 cards) ───────────────────── */}
+      {/* ── Global Stats — GAS .gstats (5 kolom + mobile 2 kolom) ─── */}
       <div
-        className="gstats"
+        className="gstats grid grid-cols-2 gap-3 md:grid-cols-5"
         id="gstats"
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-          gap: "12px",
           marginBottom: "20px",
         }}
       >
@@ -246,6 +293,11 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Page Actions — Laporan + Riwayat modals (T6 wiring) ────── */}
+      {riwayatError && (
+        <p role="alert" className="text-center py-4 text-[12.5px] text-ink3">
+          Gagal memuat riwayat perpindahan. Silakan muat ulang halaman.
+        </p>
+      )}
       <Suspense fallback={null}>
         <PageActionsHost
           riwayatItems={riwayatItems}

@@ -9,11 +9,7 @@ import type {
   UsulanPayload,
   UsulanStatus,
 } from "@/lib/usulan-types";
-import {
-  USULAN_KATEGORI_LABELS,
-  USULAN_PRIORITAS_LABELS,
-  USULAN_STATUS_LABELS,
-} from "@/lib/usulan-types";
+
 
 // ══════════════════════════════════════════════════════════════════════
 //  Types & labels live in @/lib/usulan-types (not a "use server" file)
@@ -229,19 +225,40 @@ export async function exportUsulanCSV(roomId?: string): Promise<string> {
     ? await getUsulanByRoomWithRoomInfo(roomId)
     : await getUsulanList();
 
+  // Kolom persis GAS `exportAllUsulanCSV` (index.html 22302):
+  // No, Ruangan, Nama, Kategori, Jumlah, Satuan, Prioritas, Status,
+  // Alasan, Keterangan, Tanggal. Label polos tanpa emoji.
   const header = [
+    "No",
     "Ruangan",
-    "Nama Barang",
+    "Nama Barang/Sarana",
     "Kategori",
     "Jumlah",
     "Satuan",
     "Prioritas",
     "Status",
-    "Harga Satuan",
-    "Total",
+    "Alasan/Justifikasi",
     "Keterangan",
-    "Tgl Diajukan",
+    "Tanggal Diajukan",
   ];
+  const prioLabel: Record<string, string> = {
+    mendesak: "Mendesak",
+    penting: "Penting",
+    rencana: "Rencana",
+  };
+  const statusLabel: Record<string, string> = {
+    diajukan: "Diajukan",
+    disetujui: "Disetujui",
+    ditolak: "Ditolak",
+    proses: "Diproses",
+    selesai: "Selesai",
+  };
+  const katLabel: Record<string, string> = {
+    alkes: "Alat Kesehatan",
+    meubelair: "Meubelair",
+    elektronik: "Elektronik",
+    lainnya: "Lainnya",
+  };
 
   const escape = (val: unknown): string => {
     const s = val == null ? "" : String(val);
@@ -251,35 +268,26 @@ export async function exportUsulanCSV(roomId?: string): Promise<string> {
     return s;
   };
 
-  const fmtDate = (iso: string): string => {
-    if (!iso) return "";
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
-    const dd = String(d.getDate()).padStart(2, "0");
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const yyyy = d.getFullYear();
-    return `${dd}/${mm}/${yyyy}`;
-  };
-
   const rows: string[] = [header.join(",")];
 
+  let no = 1;
   for (const u of list) {
     const roomName = u.rooms?.name || u.room_id || "";
     const items = u.payload?.items || [];
     for (const it of items) {
       rows.push(
         [
+          escape(no++),
           escape(roomName),
           escape(it.nama),
-          escape(USULAN_KATEGORI_LABELS[it.kategori] || it.kategori),
+          escape(katLabel[it.kategori] ?? it.kategori ?? ""),
           escape(it.qty),
           escape(it.satuan),
-          escape(USULAN_PRIORITAS_LABELS[it.prioritas] || it.prioritas),
-          escape(USULAN_STATUS_LABELS[it.status] || it.status),
-          escape(it.harga),
-          escape(it.total),
+          escape(prioLabel[it.prioritas] ?? it.prioritas ?? ""),
+          escape(statusLabel[it.status] ?? it.status ?? ""),
+          escape(it.alasan || ""),
           escape(it.keterangan || ""),
-          escape(fmtDate(u.created_at)),
+          escape((u.created_at || "").slice(0, 10)),
         ].join(",")
       );
     }

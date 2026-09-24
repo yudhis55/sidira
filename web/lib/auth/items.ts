@@ -21,6 +21,23 @@ export async function getItems(roomId: string): Promise<Item[]> {
   return data as Item[];
 }
 
+/**
+ * Semua item lintas ruangan (untuk rekap/laporan global).
+ * Dibatasi 2000 baris — volume kini 762.
+ */
+export async function getAllItems(): Promise<Item[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("items")
+    .select("*")
+    .order("room_id")
+    .order("name")
+    .limit(2000);
+
+  if (error) throw error;
+  return data as Item[];
+}
+
 export async function createItem(formData: FormData) {
   const supabase = await createClient();
 

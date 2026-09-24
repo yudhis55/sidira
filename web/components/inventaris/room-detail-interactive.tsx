@@ -1,15 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Badge } from "@/components/gas/badge";
-import { Button } from "@/components/gas/button";
-import { Dialog } from "@/components/gas/dialog";
-import { Input } from "@/components/gas/input";
-import { Modal } from "@/components/gas/modal";
-import { Select } from "@/components/gas/select";
 import { ChecklistRoomModal } from "@/components/inventaris/checklist-room-modal";
+import { MoveAllModal } from "@/components/inventaris/move-all-modal";
 import { MoveItemModal } from "@/components/inventaris/move-item-modal";
+import { Dialog } from "@/components/gas/dialog";
+import { useLocalStorageState } from "@/lib/use-local-storage";
+import { mergeRoom, mergeRooms, useRoomOverrides } from "@/lib/room-store";
+import { moveItemsToRoom } from "@/lib/move-store";
+import { roomItemsStorageKey } from "@/lib/storage-keys";
 import type {
   Item,
   ItemCategory,
@@ -22,6 +23,8 @@ interface RoomDetailInteractiveProps {
   items: Item[];
   rooms: Room[];
 }
+
+type ItemPriority = NonNullable<Item["prio"]>;
 
 const CATEGORY_CONFIG: {
   value: ItemCategory;
@@ -65,85 +68,101 @@ const CATEGORY_CONFIG: {
   },
 ];
 
-const CONDITION_CYCLE: ItemCondition[] = ["baik", "rr", "rb", "ta"];
+const CONDITION_OPTIONS: { value: ItemCondition; label: string }[] = [
+  { value: "baik", label: "✅ Baik" },
+  { value: "rr", label: "⚠️ Rusak Ringan" },
+  { value: "rb", label: "🔴 Rusak Berat" },
+  { value: "ta", label: "— Tidak Ada" },
+];
 
-const CONDITION_LABELS: Record<ItemCondition, string> = {
-  baik: "Baik",
-  rr: "Rusak Ringan",
-  rb: "Rusak Berat",
-  ta: "Tidak Ada",
-};
+const PRIORITY_OPTIONS: { value: ItemPriority; label: string }[] = [
+  { value: "wajib", label: "⭐ Wajib" },
+  { value: "penting", label: "🔹 Penting" },
+  { value: "pendukung", label: "· Pendukung" },
+];
 
-function nextCondition(current: ItemCondition): ItemCondition {
-  const idx = CONDITION_CYCLE.indexOf(current);
-  return CONDITION_CYCLE[(idx + 1) % CONDITION_CYCLE.length];
-}
+/* ── GAS td input / td select (index.html ~716–771, 2045–2058) ── */
 
-/** Priority spill badge matching GAS sp-wajib / sp-penting / sp-pendukung */
-function PriorityPill({ prio }: { prio?: string }) {
-  if (!prio) return null;
-  if (prio === "wajib")
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold whitespace-nowrap bg-amber2 text-amber">
-        ⭐ Wajib
-      </span>
-    );
-  if (prio === "penting")
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold whitespace-nowrap bg-blue2 text-blue">
-        🔹 Penting
-      </span>
-    );
-  if (prio === "pendukung")
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold whitespace-nowrap bg-slate2 text-slate">
-        · Pendukung
-      </span>
-    );
-  return null;
-}
+const CELL_BASE =
+  "rounded-[var(--r2)] border-[1.5px] px-2 py-[5px] text-xs outline-none transition-colors";
+
+/** Input bergaris — GAS `td input[type=text|number]`. */
+const CELL_INPUT = `${CELL_BASE} w-full border-line bg-white text-ink focus:border-teal2`;
 
 /**
- * Mock-only interactive room detail: local state for conditions + move dialogs.
- * No @/lib/auth, no Supabase.
+ * Input "hantu" — tampil seperti teks biasa (GAS merender sel ini statis),
+ * garisnya baru muncul saat hover/fokus supaya tetap bisa diedit langsung.
+ */
+const CELL_GHOST = `${CELL_BASE} w-full border-transparent bg-transparent hover:border-line focus:border-teal2 focus:bg-white`;
+
+const CELL_SELECT = `${CELL_BASE} w-full cursor-pointer font-bold`;
+
+/** GAS `td select.k-*` (~732–754). */
+const CONDITION_CLASS: Record<ItemCondition, string> = {
+  baik: "bg-teal4 text-teal border-teal3",
+  rr: "bg-amber2 text-amber border-[#fde68a]",
+  rb: "bg-red2 text-red border-[#fecaca]",
+  ta: "bg-slate2 text-slate border-line",
+};
+
+/** GAS `.spill.sp-*` (~702–713), dipakai sebagai warna select prioritas. */
+const PRIORITY_CLASS: Record<ItemPriority, string> = {
+  wajib: "bg-[#fef3c7] text-[#92400e] border-[#fde68a]",
+  penting: "bg-blue2 text-blue border-[#bfdbfe]",
+  pendukung: "bg-slate2 text-slate border-line",
+};
+
+const TH_BASE =
+  "bg-[#f8fafc] px-3.5 py-2.5 text-[10.5px] font-bold uppercase tracking-wide text-ink3 border-b border-line whitespace-nowrap";
+
+/**
+ * Detail ruangan — port GAS buildPanels (index.html ~19103).
+ * Seluruh sel dapat diedit langsung seperti spreadsheet; perubahan disimpan
+ * ke localStorage (`sidira_room_items_<roomId>`) menunggu wiring Supabase.
  */
 export function RoomDetailInteractive({
-  room,
+  room: roomProp,
   items: initialItems,
-  rooms,
+  rooms: allRooms,
 }: RoomDetailInteractiveProps) {
-  const [items, setItems] = useState<Item[]>(initialItems);
+  const router = useRouter();
+  const [items, setItems] = useLocalStorageState<Item[]>(
+    roomItemsStorageKey(roomProp.id),
+    initialItems
+  );
+
+  // Nama & penanggung jawab hasil sunting disimpan terpisah dari data mock.
+  const [overrides, setOverrides] = useRoomOverrides();
+  const room = mergeRoom(roomProp, overrides);
+  const rooms = mergeRooms(allRooms, overrides);
+
+  // Edit nama ruangan inline — GAS memakai prompt(), di sini form inline.
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(room.name);
+
+  // Edit penanggung jawab inline — GAS `editPj`.
+  const [editingPj, setEditingPj] = useState(false);
+  const [pjDraft, setPjDraft] = useState(room.pj ?? "");
+
+  // Konfirmasi hapus ruangan — GAS memakai confirm(), di sini dialog.
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   // Move single item (GAS move-item-modal)
   const [moveItem, setMoveItem] = useState<Item | null>(null);
 
-  // Move all
+  // Move all / sebagian (GAS openMvAllModal)
   const [moveAllOpen, setMoveAllOpen] = useState(false);
-  const [moveAllTargetRoomId, setMoveAllTargetRoomId] = useState("");
-
-  // Add item (mock)
-  const [addCategory, setAddCategory] = useState<ItemCategory | null>(null);
-  const [addName, setAddName] = useState("");
 
   // Ceklist harian modal (GAS openChecklist — room-scoped matrix)
   const [checklistOpen, setChecklistOpen] = useState(false);
 
-  const destinationRooms = useMemo(
-    () => rooms.filter((r) => r.id !== room.id),
-    [rooms, room.id]
-  );
-
-  const roomOptions = useMemo(
-    () =>
-      destinationRooms.map((r) => ({
-        value: r.id,
-        label: `${r.icon} ${r.name}`,
-      })),
-    [destinationRooms]
-  );
+  /** Baris baru dari addRow — nama-nya difokuskan sekali setelah render. */
+  const focusItemId = useRef<number | null>(null);
 
   const totalItems = items.length;
   const totalUnits = items.reduce((s, i) => s + (i.quantity || 0), 0);
+  /* Kotak stat "Perlu Perhatian" ala GAS — merah bila > 0. */
+  const attentionCount = items.filter((i) => i.condition !== "baik").length;
 
   const grouped: Record<ItemCategory, Item[]> = {
     alkes: [],
@@ -157,18 +176,36 @@ export function RoomDetailInteractive({
     }
   }
 
-  function handleCycleCondition(itemId: number) {
-    setItems((prev) =>
-      prev.map((it) => {
-        if (it.id !== itemId) return it;
-        const next = nextCondition(it.condition);
-        toast.success(
-          `${it.name}: ${CONDITION_LABELS[it.condition]} → ${CONDITION_LABELS[next]}`
-        );
-        return { ...it, condition: next };
-      })
-    );
-  }
+  const emptyCategories = CATEGORY_CONFIG.filter(
+    (cat) => grouped[cat.value].length === 0
+  );
+
+  /** Patch satu item — dipakai semua sel tabel. */
+  const updateItem = useCallback(
+    (itemId: number, patch: Partial<Item>) => {
+      setItems((prev) =>
+        prev.map((it) =>
+          it.id === itemId
+            ? { ...it, ...patch, updated_at: new Date().toISOString() }
+            : it
+        )
+      );
+    },
+    [setItems]
+  );
+
+  /** Callback ref: fokus + select otomatis untuk baris yang baru ditambah. */
+  const nameInputRef = useCallback(
+    (node: HTMLInputElement | null) => {
+      if (!node) return;
+      if (focusItemId.current === null) return;
+      if (node.dataset.itemId !== String(focusItemId.current)) return;
+      focusItemId.current = null;
+      node.focus();
+      node.select();
+    },
+    []
+  );
 
   function handleSemuaBaik() {
     if (items.length === 0) {
@@ -194,12 +231,59 @@ export function RoomDetailInteractive({
     toast.success(`Semua kondisi ${label} diset menjadi Baik (${count} item)`);
   }
 
-  function handleEditMock() {
-    toast.info("Mode edit ruangan (mock) — belum dihubungkan ke backend");
+  /** Simpan satu bidang perubahan ruangan ke localStorage. */
+  function patchRoom(patch: Partial<{ name: string; pj: string }>) {
+    setOverrides((prev) => ({
+      ...prev,
+      [room.id]: { ...prev[room.id], ...patch },
+    }));
   }
 
-  function handleHapusMock() {
-    toast.info("Hapus ruangan (mock) — belum dihubungkan ke backend");
+  function startEditName() {
+    setNameDraft(room.name);
+    setEditingName(true);
+  }
+
+  /** GAS `editRoomName` (prompt) — diganti form inline sesuai keputusan desain. */
+  function saveName() {
+    const next = nameDraft.trim();
+    if (!next) {
+      toast.error("Nama ruangan tidak boleh kosong");
+      return;
+    }
+    if (next === room.name) {
+      setEditingName(false);
+      return;
+    }
+    patchRoom({ name: next });
+    setEditingName(false);
+    toast.success("Nama ruangan diperbarui");
+  }
+
+  function startEditPj() {
+    setPjDraft(room.pj ?? "");
+    setEditingPj(true);
+  }
+
+  /** GAS `editPj` — kosong berarti "Belum diisi". */
+  function savePj() {
+    const next = pjDraft.trim();
+    patchRoom({ pj: next });
+    setEditingPj(false);
+    toast.success(
+      next ? `Penanggung jawab: ${next}` : "Penanggung jawab dikosongkan"
+    );
+  }
+
+  /** GAS `delRoom` (confirm) — ruangan disembunyikan, lalu kembali ke daftar. */
+  function confirmDeleteRoom() {
+    setOverrides((prev) => ({
+      ...prev,
+      [room.id]: { ...prev[room.id], deleted: true },
+    }));
+    setDeleteOpen(false);
+    toast.success(`Ruangan ${room.name} dihapus`);
+    router.push("/inventaris");
   }
 
   function openMoveItem(item: Item) {
@@ -210,46 +294,43 @@ export function RoomDetailInteractive({
     setMoveItem(null);
   }
 
-  function confirmMoveItem(destRoom: Room, _destKat: ItemCategory) {
+  function confirmMoveItem(destRoom: Room, destKat: ItemCategory) {
     if (!moveItem) return;
+    moveItemsToRoom([moveItem], room, destRoom, destKat);
     setItems((prev) => prev.filter((it) => it.id !== moveItem.id));
-    toast.success(
-      `${moveItem.name} dipindah ke ${destRoom.name} (mock)`
-    );
+    toast.success(`${moveItem.name || "Item"} dipindah ke ${destRoom.name}`);
     closeMoveItem();
   }
 
   function openMoveAll() {
     if (items.length === 0) {
-      toast.info("Tidak ada item untuk dipindah");
+      toast.info("Tidak ada item di ruangan ini");
       return;
     }
-    setMoveAllTargetRoomId(destinationRooms[0]?.id ?? "");
     setMoveAllOpen(true);
   }
 
   function closeMoveAll() {
     setMoveAllOpen(false);
-    setMoveAllTargetRoomId("");
   }
 
-  function confirmMoveAll() {
-    if (!moveAllTargetRoomId) {
-      toast.error("Pilih ruangan tujuan");
-      return;
-    }
-    const dest = rooms.find((r) => r.id === moveAllTargetRoomId);
-    const count = items.length;
-    setItems([]);
-    toast.success(
-      `${count} item dipindah ke ${dest?.name ?? "ruangan tujuan"} (mock)`
-    );
-    closeMoveAll();
+  /** GAS mvConfirm mode bulk (~28603) — hanya item tercentang yang berpindah. */
+  function confirmMoveAll(
+    destRoom: Room,
+    destKat: ItemCategory | null,
+    selected: Item[]
+  ) {
+    const moved = moveItemsToRoom(selected, room, destRoom, destKat);
+    if (moved === 0) return;
+    const movedIds = new Set(selected.map((it) => it.id));
+    setItems((prev) => prev.filter((it) => !movedIds.has(it.id)));
+    toast.success(`${moved} item dipindah ke ${destRoom.name}`);
   }
 
+  /** GAS delRow (~19340) — hapus langsung, nomor urut menyesuaikan sendiri. */
   function handleDeleteItem(item: Item) {
     setItems((prev) => prev.filter((it) => it.id !== item.id));
-    toast.success(`${item.name} dihapus (mock)`);
+    toast.success(`${item.name || "Baris"} dihapus`);
   }
 
   function openChecklist() {
@@ -260,59 +341,37 @@ export function RoomDetailInteractive({
     setChecklistOpen(false);
   }
 
-  function openAddItem(category: ItemCategory) {
-    setAddCategory(category);
-    setAddName("");
-  }
-
-  function closeAddItem() {
-    setAddCategory(null);
-    setAddName("");
-  }
-
-  function confirmAddItem() {
-    if (!addCategory) return;
-    const name = addName.trim();
-    if (!name) {
-      toast.error("Nama barang wajib diisi");
-      return;
-    }
+  /** GAS addRow (~19304) — sisipkan baris kosong siap ketik, tanpa modal. */
+  function addRow(category: ItemCategory) {
     const now = new Date().toISOString();
     const nextId =
       items.reduce((max, it) => (it.id > max ? it.id : max), 0) + 1;
-    const indexInRoom =
-      items.filter((it) => it.category === addCategory).length;
     const newItem: Item = {
       id: nextId,
       room_id: room.id,
-      category: addCategory,
-      name,
-      quantity: 1,
-      unit: "unit",
+      category,
+      name: "",
+      spec: "",
+      merk: "",
+      noreg: "",
+      quantity: 0,
+      unit: "",
+      std: 0,
       condition: "baik",
-      index_in_room: indexInRoom,
       prio: "pendukung",
+      notes: "",
+      index_in_room: items.filter((it) => it.category === category).length,
       created_at: now,
       updated_at: now,
     };
+    focusItemId.current = nextId;
     setItems((prev) => [...prev, newItem]);
-    const label =
-      CATEGORY_CONFIG.find((c) => c.value === addCategory)?.label ??
-      addCategory;
-    toast.success(`${name} ditambahkan ke ${label} (mock)`);
-    closeAddItem();
   }
-
-  const addCategoryLabel =
-    addCategory != null
-      ? (CATEGORY_CONFIG.find((c) => c.value === addCategory)?.label ??
-        addCategory)
-      : "";
 
   return (
     <>
       {/* Room Header (matches GAS .room-header) */}
-      <div className="flex flex-wrap items-center gap-4 mb-[22px] px-6 py-5 bg-white rounded-[var(--r)] border border-line">
+      <div className="flex items-center gap-4 mb-[22px] px-6 py-5 bg-white rounded-[var(--r)] border border-line shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
         <div
           className="w-[52px] h-[52px] rounded-[14px] flex items-center justify-center text-[26px] shrink-0"
           style={{ background: room.bg }}
@@ -320,14 +379,45 @@ export function RoomDetailInteractive({
           {room.icon}
         </div>
 
-        <div className="min-w-0">
-          <div className="text-lg font-extrabold text-ink">{room.name}</div>
+        <div>
+          {editingName ? (
+            <div className="flex items-center gap-1.5">
+              <input
+                type="text"
+                value={nameDraft}
+                autoFocus
+                aria-label="Nama ruangan"
+                onChange={(e) => setNameDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveName();
+                  if (e.key === "Escape") setEditingName(false);
+                }}
+                className="w-[240px] rounded-lg border-[1.5px] border-teal2 bg-white px-2.5 py-1 text-lg font-extrabold text-ink outline-none"
+              />
+              <button
+                type="button"
+                onClick={saveName}
+                className="rounded-lg border-[1.5px] border-[rgba(14,124,107,0.3)] bg-[rgba(14,124,107,0.08)] px-2.5 py-1 text-xs font-bold text-teal transition-colors hover:bg-teal hover:text-white"
+              >
+                ✅
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingName(false)}
+                className="rounded-lg border-[1.5px] border-line bg-line2 px-2.5 py-1 text-xs font-bold text-ink3 transition-colors hover:border-ink3"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <div className="text-lg font-extrabold text-ink">{room.name}</div>
+          )}
           {room.description && (
             <div className="text-xs text-ink3 mt-0.5">{room.description}</div>
           )}
         </div>
 
-        <div className="ml-auto flex gap-3 flex-wrap">
+        <div className="ml-auto flex gap-3">
           <div className="text-center px-4 py-2 rounded-lg bg-line2">
             <div className="text-[20px] font-extrabold text-teal font-mono leading-none">
               {totalItems}
@@ -344,66 +434,115 @@ export function RoomDetailInteractive({
               Total Unit
             </div>
           </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => toast.info("Ubah penanggung jawab (mock)")}
-          className="flex items-center gap-2 px-[14px] py-[7px] rounded-[10px] bg-line2 border-[1.5px] border-line min-w-[200px] max-w-[280px] text-left hover:border-teal hover:bg-[#f0fdfa] group"
-        >
-          <span className="text-base">{"\u{1F464}"}</span>
-          <div className="min-w-0 flex-1">
-            <div className="text-[9.5px] font-extrabold text-ink3 uppercase tracking-wide">
-              Penanggung Jawab
-            </div>
+          <div className="text-center px-4 py-2 rounded-lg bg-line2">
             <div
-              className={`text-[12.5px] font-bold truncate ${
-                room.pj
-                  ? "text-ink"
-                  : "text-ink3 italic font-normal"
+              className={`text-[20px] font-extrabold font-mono leading-none ${
+                attentionCount > 0 ? "text-red" : "text-teal"
               }`}
             >
-              {room.pj || "Belum diisi"}
+              {attentionCount}
+            </div>
+            <div className="text-[10px] text-ink3 font-semibold uppercase tracking-wide mt-1">
+              Perlu Perhatian
             </div>
           </div>
-          <span className="text-xs text-ink3 opacity-0 group-hover:opacity-100">
-            {"\u270F\uFE0F"}
-          </span>
-        </button>
+        </div>
+
+        {editingPj ? (
+          <div className="flex min-w-[200px] max-w-[300px] items-center gap-1.5 rounded-[10px] border-[1.5px] border-teal2 bg-white px-[10px] py-[6px]">
+            <span className="text-base">{"\u{1F464}"}</span>
+            <input
+              type="text"
+              value={pjDraft}
+              autoFocus
+              placeholder="Nama penanggung jawab"
+              aria-label="Penanggung jawab"
+              onChange={(e) => setPjDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") savePj();
+                if (e.key === "Escape") setEditingPj(false);
+              }}
+              className="min-w-0 flex-1 border-none bg-transparent text-[12.5px] font-bold text-ink outline-none placeholder:font-normal placeholder:text-ink3"
+            />
+            <button
+              type="button"
+              onClick={savePj}
+              className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold text-teal transition-colors hover:bg-teal4"
+              aria-label="Simpan penanggung jawab"
+            >
+              ✅
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditingPj(false)}
+              className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold text-ink3 transition-colors hover:bg-line2"
+              aria-label="Batal"
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={startEditPj}
+            title="Klik untuk ubah penanggung jawab"
+            className="flex items-center gap-2 px-[14px] py-[7px] rounded-[10px] bg-line2 border-[1.5px] border-line min-w-[200px] max-w-[280px] text-left hover:border-teal hover:bg-[#f0fdfa] group"
+          >
+            <span className="text-base">{"\u{1F464}"}</span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[9.5px] font-extrabold text-ink3 uppercase tracking-wide">
+                Penanggung Jawab
+              </div>
+              <div
+                className={`text-[12.5px] font-bold truncate ${
+                  room.pj ? "text-ink" : "text-ink3 italic font-normal"
+                }`}
+              >
+                {room.pj || "Belum diisi"}
+              </div>
+            </div>
+            <span className="text-xs text-ink3 opacity-0 group-hover:opacity-100">
+              {"✏️"}
+            </span>
+          </button>
+        )}
 
         <button
           type="button"
           onClick={handleSemuaBaik}
           className="px-[14px] py-[6px] rounded-lg text-xs font-bold border-[1.5px] border-[rgba(14,124,107,0.3)] bg-[rgba(14,124,107,0.08)] text-teal hover:bg-teal hover:text-white transition-colors"
         >
-          {"\u2705"} Semua Kondisi Baik
+          {"✅"} Semua Kondisi Baik
         </button>
         <button
           type="button"
-          onClick={handleEditMock}
-          className="px-[14px] py-[6px] rounded-lg text-xs font-bold border-[1.5px] border-[#bfdbfe] bg-[#eff6ff] text-[#1d4ed8] hover:bg-[#1d4ed8] hover:text-white transition-colors"
+          onClick={startEditName}
+          disabled={editingName}
+          className="px-[14px] py-[6px] rounded-lg text-xs font-bold border-[1.5px] border-[#bfdbfe] bg-[#eff6ff] text-[#1d4ed8] hover:bg-[#1d4ed8] hover:text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#eff6ff] disabled:hover:text-[#1d4ed8]"
         >
-          {"\u270F\uFE0F"} Edit Nama
+          {"✏️"} Edit Nama
         </button>
         <button
           type="button"
           onClick={openMoveAll}
           className="px-[14px] py-[6px] rounded-lg text-xs font-bold border-[1.5px] border-[#bfdbfe] bg-[#eff6ff] text-[#1d4ed8] hover:bg-[#1d4ed8] hover:text-white transition-colors"
         >
-          {"\u2197"} Pindah Item
+          {"↗"} Pindah Item
         </button>
         <button
           type="button"
-          onClick={handleHapusMock}
+          onClick={() => setDeleteOpen(true)}
           className="del-room-btn px-[14px] py-[6px] rounded-lg text-xs font-bold border-[1.5px] border-red/30 bg-red2 text-red hover:bg-red hover:text-white transition-colors"
         >
           {"\u{1F5D1}"} Hapus
         </button>
       </div>
-      {/* ── 4 Category Sections ── */}
+
+      {/* ── Kategori: GAS hanya merender kategori yang berisi (~19148) ── */}
       <div className="space-y-5">
         {CATEGORY_CONFIG.map((cat) => {
           const catItems = grouped[cat.value];
+          if (catItems.length === 0) return null;
           return (
             <details key={cat.value} open className="cat-section">
               <summary
@@ -432,7 +571,7 @@ export function RoomDetailInteractive({
                   }}
                   className="relative z-[2] inline-flex items-center gap-[5px] px-2.5 py-[3px] rounded-[20px] text-[11px] font-bold whitespace-nowrap border-[1.5px] border-[rgba(14,124,107,0.35)] bg-[rgba(14,124,107,0.1)] text-teal hover:bg-teal hover:text-white hover:border-teal transition-colors"
                 >
-                  {"\u2705"} Semua Baik
+                  {"✅"} Semua Baik
                 </button>
                 <span className="text-[11px] ml-1.5">▾</span>
               </summary>
@@ -442,151 +581,271 @@ export function RoomDetailInteractive({
                   <table className="w-full border-collapse text-[13px] bg-white border border-line border-t-0">
                     <thead>
                       <tr>
-                        <th className="w-9 text-center px-3.5 py-2.5 bg-[#f8fafc] text-[10.5px] font-bold uppercase tracking-wide text-ink3 border-b border-line whitespace-nowrap">
-                          No
+                        <th className={`${TH_BASE} w-9 text-center`}>No</th>
+                        <th className={`${TH_BASE} text-left`}>
+                          Nama &amp; Spesifikasi
                         </th>
-                        <th className="px-3.5 py-2.5 bg-[#f8fafc] text-[10.5px] font-bold uppercase tracking-wide text-ink3 border-b border-line whitespace-nowrap text-left">
-                          Nama Barang
+                        <th className={`${TH_BASE} text-center min-w-[92px]`}>
+                          Tahun
                         </th>
-                        <th className="px-3.5 py-2.5 bg-[#f8fafc] text-[10.5px] font-bold uppercase tracking-wide text-ink3 border-b border-line whitespace-nowrap text-left min-w-[72px]">
-                          Spesifikasi
-                        </th>
-                        <th className="px-3.5 py-2.5 bg-[#f8fafc] text-[10.5px] font-bold uppercase tracking-wide text-ink3 border-b border-line whitespace-nowrap text-left min-w-[110px]">
+                        <th className={`${TH_BASE} text-left min-w-[140px]`}>
                           Merek / Tipe
                         </th>
-                        <th className="px-3.5 py-2.5 bg-[#f8fafc] text-[10.5px] font-bold uppercase tracking-wide text-ink3 border-b border-line whitespace-nowrap text-left min-w-[100px]">
+                        <th className={`${TH_BASE} text-left min-w-[130px]`}>
                           No. Register
                         </th>
-                        <th className="px-3.5 py-2.5 bg-[#f8fafc] text-[10.5px] font-bold uppercase tracking-wide text-ink3 border-b border-line whitespace-nowrap text-left">
-                          Satuan
-                        </th>
-                        <th className="px-3.5 py-2.5 bg-[#f8fafc] text-[10.5px] font-bold uppercase tracking-wide text-ink3 border-b border-line whitespace-nowrap text-center">
-                          Std
-                        </th>
-                        <th className="px-3.5 py-2.5 bg-[#f8fafc] text-[10.5px] font-bold uppercase tracking-wide text-ink3 border-b border-line whitespace-nowrap text-center">
-                          Jml
-                        </th>
-                        <th className="px-3.5 py-2.5 bg-[#f8fafc] text-[10.5px] font-bold uppercase tracking-wide text-ink3 border-b border-line whitespace-nowrap text-center min-w-[90px]">
+                        <th className={`${TH_BASE} text-left`}>Satuan</th>
+                        <th className={`${TH_BASE} text-center`}>Standar</th>
+                        <th className={`${TH_BASE} text-center`}>Jml Ada</th>
+                        <th className={`${TH_BASE} text-center min-w-[132px]`}>
                           Prioritas
                         </th>
-                        <th className="px-3.5 py-2.5 bg-[#f8fafc] text-[10.5px] font-bold uppercase tracking-wide text-ink3 border-b border-line whitespace-nowrap text-center min-w-[120px]">
+                        <th className={`${TH_BASE} text-center min-w-[152px]`}>
                           Kondisi
                         </th>
-                        <th className="px-3.5 py-2.5 bg-[#f8fafc] text-[10.5px] font-bold uppercase tracking-wide text-ink3 border-b border-line whitespace-nowrap text-left min-w-[130px]">
+                        <th className={`${TH_BASE} text-left min-w-[160px]`}>
                           Keterangan
                         </th>
-                        <th className="px-3.5 py-2.5 bg-[#f8fafc] text-[10.5px] font-bold uppercase tracking-wide text-ink3 border-b border-line whitespace-nowrap text-center min-w-[80px]">
+                        <th className={`${TH_BASE} text-center min-w-[80px]`}>
                           Ceklist
                         </th>
-                        <th className="px-3.5 py-2.5 bg-[#f8fafc] text-[10.5px] font-bold uppercase tracking-wide text-ink3 border-b border-line whitespace-nowrap" />
+                        <th className={TH_BASE} />
                       </tr>
                     </thead>
                     <tbody>
-                      {catItems.length === 0 ? (
-                        <tr>
-                          <td
-                            colSpan={13}
-                            className="py-6 text-center text-ink3 text-sm"
-                          >
-                            Tidak ada data
+                      {catItems.map((item, idx) => (
+                        <tr
+                          key={item.id}
+                          className="border-b border-line last:border-b-0 hover:bg-[#fafcff]"
+                        >
+                          {/* No — GAS .td-no */}
+                          <td className="w-9 px-3.5 py-2 text-center font-mono text-[11px] text-ink3">
+                            {idx + 1}
+                          </td>
+
+                          {/* Nama & Spesifikasi — GAS .td-nama / .td-spec */}
+                          <td className="px-3.5 py-2 align-top">
+                            <input
+                              ref={nameInputRef}
+                              data-item-id={item.id}
+                              type="text"
+                              value={item.name}
+                              placeholder={`Nama ${cat.label.toLowerCase()}...`}
+                              title="Nama barang"
+                              onChange={(e) =>
+                                updateItem(item.id, { name: e.target.value })
+                              }
+                              className={`${CELL_GHOST} min-w-[160px] text-[13px] font-semibold text-ink`}
+                            />
+                            <input
+                              type="text"
+                              value={item.spec ?? ""}
+                              placeholder="Spesifikasi..."
+                              title="Spesifikasi"
+                              onChange={(e) =>
+                                updateItem(item.id, { spec: e.target.value })
+                              }
+                              className={`${CELL_GHOST} mt-0.5 min-w-[160px] py-[3px] text-[11.5px] font-normal text-ink3`}
+                            />
+                          </td>
+
+                          {/* Tahun — GAS .inp-tahun */}
+                          <td className="px-3.5 py-2">
+                            <input
+                              type="number"
+                              min={1990}
+                              max={2099}
+                              value={item.year ?? ""}
+                              placeholder="—"
+                              title="Tahun Pengadaan"
+                              onChange={(e) =>
+                                updateItem(item.id, {
+                                  year: e.target.value
+                                    ? Number(e.target.value)
+                                    : undefined,
+                                })
+                              }
+                              className={`${CELL_INPUT} w-[76px] text-center font-mono font-semibold`}
+                            />
+                          </td>
+
+                          {/* Merek / Tipe — GAS .inp-merek */}
+                          <td className="px-3.5 py-2">
+                            <input
+                              type="text"
+                              value={item.merk ?? ""}
+                              placeholder="Merek/Tipe"
+                              title="Merek / Tipe"
+                              onChange={(e) =>
+                                updateItem(item.id, { merk: e.target.value })
+                              }
+                              className={`${CELL_INPUT} w-[108px]`}
+                            />
+                          </td>
+
+                          {/* No. Register — GAS .inp-noreg */}
+                          <td className="px-3.5 py-2">
+                            <input
+                              type="text"
+                              value={item.noreg ?? ""}
+                              placeholder="No. Register"
+                              title="Nomor Register"
+                              onChange={(e) =>
+                                updateItem(item.id, { noreg: e.target.value })
+                              }
+                              className={`${CELL_INPUT} w-[98px] font-mono text-[11px]`}
+                            />
+                          </td>
+
+                          {/* Satuan — GAS .td-sat */}
+                          <td className="px-3.5 py-2">
+                            <input
+                              type="text"
+                              value={item.unit ?? ""}
+                              placeholder="Unit"
+                              title="Satuan"
+                              onChange={(e) =>
+                                updateItem(item.id, { unit: e.target.value })
+                              }
+                              className={`${CELL_GHOST} w-[70px] text-ink3`}
+                            />
+                          </td>
+
+                          {/* Standar — GAS .td-std */}
+                          <td className="px-3.5 py-2">
+                            <input
+                              type="number"
+                              min={0}
+                              value={item.std ?? 0}
+                              title="Jumlah standar"
+                              onChange={(e) =>
+                                updateItem(item.id, {
+                                  std: Number(e.target.value) || 0,
+                                })
+                              }
+                              className={`${CELL_GHOST} w-[56px] text-center font-mono text-ink3`}
+                            />
+                          </td>
+
+                          {/* Jml Ada — GAS .td-jml */}
+                          <td className="px-3.5 py-2">
+                            <input
+                              type="number"
+                              min={0}
+                              value={item.quantity}
+                              title="Jumlah yang ada"
+                              onChange={(e) =>
+                                updateItem(item.id, {
+                                  quantity: Number(e.target.value) || 0,
+                                })
+                              }
+                              className={`${CELL_INPUT} w-[60px] text-center font-mono text-[13px] font-bold`}
+                            />
+                          </td>
+
+                          {/* Prioritas */}
+                          <td className="px-3.5 py-2">
+                            <select
+                              value={item.prio ?? "pendukung"}
+                              title="Prioritas"
+                              aria-label={`Prioritas ${item.name || "item"}`}
+                              onChange={(e) =>
+                                updateItem(item.id, {
+                                  prio: e.target.value as ItemPriority,
+                                })
+                              }
+                              className={`${CELL_SELECT} ${
+                                PRIORITY_CLASS[item.prio ?? "pendukung"]
+                              }`}
+                            >
+                              {PRIORITY_OPTIONS.map((o) => (
+                                <option key={o.value} value={o.value}>
+                                  {o.label}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+
+                          {/* Kondisi — GAS kondisiOpts + styleKondisi */}
+                          <td className="px-3.5 py-2">
+                            <select
+                              value={item.condition}
+                              title="Kondisi"
+                              aria-label={`Kondisi ${item.name || "item"}`}
+                              onChange={(e) =>
+                                updateItem(item.id, {
+                                  condition: e.target.value as ItemCondition,
+                                })
+                              }
+                              className={`${CELL_SELECT} ${CONDITION_CLASS[item.condition]}`}
+                            >
+                              {CONDITION_OPTIONS.map((o) => (
+                                <option key={o.value} value={o.value}>
+                                  {o.label}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+
+                          {/* Keterangan */}
+                          <td className="px-3.5 py-2">
+                            <input
+                              type="text"
+                              value={item.notes ?? ""}
+                              placeholder="Catatan..."
+                              title="Keterangan"
+                              onChange={(e) =>
+                                updateItem(item.id, { notes: e.target.value })
+                              }
+                              className={`${CELL_INPUT} min-w-[110px]`}
+                            />
+                          </td>
+
+                          {/* Ceklist — GAS .cl-open-btn */}
+                          <td className="px-3.5 py-2 text-center">
+                            <button
+                              type="button"
+                              onClick={openChecklist}
+                              className="inline-flex h-[26px] items-center gap-1 whitespace-nowrap rounded-[5px] border border-line bg-line2 px-2 text-[11px] font-semibold text-ink2 transition-colors hover:bg-line"
+                              title="Ceklist harian"
+                            >
+                              📅 Ceklist
+                            </button>
+                          </td>
+
+                          <td className="px-3.5 py-2">
+                            <div className="flex items-center gap-1">
+                              {/* GAS .mv-btn */}
+                              <button
+                                type="button"
+                                onClick={() => openMoveItem(item)}
+                                className="inline-flex h-[26px] w-[26px] items-center justify-center rounded-[5px] border-[1.5px] border-[#bfdbfe] bg-[#eff6ff] text-[13px] font-black leading-none text-[#1d4ed8] transition-all duration-150 hover:scale-110 hover:border-[#1d4ed8] hover:bg-[#1d4ed8] hover:text-white"
+                                title="Pindah ke ruangan lain"
+                                aria-label={`Pindah ${item.name || "item"}`}
+                              >
+                                ↗
+                              </button>
+                              {/* GAS .del-btn */}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteItem(item)}
+                                className="inline-flex h-[26px] w-[26px] items-center justify-center rounded-[5px] border-0 bg-red2 text-xs font-bold text-red transition-colors hover:bg-[#fca5a5]"
+                                title="Hapus"
+                                aria-label={`Hapus ${item.name || "item"}`}
+                              >
+                                ✕
+                              </button>
+                            </div>
                           </td>
                         </tr>
-                      ) : (
-                        catItems.map((item, idx) => (
-                          <tr
-                            key={item.id}
-                            className="border-b border-line last:border-b-0 hover:bg-[#fafcff]"
-                          >
-                            <td className="w-9 text-center px-3.5 py-2.5 font-mono text-[11px] text-ink3">
-                              {idx + 1}
-                            </td>
-                            <td className="px-3.5 py-2.5 font-semibold text-ink">
-                              {item.name}
-                            </td>
-                            <td className="px-3.5 py-2.5 text-[11.5px] text-ink3 font-normal">
-                              {item.spec || "-"}
-                            </td>
-                            <td className="px-3.5 py-2.5 text-xs text-ink2">
-                              {item.merk
-                                ? `${item.merk}${item.type ? ` / ${item.type}` : ""}`
-                                : "-"}
-                            </td>
-                            <td className="px-3.5 py-2.5 text-xs text-ink2 font-mono">
-                              {item.noreg || item.kode_barang || "-"}
-                            </td>
-                            <td className="px-3.5 py-2.5 text-xs text-ink3">
-                              {item.unit || "-"}
-                            </td>
-                            <td className="px-3.5 py-2.5 text-center font-mono text-xs text-ink3">
-                              {item.std && item.std > 0 ? item.std : "-"}
-                            </td>
-                            <td className="px-3.5 py-2.5 text-center font-mono text-[13px] font-bold text-ink2">
-                              {item.quantity}
-                            </td>
-                            <td className="px-3.5 py-2.5 text-center">
-                              <PriorityPill prio={item.prio} />
-                            </td>
-                            <td className="px-3.5 py-2.5 text-center">
-                              <button
-                                type="button"
-                                onClick={() => handleCycleCondition(item.id)}
-                                className="inline-flex cursor-pointer rounded-[4px] focus:outline-none focus-visible:ring-2 focus-visible:ring-teal"
-                                title="Klik untuk ganti kondisi (baik → rr → rb → ta)"
-                                aria-label={`Kondisi ${CONDITION_LABELS[item.condition]}, klik untuk ganti`}
-                              >
-                                <Badge variant={item.condition}>
-                                  {CONDITION_LABELS[item.condition] ||
-                                    item.condition}
-                                </Badge>
-                              </button>
-                            </td>
-                            <td className="px-3.5 py-2.5 text-xs text-ink3">
-                              {item.notes || ""}
-                            </td>
-                            <td className="px-3.5 py-2.5 text-center">
-                              <button
-                                type="button"
-                                onClick={openChecklist}
-                                className="inline-flex h-[26px] items-center gap-0.5 rounded-[5px] border border-line bg-line2 px-1.5 text-[11px] font-semibold text-ink2 transition-colors hover:bg-line"
-                                title="Ceklist harian"
-                              >
-                                📋
-                              </button>
-                            </td>
-                            <td className="px-3.5 py-2.5">
-                              <div className="flex items-center gap-1">
-                                {/* GAS .mv-btn — compact blue outline, icon-only */}
-                                <button
-                                  type="button"
-                                  onClick={() => openMoveItem(item)}
-                                  className="inline-flex h-[26px] w-[26px] items-center justify-center rounded-[5px] border-[1.5px] border-[#bfdbfe] bg-[#eff6ff] text-[13px] font-black leading-none text-[#1d4ed8] transition-all duration-150 hover:scale-110 hover:border-[#1d4ed8] hover:bg-[#1d4ed8] hover:text-white"
-                                  title="Pindah ke ruangan lain"
-                                  aria-label={`Pindah ${item.name}`}
-                                >
-                                  ↗
-                                </button>
-                                {/* GAS .del-btn — compact red fill, icon-only */}
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteItem(item)}
-                                  className="inline-flex h-[26px] w-[26px] items-center justify-center rounded-[5px] border-0 bg-red2 text-xs text-red transition-colors hover:bg-[#fca5a5]"
-                                  title="Hapus"
-                                  aria-label={`Hapus ${item.name}`}
-                                >
-                                  🗑
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
+                      ))}
                     </tbody>
                   </table>
                 </div>
                 <button
                   type="button"
                   className="add-btn flex w-full items-center justify-center gap-2 border border-t-0 border-dashed border-line bg-transparent px-[18px] py-[9px] text-xs font-semibold text-ink3 rounded-b-[var(--r)] transition-colors duration-[180ms] hover:border-teal3 hover:bg-teal4 hover:text-teal"
-                  onClick={() => openAddItem(cat.value)}
+                  onClick={() => addRow(cat.value)}
                 >
                   ＋ Tambah {cat.label}
                 </button>
@@ -594,46 +853,34 @@ export function RoomDetailInteractive({
             </details>
           );
         })}
-      </div>
 
-      {/* Add item modal (mock) */}
-      <Modal
-        open={!!addCategory}
-        onClose={closeAddItem}
-        title={`Tambah ${addCategoryLabel}`}
-        subtitle={`Item baru di kategori ${addCategoryLabel}`}
-        icon="＋"
-        iconVariant="teal"
-        size="sm"
-        footer={
-          <>
-            <Button type="button" variant="modal-cancel" onClick={closeAddItem}>
-              Batal
-            </Button>
-            <Button type="button" variant="modal-ok" onClick={confirmAddItem}>
-              Tambah
-            </Button>
-          </>
-        }
-      >
-        <Input
-          label="Nama Barang"
-          placeholder={`Nama ${addCategoryLabel.toLowerCase()}...`}
-          value={addName}
-          onChange={(e) => setAddName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              confirmAddItem();
-            }
-          }}
-          autoFocus
-        />
-      </Modal>
+        {/*
+          GAS menyembunyikan kategori kosong sepenuhnya sehingga tak ada jalan
+          menambah item pertamanya. Baris tombol ini menutup celah itu tanpa
+          mengubah tampilan kategori yang sudah berisi.
+        */}
+        {emptyCategories.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-[var(--r)] border border-dashed border-line bg-white px-4 py-3">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-ink3">
+              Kategori kosong
+            </span>
+            {emptyCategories.map((cat) => (
+              <button
+                key={cat.value}
+                type="button"
+                onClick={() => addRow(cat.value)}
+                className="rounded-[20px] border-[1.5px] border-line bg-line2 px-3 py-[5px] text-[11px] font-bold text-ink3 transition-colors hover:border-teal3 hover:bg-teal4 hover:text-teal"
+              >
+                ＋ {cat.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Move single item — GAS #moveModalBg 1:1; remount resets form state */}
       <MoveItemModal
-        key={moveItem?.id ?? "closed"}
+        key={moveItem ? `move-item-${moveItem.id}` : "move-item-closed"}
         open={!!moveItem}
         onClose={closeMoveItem}
         item={moveItem}
@@ -642,62 +889,16 @@ export function RoomDetailInteractive({
         onConfirm={confirmMoveItem}
       />
 
-      {/* Move all — GAS-ish chrome (blue head + room select) */}
-      <Dialog open={moveAllOpen} onClose={closeMoveAll} size="md" zIndex={3500}>
-        <div
-          className="flex shrink-0 items-center justify-between px-[22px] py-[18px] text-white"
-          style={{
-            background: "linear-gradient(135deg, #1e3a5f, #1d4ed8)",
-          }}
-        >
-          <div className="min-w-0">
-            <div className="text-base font-extrabold leading-tight">
-              📦 Pindah Semua Item
-            </div>
-            <div className="mt-[3px] text-[11px] opacity-75">
-              {items.length} item dari {room.icon} {room.name}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={closeMoveAll}
-            className="ml-3 shrink-0 rounded-lg border-[1.5px] border-white/30 bg-white/15 px-3.5 py-1.5 text-xs font-bold text-white transition-colors hover:bg-white/28"
-          >
-            ✕ Tutup
-          </button>
-        </div>
-        <div className="flex flex-col gap-3 overflow-y-auto px-5 py-4">
-          <div className="rounded-xl border-[1.5px] border-[#bfdbfe] bg-[#eff6ff] px-4 py-3 text-[13px] font-bold text-ink">
-            Pindahkan seluruh inventaris ruangan ini ke tujuan di bawah.
-          </div>
-          <Select
-            label="Ruangan Tujuan"
-            value={moveAllTargetRoomId}
-            onChange={(e) => setMoveAllTargetRoomId(e.target.value)}
-            options={roomOptions}
-          />
-        </div>
-        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-line bg-[#f8faff] px-5 py-3.5">
-          <button
-            type="button"
-            onClick={closeMoveAll}
-            className="rounded-[10px] border-[1.5px] border-line bg-white px-4 py-[9px] text-xs font-bold text-ink2 transition-colors hover:border-[#1d4ed8] hover:text-[#1d4ed8]"
-          >
-            Batal
-          </button>
-          <button
-            type="button"
-            onClick={confirmMoveAll}
-            disabled={!moveAllTargetRoomId}
-            className="rounded-[10px] border-none px-[22px] py-[9px] text-[13px] font-extrabold text-white shadow-[0_4px_12px_rgba(29,78,216,0.3)] transition-[filter] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-            style={{
-              background: "linear-gradient(135deg, #1e3a5f, #1d4ed8)",
-            }}
-          >
-            ✅ Pindahkan Semua
-          </button>
-        </div>
-      </Dialog>
+      {/* Pindah beberapa/semua item — GAS openMvAllModal; remount reset state */}
+      <MoveAllModal
+        key={moveAllOpen ? "move-all-open" : "move-all-closed"}
+        open={moveAllOpen}
+        onClose={closeMoveAll}
+        items={items}
+        fromRoom={room}
+        rooms={rooms}
+        onConfirm={confirmMoveAll}
+      />
 
       {/* Ceklist Harian — GAS openChecklist / #clModalOverlay (mock matrix) */}
       <ChecklistRoomModal
@@ -706,6 +907,48 @@ export function RoomDetailInteractive({
         room={room}
         items={items}
       />
+
+      {/* Hapus ruangan — GAS delRoom memakai confirm(), di sini dialog bergaya GAS */}
+      <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)} size="sm">
+        <div
+          className="flex shrink-0 items-center justify-between px-[22px] py-[18px] text-white"
+          style={{ background: "linear-gradient(135deg, #7f1d1d, #b91c1c)" }}
+        >
+          <div className="min-w-0">
+            <div className="text-base font-extrabold leading-tight">
+              🗑 Hapus Ruangan
+            </div>
+            <div className="mt-[3px] truncate text-[11px] opacity-75">
+              {room.icon} {room.name}
+            </div>
+          </div>
+        </div>
+
+        <div className="px-[22px] py-5">
+          <p className="text-[13px] leading-relaxed text-ink2">
+            Ruangan <b>{room.name}</b> beserta <b>{totalItems}</b> item di
+            dalamnya akan dihapus dari daftar. Tindakan ini tidak dapat
+            dibatalkan.
+          </p>
+        </div>
+
+        <div className="flex shrink-0 justify-end gap-2 border-t border-line bg-bg px-[22px] py-3.5">
+          <button
+            type="button"
+            onClick={() => setDeleteOpen(false)}
+            className="rounded-[10px] border-[1.5px] border-line bg-white px-4 py-2 text-xs font-bold text-ink2 transition-colors hover:border-ink3"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={confirmDeleteRoom}
+            className="rounded-[10px] border-none bg-[#b91c1c] px-[22px] py-2 text-[13px] font-extrabold text-white shadow-[0_4px_12px_rgba(185,28,28,0.3)] transition-colors hover:bg-[#991b1b]"
+          >
+            🗑 Ya, Hapus Ruangan
+          </button>
+        </div>
+      </Dialog>
     </>
   );
 }

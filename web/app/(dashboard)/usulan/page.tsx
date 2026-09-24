@@ -1,5 +1,5 @@
 import type { Usulan, UsulanItem } from "@/lib/usulan-types";
-import { getMockUsulan } from "@/lib/mock-data";
+import { getUsulanList } from "@/lib/auth/usulan";
 import { Card } from "@/components/gas/card";
 import { Button } from "@/components/gas/button";
 import Link from "next/link";
@@ -46,7 +46,14 @@ export default async function UsulanPage({ searchParams }: PageProps) {
   const prioritasFilter = sp.prioritas || "all";
   const statusFilter = sp.status || "all";
 
-  const usulanList = getMockUsulan();
+  let usulanList: Usulan[];
+  let usulanError = false;
+  try {
+    usulanList = await getUsulanList();
+  } catch {
+    usulanList = [];
+    usulanError = true;
+  }
 
   const totalItems = usulanList.reduce(
     (sum, usulan) => sum + (usulan.payload?.items?.length || 0),
@@ -102,6 +109,12 @@ export default async function UsulanPage({ searchParams }: PageProps) {
           </>
         }
       />
+
+      {usulanError && (
+        <p role="alert" className="text-center py-4 text-[12.5px] text-ink3">
+          Gagal memuat data usulan. Silakan muat ulang halaman.
+        </p>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>

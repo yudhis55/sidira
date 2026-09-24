@@ -89,6 +89,8 @@ export interface SBBKItem {
   satuan: string;
   harga: number;
   total: number;
+  /** Kolom "Keterangan" per barang — GAS `sbbkAddItemRow` field `ket`. */
+  ket?: string;
 }
 
 export interface SBBK {
