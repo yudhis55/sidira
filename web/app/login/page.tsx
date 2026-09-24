@@ -1,22 +1,29 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { useActionState, useState } from "react";
+import { login } from "@/lib/auth/actions";
+
+interface LoginState {
+  error: string;
+}
+
+const initialState: LoginState = { error: "" };
+
+async function loginAction(
+  _prevState: LoginState,
+  formData: FormData,
+): Promise<LoginState> {
+  const result = await login(formData);
+  return { error: result?.error ?? "" };
+}
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    // Mock mode: redirect immediately
-    router.push("/");
-  }
+  const [state, formAction, isPending] = useActionState(
+    loginAction,
+    initialState,
+  );
+  const [showPw, setShowPw] = useState(false);
+  const error = state.error || null;
 
   return (
     <>
@@ -104,20 +111,23 @@ export default function LoginPage() {
           width: 80px;
           height: 80px;
           border-radius: 22px;
-          background: linear-gradient(
-            145deg,
-            rgba(255, 255, 255, 0.15),
-            rgba(255, 255, 255, 0.05)
-          );
-          border: 1.5px solid rgba(255, 255, 255, 0.2);
+          background: #0b0d0c;
+          border: 2px solid rgba(255, 255, 255, 0.92);
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 38px;
+          position: relative;
+          overflow: hidden;
           box-shadow:
             0 12px 32px rgba(0, 0, 0, 0.3),
             inset 0 1px 0 rgba(255, 255, 255, 0.2);
           margin-bottom: 16px;
+        }
+        .login-emblem {
+          width: 64px;
+          height: 64px;
+          display: block;
+          object-fit: contain;
         }
         .login-brand-name {
           font-size: 28px;
@@ -136,13 +146,6 @@ export default function LoginPage() {
           margin-top: 6px;
           line-height: 1.5;
           letter-spacing: 0.3px;
-        }
-        .login-divider {
-          width: 40px;
-          height: 2px;
-          background: linear-gradient(90deg, #20e0a0, #0e7c6b);
-          border-radius: 2px;
-          margin: 14px auto 0;
         }
 
         /* Form */
@@ -199,6 +202,23 @@ export default function LoginPage() {
           border-color: #20e0a0;
           background: rgba(255, 255, 255, 0.1);
           box-shadow: 0 0 0 3px rgba(32, 224, 160, 0.12);
+        }
+        .login-input-pw {
+          padding-right: 44px;
+        }
+        .login-pw-toggle {
+          position: absolute;
+          right: 12px;
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 16px;
+          color: rgba(255, 255, 255, 0.35);
+          padding: 4px;
+          transition: color 0.2s;
+        }
+        .login-pw-toggle:hover {
+          color: rgba(255, 255, 255, 0.7);
         }
 
         /* Error message */
@@ -268,33 +288,39 @@ export default function LoginPage() {
         .login-hint b {
           color: rgba(255, 255, 255, 0.55);
         }
+
+        /* Footer login */
+        .login-footer {
+          margin-top: 24px;
+          text-align: center;
+          font-size: 10px;
+          color: rgba(255, 255, 255, 0.2);
+        }
       `}</style>
 
       <div className="login-shell">
         <div className="login-orb2"></div>
         <div className="login-card">
           <div className="login-logo">
-            <div className="login-logo-badge" style={{ background: "transparent", overflow: "hidden" }}>
-              <Image 
-                src="/logo-puskesmas.svg" 
-                alt="Logo Puskesmas" 
-                width={80} 
-                height={80} 
-                style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "inherit" }} 
+            <div className="login-logo-badge" aria-hidden="true">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                className="login-emblem"
+                src="/logo-puskesmas.png"
+                alt="Logo Puskesmas Baruharjo"
               />
             </div>
             <div className="login-brand-name">
-              SIDIR<span>A</span>
+              <span>SIDI</span>RA
             </div>
             <div className="login-brand-sub">
-              Sistem Digital Inventaris Ruangan<br />
-              Puskesmas Baruharjo
+              Sistem Digital Inventaris Ruangan Aset<br />
+              UPTD Puskesmas Baruharjo · Trenggalek
             </div>
-            <div className="login-divider"></div>
           </div>
 
-          <form onSubmit={handleSubmit}>
-            <div className="login-form-title">Akses Panel Admin</div>
+          <form action={formAction}>
+            <div className="login-form-title">MASUK KE DASHBOARD</div>
 
             <div className="login-field">
               <label htmlFor="username">Username</label>
@@ -305,8 +331,8 @@ export default function LoginPage() {
                   id="username"
                   name="username"
                   className="login-input"
-                  placeholder="Masukkan username"
-                  defaultValue="sidira"
+                  placeholder="Masukkan username..."
+                  autoComplete="username"
                   required
                 />
               </div>
@@ -317,14 +343,23 @@ export default function LoginPage() {
               <div className="login-input-wrap">
                 <span className="login-input-ico">🔒</span>
                 <input
-                  type="password"
+                  type={showPw ? "text" : "password"}
                   id="password"
                   name="password"
-                  className="login-input"
-                  placeholder="Masukkan password"
-                  defaultValue="sidira2026"
+                  className="login-input login-input-pw"
+                  placeholder="Masukkan password..."
+                  autoComplete="current-password"
                   required
                 />
+                <button
+                  type="button"
+                  className="login-pw-toggle"
+                  onClick={() => setShowPw((v) => !v)}
+                  title={showPw ? "Sembunyikan password" : "Tampilkan password"}
+                  aria-label={showPw ? "Sembunyikan password" : "Tampilkan password"}
+                >
+                  {showPw ? "🙈" : "👁"}
+                </button>
               </div>
             </div>
 
@@ -332,13 +367,46 @@ export default function LoginPage() {
               {error}
             </div>
 
-            <button type="submit" className="login-btn" disabled={loading}>
-              {loading ? "Memproses..." : "Masuk ke Sistem"}
+            <button type="submit" className="login-btn" disabled={isPending}>
+              {isPending ? (
+                "Memproses..."
+              ) : (
+                <>
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 16 16"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M6.5 2.5h-4v11h4v-1.6H4.2V4.1h2.3V2.5z"
+                      fill="#f5a623"
+                    />
+                    <path
+                      d="M6.2 8h6.6M10.9 5.4L13.5 8l-2.6 2.6"
+                      stroke="#f5a623"
+                      strokeWidth="1.8"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  Masuk ke SIDIRA
+                </>
+              )}
             </button>
           </form>
 
           <div className="login-hint">
-            <p>Untuk mencoba, gunakan username <b>sidira</b> dan password <b>sidira2026</b></p>
+            <p>
+              <b>Admin:</b> sidira / sidira2026<br />
+              <b>Kepala Puskesmas:</b> kapus / kapus2026<br />
+              <b>Pengurus Barang:</b> pengurus / barang2026
+            </p>
+          </div>
+
+          <div className="login-footer">
+            SIDIRA v2.0 · Puskesmas Baruharjo · Trenggalek · 2026
           </div>
         </div>
       </div>

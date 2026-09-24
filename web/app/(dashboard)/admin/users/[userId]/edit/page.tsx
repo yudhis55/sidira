@@ -1,7 +1,8 @@
 import { Card } from "@/components/gas/card";
 import { Button } from "@/components/gas/button";
 import { UserForm } from "@/components/admin/user-form";
-import { getMockUserById } from "@/lib/mock-data/users";
+import { getUserById } from "@/lib/auth/admin";
+import { toProfile } from "@/lib/admin-utils";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +13,7 @@ interface UserEditPageProps {
 
 export default async function UserEditPage({ params }: UserEditPageProps) {
   const { userId } = await params;
-  const userData = getMockUserById(userId);
+  const userData = await getUserById(userId);
 
   if (!userData) {
     return (
@@ -37,7 +38,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
               📭
             </p>
             <p className="mt-3 text-ink3">
-              User dengan ID tersebut tidak ada di data mock.
+              User dengan ID tersebut tidak ditemukan.
             </p>
             <Link href="/admin/users" className="mt-4 inline-block">
               <Button variant="ghost">← Kembali ke daftar</Button>
@@ -69,13 +70,13 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
               Edit User
             </h1>
             <p className="text-xs text-ink3">
-              Ubah informasi · {userData.nama} · mode demo
+              Ubah informasi · {userData.nama}
             </p>
           </div>
         </div>
       </div>
 
-      <UserForm user={userData} />
+      <UserForm user={toProfile(userData)} />
     </div>
   );
 }

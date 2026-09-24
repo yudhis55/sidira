@@ -26,7 +26,7 @@ export default function NewUserPage() {
               Tambah User Baru
             </h1>
             <p className="text-xs text-ink3">
-              Buat akun user baru · mode demo
+              Buat akun user baru
             </p>
           </div>
         </div>

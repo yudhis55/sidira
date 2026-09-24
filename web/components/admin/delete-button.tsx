@@ -1,16 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/gas/button";
+import { deleteUser } from "@/lib/auth/admin";
 
 interface DeleteUserButtonProps {
   userId: string;
   username: string;
 }
 
-export function DeleteUserButton({ username }: DeleteUserButtonProps) {
+export function DeleteUserButton({ userId, username }: DeleteUserButtonProps) {
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleDelete = async () => {
     if (!confirm(`Apakah Anda yakin ingin menghapus user "${username}"?`)) {
@@ -18,7 +21,14 @@ export function DeleteUserButton({ username }: DeleteUserButtonProps) {
     }
 
     setLoading(true);
-    toast.success("Mode demo — user tidak dihapus dari server");
+    const result = await deleteUser(userId);
+    if (result && "error" in result && result.error) {
+      toast.error(result.error);
+      setLoading(false);
+      return;
+    }
+    toast.success(`User "${username}" berhasil dihapus`);
+    router.refresh();
     setLoading(false);
   };
 

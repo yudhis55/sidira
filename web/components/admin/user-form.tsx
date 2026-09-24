@@ -7,6 +7,7 @@ import { Card } from "@/components/gas/card";
 import { Button } from "@/components/gas/button";
 import { Input } from "@/components/gas/input";
 import { Select } from "@/components/gas/select";
+import { createUser, updateUser } from "@/lib/auth/admin";
 import type { Profile } from "@/types/database";
 
 interface UserFormProps {
@@ -29,13 +30,30 @@ export function UserForm({ user }: UserFormProps) {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    toast.success(
-      user?.id
-        ? "Mode demo — perubahan user tidak disimpan ke server"
-        : "Mode demo — user baru tidak disimpan ke server",
-    );
-    setLoading(false);
-    router.push("/admin/users");
+    try {
+      const formData = new FormData(e.currentTarget);
+      // Username dikunci saat edit (input disabled tidak ikut terkirim),
+      // jadi setel manual dari data user.
+      if (user?.id) {
+        formData.set("username", user.username);
+      }
+      const result = user?.id
+        ? await updateUser(user.id, formData)
+        : await createUser(formData);
+      if (result && "error" in result && result.error) {
+        toast.error(result.error);
+        setLoading(false);
+        return;
+      }
+      toast.success(
+        user?.id ? "User berhasil diperbarui" : "User berhasil dibuat",
+      );
+      router.push("/admin/users");
+      router.refresh();
+    } catch {
+      toast.error("Gagal menyimpan user. Silakan coba lagi.");
+      setLoading(false);
+    }
   };
 
   return (
@@ -46,7 +64,7 @@ export function UserForm({ user }: UserFormProps) {
             {user?.id ? "✏️ Edit User" : "➕ Data User Baru"}
           </p>
           <p className="text-[11px] text-ink3">
-            Mode demo — tidak tersimpan ke server
+            Pastikan data terisi dengan benar
           </p>
         </div>
 

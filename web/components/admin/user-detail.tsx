@@ -146,12 +146,6 @@ export function UserDetail({ user }: UserDetailProps) {
         </div>
       </Card>
 
-      <Card className="bg-line2/40">
-        <p className="text-xs text-ink3">
-          ℹ️ Mode demo — data user dari mock. Tidak ada sinkronisasi ke
-          Supabase Auth.
-        </p>
-      </Card>
     </div>
   );
 }
