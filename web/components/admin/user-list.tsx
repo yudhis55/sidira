@@ -1,8 +1,14 @@
-import Link from "next/link";
+"use client";
+
+import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/gas/card";
 import { Button } from "@/components/gas/button";
+import { Modal } from "@/components/gas/modal";
 import { Table, type TableColumn } from "@/components/gas/table";
 import { DeleteUserButton } from "./delete-button";
+import { UserDetail } from "./user-detail";
+import { UserForm } from "./user-form";
 import type { Profile } from "@/types/database";
 
 interface UserListProps {
@@ -32,6 +38,18 @@ function RoleBadge({ role }: { role: string }) {
 }
 
 export function UserList({ users }: UserListProps) {
+  const router = useRouter();
+  const [detailUser, setDetailUser] = React.useState<Profile | null>(null);
+  const [editingUser, setEditingUser] = React.useState<Profile | null>(null);
+  const [creating, setCreating] = React.useState(false);
+
+  /** Refresh daftar dari server setelah tulis (data fresh, modal tertutup). */
+  const afterWrite = () => {
+    setEditingUser(null);
+    setCreating(false);
+    setDetailUser(null);
+    router.refresh();
+  };
   const columns: TableColumn[] = [
     { key: "user", label: "User" },
     { key: "role", label: "Role", width: "100px" },
@@ -57,20 +75,35 @@ export function UserList({ users }: UserListProps) {
     jabatan: <span className="text-ink2">{user.jabatan || "—"}</span>,
     aksi: (
       <div className="flex items-center gap-1">
-        <Link href={`/admin/users/${user.id}`}>
-          <Button variant="ghost" size="sm" className="text-[11px] px-2 py-1">
-            Detail
-          </Button>
-        </Link>
-        <Link href={`/admin/users/${user.id}/edit`}>
-          <Button variant="ghost" size="sm" className="text-[11px] px-2 py-1">
-            ✏️
-          </Button>
-        </Link>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-[11px] px-2 py-1"
+          onClick={() => setDetailUser(user)}
+        >
+          Detail
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-[11px] px-2 py-1"
+          onClick={() => setEditingUser(user)}
+          aria-label={`Edit ${user.username}`}
+        >
+          ✏️
+        </Button>
         <DeleteUserButton userId={user.id} username={user.username} />
       </div>
     ),
   }));
+
+  // UserForm menavigasi sendiri setelah sukses; di dalam modal cukup
+  // tutup + refresh agar daftar tampil segar.
+  const formKey = editingUser
+    ? `edit-${editingUser.id}`
+    : creating
+      ? "new"
+      : "closed";
 
   return (
     <Card className="overflow-hidden p-0">
@@ -79,20 +112,95 @@ export function UserList({ users }: UserListProps) {
           <p className="font-mono text-sm font-bold text-ink">Daftar User</p>
           <p className="text-[11px] text-ink3">Total: {users.length} user</p>
         </div>
-        <Link href="/admin/users/new">
-          <Button>
-            <span className="mr-1" aria-hidden>
-              ➕
-            </span>
-            Tambah User
-          </Button>
-        </Link>
+        <Button onClick={() => setCreating(true)}>
+          <span className="mr-1" aria-hidden>
+            ➕
+          </span>
+          Tambah User
+        </Button>
       </div>
       {users.length === 0 ? (
         <div className="py-12 text-center text-ink3">📭 Belum ada user</div>
       ) : (
         <Table columns={columns} rows={rows} striped />
       )}
+
+      {/* Modal detail — konten UserDetail yang sama dengan halaman. */}
+      <Modal
+        open={detailUser !== null}
+        onClose={() => setDetailUser(null)}
+        headVariant="gas"
+        size="md"
+        icon="👤"
+        title={detailUser ? detailUser.nama : "Detail User"}
+        subtitle="Informasi lengkap akun"
+        footer={
+          <>
+            {detailUser && (
+              <Button
+                type="button"
+                variant="modal-ok"
+                onClick={() => {
+                  setEditingUser(detailUser);
+                  setDetailUser(null);
+                }}
+              >
+                ✏️ Edit
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="modal-cancel"
+              onClick={() => setDetailUser(null)}
+            >
+              Tutup
+            </Button>
+          </>
+        }
+      >
+        {detailUser && (
+          <UserDetail
+            user={detailUser}
+            hideNav
+            onEdit={() => {
+              setEditingUser(detailUser);
+              setDetailUser(null);
+            }}
+          />
+        )}
+      </Modal>
+
+      {/* Modal tambah/edit — UserForm yang sama, refresh saat sukses. */}
+      <Modal
+        open={editingUser !== null || creating}
+        onClose={() => {
+          setEditingUser(null);
+          setCreating(false);
+        }}
+        headVariant="gas"
+        size="md"
+        icon={editingUser ? "✏️" : "➕"}
+        title={editingUser ? "Edit User" : "Tambah User Baru"}
+        subtitle="Pastikan data terisi dengan benar"
+        footer={
+          <Button
+            type="button"
+            variant="modal-cancel"
+            onClick={() => {
+              setEditingUser(null);
+              setCreating(false);
+            }}
+          >
+            Tutup
+          </Button>
+        }
+      >
+        <UserForm
+          key={formKey}
+          user={editingUser ?? undefined}
+          onSuccess={afterWrite}
+        />
+      </Modal>
     </Card>
   );
 }

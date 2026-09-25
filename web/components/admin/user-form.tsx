@@ -12,6 +12,11 @@ import type { Profile } from "@/types/database";
 
 interface UserFormProps {
   user?: Profile;
+  /**
+   * Dipanggil setelah tulis sukses (mode modal): pemilik menutup modal +
+   * refresh. Tanpa ini (halaman), perilaku lama: pindah ke /admin/users.
+   */
+  onSuccess?: () => void;
 }
 
 const AVATAR_PRESETS = ["👤", "🛡️", "👩‍⚕️", "👨‍⚕️", "📦", "🔧", "📋", "💉"];
@@ -22,7 +27,7 @@ const ROLE_OPTIONS = [
   { value: "viewer", label: "Viewer — hanya lihat" },
 ];
 
-export function UserForm({ user }: UserFormProps) {
+export function UserForm({ user, onSuccess }: UserFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [avatar, setAvatar] = useState(user?.avatar || "👤");
@@ -48,8 +53,12 @@ export function UserForm({ user }: UserFormProps) {
       toast.success(
         user?.id ? "User berhasil diperbarui" : "User berhasil dibuat",
       );
-      router.push("/admin/users");
-      router.refresh();
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.push("/admin/users");
+        router.refresh();
+      }
     } catch {
       toast.error("Gagal menyimpan user. Silakan coba lagi.");
       setLoading(false);

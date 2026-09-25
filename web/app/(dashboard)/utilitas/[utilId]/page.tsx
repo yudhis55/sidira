@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { UtilitasEditModal } from "@/components/utilitas/utilitas-edit-modal";
 import { UtilDetailPanels } from "@/components/utilitas/util-detail-panels";
 import { AddedUtilDetail } from "@/components/utilitas/added-util-detail";
 import {
@@ -131,13 +132,7 @@ export default async function UtilitasDetailPage({
         </div>
         <div className="min-w-0 flex-1">
           <h1 className="flex flex-wrap items-center gap-2.5 text-lg font-extrabold leading-tight text-ink">
-            Pemeliharaan {utilMeta.label}
-            <Link
-              href={`/utilitas/${utilId}/edit`}
-              className="inline-flex items-center gap-1.5 rounded-[20px] border-[1.5px] border-line bg-white px-3.5 py-1 text-xs font-bold text-ink2 transition-colors hover:border-ink3 hover:text-ink"
-            >
-              ✏️ Edit Nama
-            </Link>
+            Pemeliharaan {utilMeta.label} <UtilitasEditModal utilitas={utilMeta} />
           </h1>
           <p className="mt-0.5 text-xs text-ink3">
             Puskesmas Baruharjo · {items.length} item pemeliharaan

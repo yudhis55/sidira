@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Card } from "@/components/gas/card";
 import { Button } from "@/components/gas/button";
 import { DeleteUserButton } from "./delete-button";
@@ -6,6 +5,10 @@ import type { Profile } from "@/types/database";
 
 interface UserDetailProps {
   user: Profile;
+  /** Sembunyikan header navigasi (mode modal — navigasi di footer modal). */
+  hideNav?: boolean;
+  /** Dipanggil tombol Edit (mode modal). Tanpa ini, tombol disembunyikan. */
+  onEdit?: () => void;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -37,7 +40,7 @@ function formatDateTime(dateString?: string) {
   });
 }
 
-export function UserDetail({ user }: UserDetailProps) {
+export function UserDetail({ user, hideNav, onEdit }: UserDetailProps) {
   const email = `${user.username}@sidira.local`;
   const roleLabel = ROLE_LABELS[user.role] || user.role;
   const roleColor = ROLE_COLORS[user.role] || "bg-line2 text-ink2";
@@ -45,33 +48,30 @@ export function UserDetail({ user }: UserDetailProps) {
   return (
     <div className="space-y-5">
       {/* Header */}
+      {!hideNav && (
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <Link href="/admin/users">
-            <Button
-              variant="ghost"
-              className="h-9 w-9 p-0"
-              aria-label="Kembali"
-            >
-              ←
-            </Button>
-          </Link>
-          <div>
-            <h1 className="font-mono text-xl font-bold tracking-tight text-ink">
-              Detail User
-            </h1>
-            <p className="text-xs text-ink3">Informasi lengkap akun</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href={`/admin/users/${user.id}/edit`}>
-            <Button variant="ghost" className="text-xs px-3 py-1.5">
-              ✏️ Edit
-            </Button>
-          </Link>
-          <DeleteUserButton userId={user.id} username={user.username} />
+        <div>
+          <h1 className="font-mono text-xl font-bold tracking-tight text-ink">
+            Detail User
+          </h1>
+          <p className="text-xs text-ink3">Informasi lengkap akun</p>
         </div>
       </div>
+      )}
+      {(onEdit || !hideNav) && (
+      <div className="flex flex-wrap items-center gap-2">
+        {onEdit ? (
+          <Button
+            variant="ghost"
+            className="text-xs px-3 py-1.5"
+            onClick={onEdit}
+          >
+            ✏️ Edit
+          </Button>
+        ) : null}
+        <DeleteUserButton userId={user.id} username={user.username} />
+      </div>
+      )}
 
       {/* Identity card */}
       <Card className="space-y-5">

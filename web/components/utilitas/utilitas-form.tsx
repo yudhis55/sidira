@@ -5,18 +5,24 @@ import { createUtilMeta, updateUtilMeta } from "@/lib/auth/utilitas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import type { UtilMeta } from "@/lib/auth/utilitas";
 
 interface UtilitasFormProps {
   utilitas?: UtilMeta;
+  /**
+   * Mode telanjang untuk dipakai di dalam modal: tanpa Card pembungkus
+   * dan tombol Batal memanggil onCancel (bukan pindah ke /utilitas).
+   */
+  bare?: boolean;
+  onCancel?: () => void;
 }
 
 // Preset emojis for utilitas identity (ambulance, genset, water/IPAL, tools, etc.)
 const PRESET_EMOJIS = ["🚑", "⚡", "💧", "🔧", "🔥", "🧯", "🚰", "🏥"];
 
-export function UtilitasForm({ utilitas }: UtilitasFormProps) {
+export function UtilitasForm({ utilitas, bare, onCancel }: UtilitasFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [icon, setIcon] = useState(utilitas?.icon || "🔧");
@@ -38,13 +44,16 @@ export function UtilitasForm({ utilitas }: UtilitasFormProps) {
     // On success, the server action redirects; no client navigation needed.
   }
 
-  return (
-    <form action={handleSubmit} className="space-y-6">
-      <Card className="rounded-none">
-        <CardHeader>
-          <CardTitle className="font-mono">Informasi Utilitas</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+  const body = (
+    <>
+      {!bare && (
+        <div className="border-b border-line pb-3">
+          <p className="font-mono text-sm font-bold text-ink">
+            Informasi Utilitas
+          </p>
+        </div>
+      )}
+      <div className="grid gap-4">
           {!utilitas && (
             <div className="grid gap-2">
               <Label htmlFor="util_id" className="font-mono">
@@ -152,15 +161,38 @@ export function UtilitasForm({ utilitas }: UtilitasFormProps) {
               {error}
             </div>
           )}
-        </CardContent>
-      </Card>
+      </div>
+    </>
+  );
+
+  return (
+    <form action={handleSubmit} className="space-y-5">
+      {bare ? (
+        body
+      ) : (
+        <Card className="space-y-5">
+          <CardContent className="space-y-4 pt-5">{body}</CardContent>
+        </Card>
+      )}
 
       <div className="flex gap-2">
-        <Link href="/utilitas">
-          <Button variant="outline" type="button" disabled={loading}>
-            Batal
-          </Button>
-        </Link>
+        {!bare &&
+          (onCancel ? (
+            <Button
+              variant="outline"
+              type="button"
+              disabled={loading}
+              onClick={onCancel}
+            >
+              Batal
+            </Button>
+          ) : (
+            <Link href="/utilitas">
+              <Button variant="outline" type="button" disabled={loading}>
+                Batal
+              </Button>
+            </Link>
+          ))}
         <Button type="submit" disabled={loading}>
           {loading ? (
             <>⏳ Menyimpan...</>

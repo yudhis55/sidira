@@ -15,7 +15,7 @@ import {
   ModalField,
   MODAL_INPUT_CLASS,
 } from "@/components/gas/emoji-picker";
-import { addRoom } from "@/lib/room-store";
+import { createRoom } from "@/lib/auth/rooms";
 
 /** GAS membuka modal dengan ikon 🏠 terpilih. */
 const DEFAULT_ICON = "🏠";
@@ -35,8 +35,10 @@ export function AddRoomModal({ open, onClose, onCreated }: AddRoomModalProps) {
   const [invalid, setInvalid] = React.useState(false);
   const nameRef = React.useRef<HTMLInputElement>(null);
 
+  const [saving, setSaving] = React.useState(false);
+
   /** GAS menandai input merah lalu memfokuskannya bila nama kosong. */
-  function submit() {
+  async function submit() {
     const nama = name.trim();
     if (!nama) {
       setInvalid(true);
@@ -44,11 +46,26 @@ export function AddRoomModal({ open, onClose, onCreated }: AddRoomModalProps) {
       return;
     }
     setInvalid(false);
-    const room = addRoom({ name: nama, icon, description: desc });
+    setSaving(true);
+    const formData = new FormData();
+    formData.set("name", nama);
+    formData.set("icon", icon);
+    formData.set("description", desc.trim());
+    const res = await createRoom(formData).catch(() => ({
+      error: "Gagal menyimpan ke server",
+    }));
+    setSaving(false);
+    if (res && "error" in res && res.error) {
+      toast.error(typeof res.error === "string" ? res.error : "Gagal menyimpan");
+      return;
+    }
+    // id = slug nama (lihat createRoom) — samakan agar langsung dibuka.
+    const slug = nama.toLowerCase().replace(/\s+/g, "-");
     toast.success(`Ruangan "${nama}" berhasil ditambahkan`);
     onClose();
-    if (onCreated) onCreated(room.id);
-    else router.push(`/inventaris/${room.id}`);
+    router.refresh();
+    if (onCreated) onCreated(slug);
+    else router.push(`/inventaris/${slug}`);
   }
 
   return (
@@ -65,8 +82,13 @@ export function AddRoomModal({ open, onClose, onCreated }: AddRoomModalProps) {
           <Button type="button" variant="modal-cancel" onClick={onClose}>
             Batal
           </Button>
-          <Button type="button" variant="modal-ok" onClick={submit}>
-            ＋ Tambah Ruangan
+          <Button
+            type="button"
+            variant="modal-ok"
+            onClick={submit}
+            disabled={saving}
+          >
+            {saving ? "Menyimpan…" : "＋ Tambah Ruangan"}
           </Button>
         </>
       }

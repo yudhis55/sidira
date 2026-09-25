@@ -1,7 +1,5 @@
-import Link from "next/link";
 import { getAllUsers } from "@/lib/auth/admin";
 import { toProfile } from "@/lib/admin-utils";
-import { Button } from "@/components/gas/button";
 import { Card } from "@/components/gas/card";
 import { PageHeader } from "@/components/shared/page-elements";
 import { UserList } from "@/components/admin/user-list";
@@ -49,16 +47,7 @@ export default async function AdminUsersPage() {
           { value: editorCount, label: "Editor", tone: "blue" },
           { value: viewerCount, label: "Viewer", tone: "slate" },
         ]}
-        actions={
-          <Link href="/admin/users/new">
-            <Button>
-              <span aria-hidden className="mr-1">
-                ➕
-              </span>
-              Tambah User
-            </Button>
-          </Link>
-        }
+        actions={null}
       />
 
       {/* Role legend */}
