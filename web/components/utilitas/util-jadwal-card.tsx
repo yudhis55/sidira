@@ -2,6 +2,11 @@
 
 import type { UtilItem } from "@/types/database";
 import { cn } from "@/lib/utils";
+import {
+  fulfillmentLabel,
+  monthFulfillment,
+  parseFrekuensi,
+} from "@/lib/utilitas-frekuensi";
 
 const MONTH_NAMES_SHORT = [
   "Jan",
@@ -31,10 +36,6 @@ function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
-function daysInMonth(year: number, month0: number) {
-  return new Date(year, month0 + 1, 0).getDate();
-}
-
 export interface UtilJadwalCardProps {
   icon: string;
   year: number;
@@ -59,14 +60,6 @@ export function UtilJadwalCard({
   const now = new Date();
   const currentYm = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}`;
 
-  const monthHasDone = (itemIndex: number, month0: number) => {
-    const dim = daysInMonth(year, month0);
-    const prefix = `${year}-${pad2(month0 + 1)}`;
-    for (let day = 1; day <= dim; day++) {
-      if (doneSet.has(`${itemIndex}|${prefix}-${pad2(day)}`)) return true;
-    }
-    return false;
-  };
 
   return (
     <div className="mb-5 overflow-hidden rounded-[10px] border border-line bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
@@ -135,20 +128,46 @@ export function UtilJadwalCard({
                   {MONTH_NAMES_SHORT.map((b, mi) => {
                     const ym = `${year}-${pad2(mi + 1)}`;
                     const isFuture = ym > currentYm;
-                    const hasDone = !isFuture && monthHasDone(idx, mi);
+                    // Target vs realisasi sesuai frekuensi item (ket).
+                    const freq = parseFrekuensi(it.ket);
+                    const f = monthFulfillment(
+                      freq,
+                      doneSet,
+                      idx,
+                      year,
+                      mi,
+                      isFuture
+                    );
+                    const tip = `${it.nama} · ${ym}: ${fulfillmentLabel(
+                      freq,
+                      f.actual,
+                      f.expected
+                    )}`;
                     return (
                       <td
                         key={b}
+                        title={tip}
                         className={cn(
                           "border border-line px-2 py-1.5 text-center",
                           isFuture && "text-[#e5e7eb]",
-                          hasDone && "text-sm font-extrabold text-[#16a34a]"
+                          f.status === "terpenuhi" &&
+                            "text-sm font-extrabold text-[#16a34a]",
+                          f.status === "sebagian" &&
+                            "text-[10px] font-extrabold text-[#d97706]"
                         )}
                         style={
-                          !isFuture && !hasDone ? { color: "#fbbf24" } : undefined
+                          !isFuture && f.status === "belum"
+                            ? { color: "#fbbf24" }
+                            : undefined
                         }
                       >
-                        {isFuture ? "—" : hasDone ? "✔" : "·"}
+                        {f.status === "mendatang"
+                          ? "—"
+                          : f.status === "terpenuhi"
+                            ? "✔"
+                            : f.status === "sebagian"
+                              ? `${f.actual}/${f.expected}`
+                              : "·"}
                       </td>
                     );
                   })}

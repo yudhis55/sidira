@@ -89,6 +89,67 @@ export async function createItem(formData: FormData) {
   return { success: true };
 }
 
+export interface ItemRecordInput {
+  room_id: string;
+  category: string;
+  name?: string;
+  merk?: string;
+  type?: string;
+  spec?: string;
+  noreg?: string;
+  year?: number;
+  quantity?: number;
+  unit?: string;
+  std?: number;
+  prio?: "wajib" | "penting" | "pendukung";
+  condition?: string;
+  notes?: string;
+  index_in_room?: number;
+}
+
+/**
+ * Buat baris item dan kembalikan id-nya — dipakai tambah-baris-cepat di
+ * tabel interaktif (FormData createItem tidak mengembalikan id).
+ */
+export async function createItemRecord(
+  input: ItemRecordInput
+): Promise<{ success: true; id: number } | { error: string }> {
+  const supabase = await createClient();
+
+  if (!input.room_id || !input.category) {
+    return { error: "Ruangan dan kategori harus diisi" };
+  }
+
+  const { data, error } = await supabase
+    .from("items")
+    .insert({
+      room_id: input.room_id,
+      name: input.name || "",
+      category: input.category,
+      merk: input.merk || null,
+      type: input.type || null,
+      spec: input.spec || null,
+      noreg: input.noreg || null,
+      year: input.year ?? null,
+      quantity: input.quantity ?? 0,
+      unit: input.unit || "unit",
+      std: input.std ?? 0,
+      prio: input.prio || "pendukung",
+      condition: input.condition || "baik",
+      notes: input.notes || null,
+      index_in_room: input.index_in_room ?? 0,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/inventaris/${input.room_id}`);
+  return { success: true, id: data.id as number };
+}
+
 export async function updateItem(id: number, formData: FormData) {
   const supabase = await createClient();
 

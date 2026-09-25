@@ -290,6 +290,55 @@ assertEqual(daysInMonth(2024, 1), 29, "February 2024 (leap) has 29 days");
 assertEqual(daysInMonth(2026, 0), 31, "January has 31 days");
 assertEqual(daysInMonth(2026, 3), 30, "April has 30 days");
 
+// ── 14. Frekuensi Utilitas ──
+console.log("\n── Frekuensi Utilitas ──");
+
+import {
+  parseFrekuensi,
+  expectedInMonth,
+  fulfillmentStatus,
+  monthFulfillment,
+  countDoneInRange,
+} from "../lib/utilitas-frekuensi";
+
+assertEqual(parseFrekuensi("Harian"), "harian", "parse Harian");
+assertEqual(parseFrekuensi("Mingguan"), "mingguan", "parse Mingguan");
+assertEqual(parseFrekuensi("Bulanan"), "bulanan", "parse Bulanan");
+assertEqual(parseFrekuensi("Semester"), "semester", "parse Semester");
+assertEqual(parseFrekuensi("Tahunan"), "tahunan", "parse Tahunan");
+assertEqual(parseFrekuensi("Min. 1 Tahun 1x"), "tahunan", "parse Min. 1 Tahun 1x");
+assertEqual(parseFrekuensi("Setiap 5000 KM"), "lainnya", "parse non-tanggal");
+assertEqual(parseFrekuensi(""), "lainnya", "parse kosong");
+assertEqual(parseFrekuensi(undefined), "lainnya", "parse undefined");
+
+const fakeToday = new Date(2026, 8, 22); // 22 Sep 2026
+assertEqual(expectedInMonth("harian", 2026, 8, fakeToday), 22, "harian Sep: 22 hari");
+assertEqual(expectedInMonth("harian", 2026, 7, fakeToday), 31, "harian Agu: 31 hari");
+assertEqual(expectedInMonth("harian", 2026, 9, fakeToday), 0, "harian Okt: mendatang");
+assertEqual(expectedInMonth("mingguan", 2026, 8, fakeToday), 4, "mingguan Sep: ceil(22/7)");
+assertEqual(expectedInMonth("bulanan", 2026, 8, fakeToday), 1, "bulanan Sep: 1");
+assertEqual(expectedInMonth("bulanan", 2026, 9, fakeToday), 0, "bulanan Okt: 0");
+assertEqual(expectedInMonth("semester", 2026, 8, fakeToday), 1, "semester H2: 1");
+assertEqual(expectedInMonth("tahunan", 2026, 8, fakeToday), 1, "tahunan: 1");
+assertEqual(expectedInMonth("lainnya", 2026, 8, fakeToday), -1, "lainnya: -1");
+
+assertEqual(fulfillmentStatus("harian", 22, 22, false), "terpenuhi", "22/22 terpenuhi");
+assertEqual(fulfillmentStatus("harian", 3, 22, false), "sebagian", "3/22 sebagian");
+assertEqual(fulfillmentStatus("harian", 0, 22, false), "belum", "0/22 belum");
+assertEqual(fulfillmentStatus("harian", 0, 0, true), "mendatang", "future mendatang");
+assertEqual(fulfillmentStatus("lainnya", 1, -1, false), "terpenuhi", "lainnya ada");
+assertEqual(fulfillmentStatus("lainnya", 0, -1, false), "belum", "lainnya kosong");
+
+const doneSep = new Set(["0|2026-09-01", "0|2026-09-05", "1|2026-09-01"]);
+assertEqual(countDoneInRange(doneSep, 0, "2026-09-01", "2026-09-30"), 2, "count range item 0");
+assertEqual(countDoneInRange(doneSep, 1, "2026-09-01", "2026-09-30"), 1, "count range item 1");
+const fHarian = monthFulfillment("harian", doneSep, 0, 2026, 8, false, fakeToday);
+assertEqual(fHarian.status, "sebagian", "harian 2/22 sebagian");
+assertEqual(fHarian.actual, 2, "harian aktual 2");
+const fTahunan = monthFulfillment("tahunan", doneSep, 0, 2026, 8, false, fakeToday);
+assertEqual(fTahunan.status, "terpenuhi", "tahunan kumulatif terpenuhi");
+assertEqual(monthFulfillment("bulanan", doneSep, 0, 2026, 9, true, fakeToday).status, "mendatang", "bulan depan mendatang");
+
 // ═══════════════════════════════════════════════════════
 //  RESULTS
 // ═══════════════════════════════════════════════════════

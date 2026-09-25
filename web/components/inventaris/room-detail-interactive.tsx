@@ -1,16 +1,23 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChecklistRoomModal } from "@/components/inventaris/checklist-room-modal";
 import { MoveAllModal } from "@/components/inventaris/move-all-modal";
 import { MoveItemModal } from "@/components/inventaris/move-item-modal";
 import { Dialog } from "@/components/gas/dialog";
-import { useLocalStorageState } from "@/lib/use-local-storage";
 import { mergeRoom, mergeRooms, useRoomOverrides } from "@/lib/room-store";
 import { moveItemsToRoom } from "@/lib/move-store";
-import { roomItemsStorageKey } from "@/lib/storage-keys";
+import {
+  bulkSetCondition,
+  createItemRecord,
+  deleteItem,
+  moveItem as moveItemServer,
+  moveItems as moveItemsServer,
+  updateItemField,
+} from "@/lib/auth/items";
+import { deleteRoom, updateRoomName, updateRoomPj } from "@/lib/auth/rooms";
 import type {
   Item,
   ItemCategory,
@@ -117,8 +124,10 @@ const TH_BASE =
 
 /**
  * Detail ruangan — port GAS buildPanels (index.html ~19103).
- * Seluruh sel dapat diedit langsung seperti spreadsheet; perubahan disimpan
- * ke localStorage (`sidira_room_items_<roomId>`) menunggu wiring Supabase.
+ * Seluruh sel dapat diedit langsung seperti spreadsheet; perubahan sel
+ * tersimpan ke Supabase (debounce) untuk ruangan DB. Ruangan `custom_*`
+ * (localStorage saja) tetap sesi-lokal. Baris baru memakai id negatif
+ * sementara sampai tersimpan (anti-tabrakan dengan id DB).
  */
 export function RoomDetailInteractive({
   room: roomProp,
@@ -126,10 +135,25 @@ export function RoomDetailInteractive({
   rooms: allRooms,
 }: RoomDetailInteractiveProps) {
   const router = useRouter();
-  const [items, setItems] = useLocalStorageState<Item[]>(
-    roomItemsStorageKey(roomProp.id),
-    initialItems
+  /** False untuk ruangan `custom_*` (hanya localStorage, tanpa baris DB). */
+  const isDbRoom = !roomProp.id.startsWith("custom_");
+  const [items, setItems] = useState<Item[]>(initialItems);
+  // Sinkron ulang saat pindah ruangan — server adalah sumber kebenaran,
+  // bukan lagi localStorage (yang dulu membayangi data server).
+  const [seenRoomId, setSeenRoomId] = useState(roomProp.id);
+  if (seenRoomId !== roomProp.id) {
+    setSeenRoomId(roomProp.id);
+    setItems(initialItems);
+  }
+  const itemsRef = useRef(items);
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+  const persistTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>(
+    {}
   );
+  /** Id sementara yang sedang dibuatkan baris DB — cegah duplikat. */
+  const creatingIds = useRef<Set<number>>(new Set());
 
   // Nama & penanggung jawab hasil sunting disimpan terpisah dari data mock.
   const [overrides, setOverrides] = useRoomOverrides();
@@ -180,7 +204,61 @@ export function RoomDetailInteractive({
     (cat) => grouped[cat.value].length === 0
   );
 
-  /** Patch satu item — dipakai semua sel tabel. */
+  /**
+   * Simpan satu field ke Supabase (debounce 800ms per sel). Baris
+   * sementara (id negatif, belum bernama) dibuatkan baris DB saat namanya
+   * terisi; ruangan `custom_*` murni lokal.
+   */
+  const persistItemField = useCallback(
+    (itemId: number, field: string, value: string | number) => {
+      if (!isDbRoom) return;
+      const key = `${itemId}:${field}`;
+      if (persistTimers.current[key]) clearTimeout(persistTimers.current[key]);
+      persistTimers.current[key] = setTimeout(async () => {
+        const row = itemsRef.current.find((it) => it.id === itemId);
+        if (!row) return;
+        // Baris sementara: buat baris DB begitu ada nama.
+        if (itemId < 0) {
+          if (!row.name.trim() || creatingIds.current.has(itemId)) return;
+          creatingIds.current.add(itemId);
+          const res = await createItemRecord({
+            room_id: roomProp.id,
+            category: row.category,
+            name: row.name.trim(),
+            merk: row.merk || undefined,
+            type: row.type || undefined,
+            spec: row.spec || undefined,
+            noreg: row.noreg || undefined,
+            year: row.year ?? undefined,
+            quantity: row.quantity ?? 0,
+            unit: row.unit || "unit",
+            std: row.std ?? 0,
+            prio: row.prio ?? "pendukung",
+            condition: row.condition,
+            notes: row.notes || undefined,
+            index_in_room: row.index_in_room ?? 0,
+          });
+          creatingIds.current.delete(itemId);
+          if ("error" in res) {
+            toast.error("Gagal menyimpan baris baru ke server");
+            return;
+          }
+          const realId = res.id;
+          setItems((prev) =>
+            prev.map((it) => (it.id === itemId ? { ...it, id: realId } : it))
+          );
+          return;
+        }
+        const res = await updateItemField(itemId, roomProp.id, field, value);
+        if (res && "error" in res) {
+          toast.error("Gagal menyimpan perubahan ke server");
+        }
+      }, 800);
+    },
+    [isDbRoom, roomProp.id]
+  );
+
+  /** Patch satu item — dipakai semua sel tabel (optimistik + persist). */
   const updateItem = useCallback(
     (itemId: number, patch: Partial<Item>) => {
       setItems((prev) =>
@@ -190,8 +268,13 @@ export function RoomDetailInteractive({
             : it
         )
       );
+      for (const [field, value] of Object.entries(patch)) {
+        if (field === "id" || field === "updated_at") continue;
+        if (typeof value !== "string" && typeof value !== "number") continue;
+        persistItemField(itemId, field, value);
+      }
     },
-    [setItems]
+    [persistItemField]
   );
 
   /** Callback ref: fokus + select otomatis untuk baris yang baru ditambah. */
@@ -207,17 +290,26 @@ export function RoomDetailInteractive({
     []
   );
 
-  function handleSemuaBaik() {
+  async function handleSemuaBaik() {
     if (items.length === 0) {
       toast.info("Tidak ada item di ruangan ini");
       return;
     }
     setItems((prev) => prev.map((it) => ({ ...it, condition: "baik" })));
+    if (isDbRoom) {
+      const res = await bulkSetCondition(roomProp.id, "baik").catch(() => ({
+        error: "Gagal menyimpan ke server",
+      }));
+      if (res && "error" in res) {
+        toast.error("Gagal menyimpan ke server — muat ulang untuk sinkron");
+        return;
+      }
+    }
     toast.success("Semua kondisi di ruangan ini diset menjadi Baik");
   }
 
   /** Per-category bulk set baik (GAS .btn-all-baik / setAllKondisiBaik) */
-  function handleCategorySemuaBaik(category: ItemCategory, label: string) {
+  async function handleCategorySemuaBaik(category: ItemCategory, label: string) {
     const count = items.filter((it) => it.category === category).length;
     if (count === 0) {
       toast.info(`Tidak ada item di kategori ${label}`);
@@ -228,6 +320,15 @@ export function RoomDetailInteractive({
         it.category === category ? { ...it, condition: "baik" } : it
       )
     );
+    if (isDbRoom) {
+      const res = await bulkSetCondition(roomProp.id, "baik", category).catch(
+        () => ({ error: "Gagal menyimpan ke server" })
+      );
+      if (res && "error" in res) {
+        toast.error("Gagal menyimpan ke server — muat ulang untuk sinkron");
+        return;
+      }
+    }
     toast.success(`Semua kondisi ${label} diset menjadi Baik (${count} item)`);
   }
 
@@ -245,7 +346,7 @@ export function RoomDetailInteractive({
   }
 
   /** GAS `editRoomName` (prompt) — diganti form inline sesuai keputusan desain. */
-  function saveName() {
+  async function saveName() {
     const next = nameDraft.trim();
     if (!next) {
       toast.error("Nama ruangan tidak boleh kosong");
@@ -257,6 +358,19 @@ export function RoomDetailInteractive({
     }
     patchRoom({ name: next });
     setEditingName(false);
+    if (isDbRoom) {
+      const res = await updateRoomName(roomProp.id, next).catch(() => ({
+        error: "Gagal menyimpan ke server",
+      }));
+      if (res && "error" in res) {
+        toast.error(
+          typeof res.error === "string"
+            ? res.error
+            : "Gagal menyimpan ke server"
+        );
+        return;
+      }
+    }
     toast.success("Nama ruangan diperbarui");
   }
 
@@ -266,21 +380,48 @@ export function RoomDetailInteractive({
   }
 
   /** GAS `editPj` — kosong berarti "Belum diisi". */
-  function savePj() {
+  async function savePj() {
     const next = pjDraft.trim();
     patchRoom({ pj: next });
     setEditingPj(false);
+    if (isDbRoom) {
+      const res = await updateRoomPj(roomProp.id, next).catch(() => ({
+        error: "Gagal menyimpan ke server",
+      }));
+      if (res && "error" in res) {
+        toast.error(
+          typeof res.error === "string"
+            ? res.error
+            : "Gagal menyimpan ke server"
+        );
+        return;
+      }
+    }
     toast.success(
       next ? `Penanggung jawab: ${next}` : "Penanggung jawab dikosongkan"
     );
   }
 
   /** GAS `delRoom` (confirm) — ruangan disembunyikan, lalu kembali ke daftar. */
-  function confirmDeleteRoom() {
-    setOverrides((prev) => ({
-      ...prev,
-      [room.id]: { ...prev[room.id], deleted: true },
-    }));
+  async function confirmDeleteRoom() {
+    if (isDbRoom) {
+      const res = await deleteRoom(roomProp.id).catch(() => ({
+        error: "Gagal menghapus di server",
+      }));
+      if (res && "error" in res) {
+        toast.error(
+          typeof res.error === "string"
+            ? res.error
+            : "Gagal menghapus di server"
+        );
+        return;
+      }
+    } else {
+      setOverrides((prev) => ({
+        ...prev,
+        [room.id]: { ...prev[room.id], deleted: true },
+      }));
+    }
     setDeleteOpen(false);
     toast.success(`Ruangan ${room.name} dihapus`);
     router.push("/inventaris");
@@ -294,12 +435,36 @@ export function RoomDetailInteractive({
     setMoveItem(null);
   }
 
-  function confirmMoveItem(destRoom: Room, destKat: ItemCategory) {
+  async function confirmMoveItem(destRoom: Room, destKat: ItemCategory) {
     if (!moveItem) return;
-    moveItemsToRoom([moveItem], room, destRoom, destKat);
-    setItems((prev) => prev.filter((it) => it.id !== moveItem.id));
-    toast.success(`${moveItem.name || "Item"} dipindah ke ${destRoom.name}`);
+    const target = moveItem;
+    // Ruangan lokal / baris sementara: pindah lokal saja.
+    if (!isDbRoom || target.id < 0 || destRoom.id.startsWith("custom_")) {
+      if (!isDbRoom || destRoom.id.startsWith("custom_")) {
+        moveItemsToRoom([target], room, destRoom, destKat);
+      } else {
+        toast.info("Simpan baris baru dulu (isi nama) sebelum memindah");
+        return;
+      }
+    } else {
+      const res = await moveItemServer(
+        target.id,
+        roomProp.id,
+        destRoom.id,
+        target.name,
+        destKat
+      ).catch(() => ({ error: "Gagal memindah di server" }));
+      if (res && "error" in res) {
+        toast.error(
+          typeof res.error === "string" ? res.error : "Gagal memindah di server"
+        );
+        return;
+      }
+    }
+    setItems((prev) => prev.filter((it) => it.id !== target.id));
+    toast.success(`${target.name || "Item"} dipindah ke ${destRoom.name}`);
     closeMoveItem();
+    router.refresh();
   }
 
   function openMoveAll() {
@@ -315,20 +480,60 @@ export function RoomDetailInteractive({
   }
 
   /** GAS mvConfirm mode bulk (~28603) — hanya item tercentang yang berpindah. */
-  function confirmMoveAll(
+  async function confirmMoveAll(
     destRoom: Room,
     destKat: ItemCategory | null,
     selected: Item[]
   ) {
-    const moved = moveItemsToRoom(selected, room, destRoom, destKat);
-    if (moved === 0) return;
-    const movedIds = new Set(selected.map((it) => it.id));
+    if (selected.length === 0) return;
+    // Ruangan lokal: pindah lokal saja (perilaku lama).
+    if (!isDbRoom || destRoom.id.startsWith("custom_")) {
+      const moved = moveItemsToRoom(selected, room, destRoom, destKat);
+      if (moved === 0) return;
+      const movedIds = new Set(selected.map((it) => it.id));
+      setItems((prev) => prev.filter((it) => !movedIds.has(it.id)));
+      toast.success(`${moved} item dipindah ke ${destRoom.name}`);
+      return;
+    }
+    const saved = selected.filter((it) => it.id > 0);
+    if (saved.length < selected.length) {
+      toast.info("Baris baru (belum bernama) tidak ikut dipindah");
+    }
+    if (saved.length === 0) return;
+    const res = await moveItemsServer(
+      saved.map((it) => it.id),
+      roomProp.id,
+      destRoom.id
+    ).catch(() => ({ error: "Gagal memindah di server" }));
+    if (res && "error" in res) {
+      toast.error(
+        typeof res.error === "string" ? res.error : "Gagal memindah di server"
+      );
+      return;
+    }
+    const movedIds = new Set(saved.map((it) => it.id));
     setItems((prev) => prev.filter((it) => !movedIds.has(it.id)));
-    toast.success(`${moved} item dipindah ke ${destRoom.name}`);
+    toast.success(`${saved.length} item dipindah ke ${destRoom.name}`);
+    router.refresh();
   }
 
   /** GAS delRow (~19340) — hapus langsung, nomor urut menyesuaikan sendiri. */
-  function handleDeleteItem(item: Item) {
+  async function handleDeleteItem(item: Item) {
+    // Baris sementara: hapus lokal saja.
+    if (!isDbRoom || item.id < 0) {
+      setItems((prev) => prev.filter((it) => it.id !== item.id));
+      toast.success(`${item.name || "Baris"} dihapus`);
+      return;
+    }
+    const res = await deleteItem(item.id, roomProp.id).catch(() => ({
+      error: "Gagal menghapus di server",
+    }));
+    if (res && "error" in res) {
+      toast.error(
+        typeof res.error === "string" ? res.error : "Gagal menghapus di server"
+      );
+      return;
+    }
     setItems((prev) => prev.filter((it) => it.id !== item.id));
     toast.success(`${item.name || "Baris"} dihapus`);
   }
@@ -341,11 +546,14 @@ export function RoomDetailInteractive({
     setChecklistOpen(false);
   }
 
-  /** GAS addRow (~19304) — sisipkan baris kosong siap ketik, tanpa modal. */
+  /** GAS addRow (~19304) — sisipkan baris kosong siap ketik, tanpa modal.
+   *  Id negatif sementara (anti-tabrakan id DB); baris dibuatkan di server
+   *  otomatis begitu namanya diisi (lihat persistItemField). */
+  /** Counter id sementara (negatif, anti-tabrakan id DB). */
+  const tempIdRef = useRef(-1);
   function addRow(category: ItemCategory) {
     const now = new Date().toISOString();
-    const nextId =
-      items.reduce((max, it) => (it.id > max ? it.id : max), 0) + 1;
+    const nextId = tempIdRef.current--;
     const newItem: Item = {
       id: nextId,
       room_id: room.id,

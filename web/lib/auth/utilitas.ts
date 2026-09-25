@@ -1,8 +1,45 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth/utils";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+
+/**
+ * Tulis satu baris util_state via RPC `upsert_util_state` (SECURITY DEFINER).
+ *
+ * JANGAN pakai PostgREST `.upsert(..., { onConflict })` di tabel ini:
+ * constraint uniknya adalah expression index
+ * `(util_id, kind, COALESCE(item_index,''), state_key)` sehingga PostgREST
+ * selalu 42P10. RPC menangani konfliknya dengan benar di sisi server.
+ */
+async function rpcUpsertUtilState(args: {
+  utilId: string;
+  kind: "check" | "note";
+  itemIndex: string | null;
+  stateKey: string;
+  value: string;
+}): Promise<{ error?: string }> {
+  await requireRole(["admin", "editor"]);
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { error } = await supabase.rpc("upsert_util_state", {
+    p_util_id: args.utilId,
+    p_kind: args.kind,
+    p_item_index: args.itemIndex,
+    p_state_key: args.stateKey,
+    p_value: args.value,
+    p_user_id: user?.id ?? null,
+  });
+  if (error) {
+    console.error("Error upsert util state:", error);
+    return { error: error.message };
+  }
+  revalidatePath(`/utilitas/${args.utilId}`);
+  return {};
+}
 
 export interface UtilMeta {
   util_id: string;
@@ -238,31 +275,16 @@ export async function updateUtilState(
   value: string,
   itemIndex?: string
 ) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Via RPC (lihat rpcUpsertUtilState) — onConflict langsung 42P10.
+  const res = await rpcUpsertUtilState({
+    utilId,
+    kind,
+    itemIndex: itemIndex ?? null,
+    stateKey,
+    value,
+  });
+  if (res.error) return { error: res.error };
 
-  // Use upsert with the unique constraint
-  const { error } = await supabase.from("util_state").upsert(
-    {
-      util_id: utilId,
-      kind,
-      state_key: stateKey,
-      value,
-      item_index: itemIndex,
-      updated_by: user?.id,
-      updated_at: new Date().toISOString(),
-    },
-    {
-      onConflict: "util_id,kind,item_index,state_key",
-    }
-  );
-
-  if (error) {
-    console.error("Error updating util state:", error);
-    return { error: error.message };
-  }
-
-  revalidatePath(`/utilitas/${utilId}`);
   return { success: true };
 }
 
@@ -338,23 +360,16 @@ export async function toggleUtilCheck(
   const idxStr = String(itemIndex);
 
   if (done) {
-    const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from("util_state").upsert(
-      {
-        util_id: utilId,
-        kind: "check",
-        item_index: idxStr,
-        state_key: dateKey,
-        value: "1",
-        updated_at: new Date().toISOString(),
-        updated_by: user?.id,
-      },
-      { onConflict: "util_id,kind,item_index,state_key" }
-    );
+    const res = await rpcUpsertUtilState({
+      utilId,
+      kind: "check",
+      itemIndex: idxStr,
+      stateKey: dateKey,
+      value: "1",
+    });
 
-    if (error) {
-      console.error("Error upserting util check:", error);
-      return { error: error.message };
+    if (res.error) {
+      return { error: res.error };
     }
   } else {
     const { error } = await supabase
@@ -435,28 +450,34 @@ export async function bulkSetUtilCheck(
     return { count: 0, dates: targetDates.length, items: 0 };
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
-  const nowIso = new Date().toISOString();
-  const rows = items.flatMap((_, idx) =>
-    targetDates.map((dateKey) => ({
-      util_id: utilId,
-      kind: "check" as const,
-      item_index: String(idx),
-      state_key: dateKey,
-      value: "1",
-      updated_by: user?.id,
-      updated_at: nowIso,
-    }))
-  );
-
-  const { error: upsertErr } = await supabase
-    .from("util_state")
-    .upsert(rows, { onConflict: "util_id,kind,item_index,state_key" });
-
-  if (upsertErr) throw upsertErr;
+  // Via RPC per baris (lihat rpcUpsertUtilState) — PostgREST onConflict
+  // langsung 42P10 di tabel ini. Diparalel karena jumlah baris kecil
+  // (item × tanggal; panggil dengan rentang wajar dari UI).
+  await requireRole(["admin", "editor"]);
+  const jobs: Promise<{ error?: string }>[] = [];
+  for (let idx = 0; idx < items.length; idx++) {
+    for (const dateKey of targetDates) {
+      jobs.push(
+        rpcUpsertUtilState({
+          utilId,
+          kind: "check",
+          itemIndex: String(idx),
+          stateKey: dateKey,
+          value: "1",
+        })
+      );
+    }
+  }
+  const results = await Promise.all(jobs);
+  const failed = results.find((r) => r.error);
+  if (failed) throw new Error(failed.error);
 
   revalidatePath(`/utilitas/${utilId}`);
-  return { count: rows.length, dates: targetDates.length, items: items.length };
+  return {
+    count: jobs.length,
+    dates: targetDates.length,
+    items: items.length,
+  };
 }
 
 /**
@@ -469,26 +490,17 @@ export async function saveUtilNote(
   noteText: string
 ) {
   const stateKey = `${utilId}_${year}_${month}`;
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
 
-  const { error } = await supabase.from("util_state").upsert(
-    {
-      util_id: utilId,
-      kind: "note",
-      item_index: null,
-      state_key: stateKey,
-      value: noteText,
-      updated_by: user?.id,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "util_id,kind,item_index,state_key" }
-  );
-
-  if (error) {
-    console.error("Error saving util note:", error);
-    return { error: error.message };
-  }
+  // Via RPC (lihat rpcUpsertUtilState) — onConflict langsung 42P10,
+  // apalagi item_index NULL tak pernah cocok sebagai konflik.
+  const res = await rpcUpsertUtilState({
+    utilId,
+    kind: "note",
+    itemIndex: null,
+    stateKey,
+    value: noteText,
+  });
+  if (res.error) return { error: res.error };
 
   // Note changes don't need a hard revalidate of the path data, but keep it for
   // consistency so server-rendered note text refreshes.
