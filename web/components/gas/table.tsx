@@ -28,12 +28,12 @@ export function Table({
     <div className="w-full overflow-x-auto">
       <table className={cn("w-full border-collapse", className)}>
         <thead>
-          <tr>
+          <tr className="bg-[#f8fafc]">
             {columns.map((col) => (
               <th
                 key={col.key}
                 className={cn(
-                  "border-b border-line px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-wide text-ink3",
+                  "border-b border-line px-3.5 py-2.5 text-[10.5px] font-bold uppercase tracking-wide text-ink3",
                   col.align === "right" && "text-right",
                   col.align === "center" && "text-center",
                   (!col.align || col.align === "left") && "text-left"
@@ -58,7 +58,6 @@ export function Table({
           ) : (
             rows.map((row, rowIndex) => (
               <tr
-                // eslint-disable-next-line react/no-array-index-key
                 key={rowIndex}
                 className={cn(
                   "hover:bg-line2/50",
