@@ -95,16 +95,21 @@ export default async function UtilitasDetailPage({
     );
   }
 
-  const itemsRow = await getUtilItems(utilId).catch(() => ({ items: [] }));
+  // Paralel: 3 roundtrip jadi 1 gelombang.
+  const [itemsRow, stateRows, summaries] = await Promise.all([
+    getUtilItems(utilId).catch(() => ({ items: [] })),
+    getUtilState(utilId).catch(
+      () => [] as Awaited<ReturnType<typeof getUtilState>>
+    ),
+    getUtilSummaries().catch(() => []),
+  ]);
   const items = (itemsRow.items ?? []).map((it) => ({
     nama: it.nama,
     ket: it.ket,
   }));
   // `util_state` kosong → ceklist kosong — tampilan yang jujur.
-  const stateRows = await getUtilState(utilId).catch(() => []);
   const checks = stateRows.filter((r) => r.kind === "check");
   const notesByMonth = toNotesByMonth(stateRows);
-  const summaries = await getUtilSummaries().catch(() => []);
   const allMeta = summaries.map((s) => s.meta);
   const itemCountByUtil = new Map(summaries.map((s) => [s.meta.util_id, s.itemCount]));
 

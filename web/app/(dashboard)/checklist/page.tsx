@@ -13,7 +13,8 @@ interface ChecklistPageProps {
 
 export default async function ChecklistPage({ searchParams }: ChecklistPageProps) {
   const params = await searchParams;
-  const rooms = await getRooms();
+  // Paralel: rooms + semua items sekaligus.
+  const [rooms, allItems] = await Promise.all([getRooms(), getAllItems()]);
 
   if (rooms.length === 0) {
     return (
@@ -56,7 +57,6 @@ export default async function ChecklistPage({ searchParams }: ChecklistPageProps
     : now.getMonth() + 1;
   const month = Math.min(Math.max(monthParam, 1), 12) - 1;
 
-  const allItems = await getAllItems();
   const items = allItems.filter((i) => i.room_id === selectedRoom.id);
 
   const roomHref = (roomId: string) =>

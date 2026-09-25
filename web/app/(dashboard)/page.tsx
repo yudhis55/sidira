@@ -36,39 +36,43 @@ function toRiwayatPindah(row: RiwayatRow): RiwayatPindah {
  */
 export default async function DashboardPage() {
   const items = getMockItems();
-  let usulan: Awaited<ReturnType<typeof getUsulanList>>;
-  try {
-    usulan = await getUsulanList();
-  } catch {
-    usulan = [];
-  }
-  let riwayatItems: RiwayatPindah[];
-  let riwayatError = false;
-  try {
-    riwayatItems = (await getRiwayatList()).map(toRiwayatPindah);
-  } catch {
-    riwayatItems = [];
-    riwayatError = true;
-  }
   // Nilai awal untuk modal laporan (diambil ulang live saat dibuka).
   // Gagal → nol; dashboard tetap tampil, modal menampilkan toast.
   const now = new Date();
   const laporanFilter = { bulan: now.getMonth() + 1, tahun: now.getFullYear() };
-  const [laporanSummary, laporanRooms] = await Promise.all([
-    getLaporanSummary(laporanFilter).catch(() => ({
-      total_rooms: 0,
-      total_items: 0,
-      total_baik: 0,
-      total_rr: 0,
-      total_rb: 0,
-      total_ta: 0,
-      percentage_baik: 0,
-      percentage_rr: 0,
-      percentage_rb: 0,
-      percentage_ta: 0,
-    })),
-    getLaporanPerRoom(laporanFilter).catch(() => []),
-  ]);
+  // Paralel: 4 roundtrip jadi 1 gelombang.
+  const [usulan, riwayatRes, laporanSummary, laporanRooms] = await Promise.all(
+    [
+      getUsulanList().catch(
+        () => [] as Awaited<ReturnType<typeof getUsulanList>>
+      ),
+      getRiwayatList().then(
+        (v): { items: RiwayatPindah[]; error: false } => ({
+          items: v.map(toRiwayatPindah),
+          error: false,
+        }),
+        (): { items: RiwayatPindah[]; error: true } => ({
+          items: [],
+          error: true,
+        })
+      ),
+      getLaporanSummary(laporanFilter).catch(() => ({
+        total_rooms: 0,
+        total_items: 0,
+        total_baik: 0,
+        total_rr: 0,
+        total_rb: 0,
+        total_ta: 0,
+        percentage_baik: 0,
+        percentage_rr: 0,
+        percentage_rb: 0,
+        percentage_ta: 0,
+      })),
+      getLaporanPerRoom(laporanFilter).catch(() => []),
+    ]
+  );
+  const riwayatItems = riwayatRes.items;
+  const riwayatError = riwayatRes.error;
 
   const totalItems = items.length;
   const alkes = items.filter((i) => i.category === "alkes").length;

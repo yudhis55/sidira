@@ -90,9 +90,12 @@ export default async function RoomDetailPage({
   // jadi pencariannya dilakukan di klien — bukan 404.
   if (!room) {
     if (!id.startsWith("custom_")) return notFound();
-    const baseRooms = await getRooms().catch(() => []);
-    const riwayat = await loadRiwayat();
-    const laporan = await loadLaporan();
+    // Paralel: 3 roundtrip jadi 1 gelombang.
+    const [baseRooms, riwayat, laporan] = await Promise.all([
+      getRooms().catch(() => []),
+      loadRiwayat(),
+      loadLaporan(),
+    ]);
     return (
       <>
         {riwayat.error && (
@@ -111,18 +114,22 @@ export default async function RoomDetailPage({
     );
   }
 
-  const rooms = await getRooms().catch(() => [room]);
-  const items = await getItems(id).catch(() => []);
-  let usulanList: Awaited<ReturnType<typeof getUsulanByRoomWithRoomInfo>>;
-  let usulanError = false;
-  try {
-    usulanList = await getUsulanByRoomWithRoomInfo(id);
-  } catch {
-    usulanList = [];
-    usulanError = true;
-  }
-  const riwayat = await loadRiwayat();
-  const laporan = await loadLaporan();
+  // Paralel: 5 roundtrip jadi 1 gelombang.
+  const [rooms, items, usulanRes, riwayat, laporan] = await Promise.all([
+    getRooms().catch(() => [room]),
+    getItems(id).catch(() => []),
+    getUsulanByRoomWithRoomInfo(id).then(
+      (v): { list: typeof v; error: false } => ({ list: v, error: false }),
+      (): {
+        list: Awaited<ReturnType<typeof getUsulanByRoomWithRoomInfo>>;
+        error: true;
+      } => ({ list: [], error: true })
+    ),
+    loadRiwayat(),
+    loadLaporan(),
+  ]);
+  const usulanList = usulanRes.list;
+  const usulanError = usulanRes.error;
 
   return (
     <div className="container mx-auto py-6 space-y-6">

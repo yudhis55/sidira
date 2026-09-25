@@ -1,10 +1,13 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, UserRole } from "@/types/database";
 
 /**
- * Get current authenticated user profile
+ * Get current authenticated user profile.
+ * Di-cache per-request: layout + admin layout + actions yang memanggil
+ * getUser/requireRole dalam satu render hanya membayar 1 roundtrip.
  */
-export async function getUser(): Promise<Profile | null> {
+export const getUser = cache(async (): Promise<Profile | null> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -19,7 +22,7 @@ export async function getUser(): Promise<Profile | null> {
     .single();
 
   return profile as Profile | null;
-}
+});
 
 /**
  * Check if user has required role

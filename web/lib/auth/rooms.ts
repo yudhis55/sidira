@@ -1,19 +1,30 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import type { Room } from "@/types/database";
 
-export async function getRooms(): Promise<Room[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("rooms")
-    .select("*")
-    .order("name");
+/**
+ * Daftar ruangan — di-cache 60 detik karena dibaca di hampir tiap navigasi
+ * (sidebar, daftar, detail). Pakai admin client (tanpa cookies) agar
+ * cacheable; isi identik untuk semua role (SELECT rooms terbuka).
+ * Setiap mutasi di bawah memanggil revalidateTag("rooms", "default").
+ */
+export const getRooms = unstable_cache(
+  async (): Promise<Room[]> => {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("rooms")
+      .select("*")
+      .order("name");
 
-  if (error) throw error;
-  return data as Room[];
-}
+    if (error) throw error;
+    return data as Room[];
+  },
+  ["rooms"],
+  { revalidate: 60, tags: ["rooms"] }
+);
 
 export async function getRoomById(id: string): Promise<Room> {
   const supabase = await createClient();
@@ -52,6 +63,7 @@ export async function createRoom(formData: FormData) {
   }
 
   revalidatePath("/inventaris");
+  revalidateTag("rooms", "default");
   return { success: true };
 }
 
@@ -80,6 +92,7 @@ export async function updateRoom(id: string, formData: FormData) {
   }
 
   revalidatePath("/inventaris");
+  revalidateTag("rooms", "default");
   return { success: true };
 }
 
@@ -97,6 +110,7 @@ export async function deleteRoom(id: string) {
 
   revalidatePath("/inventaris");
   revalidatePath(`/inventaris/${id}`);
+  revalidateTag("rooms", "default");
   return { success: true };
 }
 
@@ -121,6 +135,7 @@ export async function updateRoomPj(roomId: string, pj: string) {
 
   revalidatePath(`/inventaris/${roomId}`);
   revalidatePath("/inventaris");
+  revalidateTag("rooms", "default");
   return { success: true };
 }
 
@@ -145,5 +160,6 @@ export async function updateRoomName(roomId: string, name: string) {
 
   revalidatePath(`/inventaris/${roomId}`);
   revalidatePath("/inventaris");
+  revalidateTag("rooms", "default");
   return { success: true };
 }
