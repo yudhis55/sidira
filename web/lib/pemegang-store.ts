@@ -75,6 +75,14 @@ export function addPemegang(values: PemegangIdentity): PemegangInventaris {
   return rec;
 }
 
+/** Hapus record buatan dari store lokal (dipakai berpasangan dengan hapus server). */
+export function deleteAddedPemegang(id: string): void {
+  writeLocalStorage(
+    PEMEGANG_ADDED_KEY,
+    readAddedPemegang().filter((p) => p.id !== id)
+  );
+}
+
 /** Simpan edit identitas: record buatan diubah langsung, bawaan di-patch. */
 export function savePemegangIdentity(
   id: string,

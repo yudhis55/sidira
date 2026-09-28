@@ -17,7 +17,15 @@ import {
   useHiddenPaktaIds,
 } from "@/lib/pakta-store";
 import {
+  createPemegang,
+  deletePemegang,
+  getAllAsetGrouped,
+  getPemegangList,
+  updatePemegang,
+} from "@/lib/auth/rekap";
+import {
   addPemegang,
+  deleteAddedPemegang,
   getMergedPemegang,
   savePemegangIdentity,
   useAddedPemegang,
@@ -122,11 +130,56 @@ export default function RekapPage() {
 
   const [addedPemegang] = useAddedPemegang();
   const [pemegangOverrides] = usePemegangOverrides();
+  // Daftar live Supabase; null = tabel belum ada / gagal baca → fallback mock
+  // agar halaman tetap berguna sebelum migrasi dijalankan.
+  const [serverPemegang, setServerPemegang] = useState<
+    PemegangInventaris[] | null
+  >(null);
+  const [serverAset, setServerAset] = useState<Record<
+    string,
+    AsetPemegang[]
+  > | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const reloadServer = () => setReloadKey((k) => k + 1);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [list, grouped] = await Promise.all([
+          getPemegangList(),
+          getAllAsetGrouped(),
+        ]);
+        if (!cancelled) {
+          setServerPemegang(list);
+          setServerAset(grouped);
+        }
+      } catch {
+        if (!cancelled) {
+          setServerPemegang(null);
+          setServerAset(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
   const pemegangList = useMemo(
-    () => getMergedPemegang(getMockPemegang(), addedPemegang, pemegangOverrides),
-    [addedPemegang, pemegangOverrides]
+    () =>
+      getMergedPemegang(
+        serverPemegang ?? getMockPemegang(),
+        addedPemegang,
+        pemegangOverrides
+      ),
+    [serverPemegang, addedPemegang, pemegangOverrides]
   );
-  const allAset = useMemo(() => getMockAsetPemegang(), []);
+  const allAset = useMemo(
+    () =>
+      serverAset
+        ? Object.values(serverAset).flat()
+        : getMockAsetPemegang(),
+    [serverAset]
+  );
   const { hasPakta } = usePaktaLookup();
 
   const asetGrouped = useMemo(() => {
@@ -171,6 +224,25 @@ export default function RekapPage() {
       }
       return next;
     });
+  };
+
+  /** GAS `riDelete` — konfirmasi, hapus server + sisa lokal, refresh. */
+  const handleDeletePemegang = async (p: PemegangInventaris) => {
+    if (
+      !window.confirm(
+        `Hapus pemegang "${p.nama}" beserta seluruh asetnya?\nTindakan ini tidak bisa dibatalkan.`
+      )
+    ) {
+      return;
+    }
+    try {
+      await deletePemegang(p.id);
+    } catch {
+      // Baris lokal / tabel belum ada: lanjutkan ke pembersihan lokal.
+    }
+    deleteAddedPemegang(p.id);
+    reloadServer();
+    toast.success(`Pemegang "${p.nama}" dihapus`);
   };
 
   /** GAS `riBuatSemuaPakta` — buat pre-filled untuk semua yg belum (yg terfilter). */
@@ -341,11 +413,18 @@ export default function RekapPage() {
                 Tambah Pemegang
               </Button>
             }
-            onSaved={(values: PemegangIdentity) => {
-              const rec = addPemegang(values);
-              toast.success(
-                `Pemegang "${rec.nama}" ditambahkan (mode demo — tersimpan lokal)`
-              );
+            onSaved={async (values: PemegangIdentity) => {
+              try {
+                await createPemegang(values);
+                reloadServer();
+                toast.success(`Pemegang "${values.nama.trim()}" ditambahkan`);
+              } catch {
+                // Tabel belum ada (pra-migrasi): fallback lokal lama.
+                const rec = addPemegang(values);
+                toast.success(
+                  `Pemegang "${rec.nama}" ditambahkan (mode demo — tersimpan lokal)`
+                );
+              }
             }}
           />
         </div>
@@ -407,12 +486,22 @@ export default function RekapPage() {
                       isOpen={isOpen}
                       hasPakta={hasPakta(pemegang)}
                       onToggle={() => toggleRow(pemegang.id)}
-                      onEdit={(values: PemegangIdentity) => {
-                        savePemegangIdentity(pemegang.id, values);
-                        toast.success(
-                          `Identitas "${values.nama.trim()}" disimpan (mode demo — tersimpan lokal). Selebihnya edit di menu Pakta.`
-                        );
+                      onEdit={async (values: PemegangIdentity) => {
+                        try {
+                          await updatePemegang(pemegang.id, values);
+                          reloadServer();
+                          toast.success(
+                            `Identitas "${values.nama.trim()}" disimpan. Selebihnya edit di menu Pakta.`
+                          );
+                        } catch {
+                          // Tabel belum ada (pra-migrasi): fallback lokal lama.
+                          savePemegangIdentity(pemegang.id, values);
+                          toast.success(
+                            `Identitas "${values.nama.trim()}" disimpan (mode demo — tersimpan lokal). Selebihnya edit di menu Pakta.`
+                          );
+                        }
                       }}
+                      onDelete={() => handleDeletePemegang(pemegang)}
                     />
                   );
                 })}
@@ -435,6 +524,7 @@ function RekapRow({
   hasPakta,
   onToggle,
   onEdit,
+  onDelete,
 }: {
   pemegang: PemegangInventaris;
   asetList: AsetPemegang[];
@@ -443,6 +533,7 @@ function RekapRow({
   hasPakta: boolean;
   onToggle: () => void;
   onEdit: (values: PemegangIdentity) => void;
+  onDelete: () => void;
 }) {
   const isPppk = pemegang.status.toUpperCase() === "PPPK";
   const statusBadgeStyle = isPppk
@@ -544,6 +635,15 @@ const paktaBadge = hasPakta ? (
               onSaved={onEdit}
             />
             <RekapPaktaButton pemegang={pemegang} asetList={asetList} />
+            <button
+              type="button"
+              onClick={onDelete}
+              title={`Hapus ${pemegang.nama}`}
+              aria-label={`Hapus ${pemegang.nama}`}
+              className="py-1 px-2.5 rounded-md border-[1.5px] border-line text-[11px] font-semibold text-ink2 bg-white transition-colors hover:border-[#b91c1c] hover:text-[#b91c1c]"
+            >
+              {"\uD83D\uDDD1️"} Hapus
+            </button>
           </div>
         </td>
       </tr>

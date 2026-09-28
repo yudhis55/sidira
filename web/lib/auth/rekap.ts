@@ -2,7 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import type {
   PemegangInventaris,
   AsetPemegang,
@@ -194,7 +193,10 @@ export async function updatePemegang(
   revalidatePath(`/rekap/${id}`);
 }
 
-/** Hapus pemegang (aset terkait ter-cascade via FK). Redirect /rekap. */
+/**
+ * Hapus pemegang (aset terkait ter-cascade via FK). Tanpa redirect agar
+ * bisa dipakai dari tombol hapus per baris (pemanggil me-refresh sendiri).
+ */
 export async function deletePemegang(id: string): Promise<void> {
   const supabase = await createClient();
 
@@ -209,7 +211,6 @@ export async function deletePemegang(id: string): Promise<void> {
   }
 
   revalidatePath("/rekap");
-  redirect("/rekap");
 }
 
 // ══════════════════════════════════════════════════════════════════════
