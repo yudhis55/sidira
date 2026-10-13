@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useIsClient } from "@/lib/use-is-client";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
@@ -174,28 +175,39 @@ export function RoomQrDialog({ roomId, roomName }: RoomQrDialogProps) {
         </DialogContent>
       </Dialog>
 
-      <style>{`@media print { body * { visibility: hidden; } #room-qr-print, #room-qr-print * { visibility: visible; } #room-qr-print { position: absolute; inset: 0; display: flex; align-items: flex-start; justify-content: center; padding: 24px; } }`}</style>
-      <div id="room-qr-print" className="hidden print:flex">
-        <div className="flex w-full max-w-[520px] flex-col items-center gap-4 rounded-lg border border-neutral-900 bg-white p-8 text-center">
-          <p className="text-xs font-bold uppercase tracking-wide text-neutral-900">
-            UPTD Puskesmas Baruharjo — SIDIRA
-          </p>
-          <p className="text-2xl font-bold text-neutral-900">
-            {"\u25A6"} {roomName}
-          </p>
-          <QRCodeSVG
-            value={qrValue}
-            size={QR_PRINT_SIZE}
-            level="Q"
-            bgColor="#ffffff"
-            fgColor="#000000"
-          />
-          <p className="text-xs text-neutral-700 break-all">{qrValue}</p>
-          <p className="text-sm text-neutral-900">
-            Pindai untuk melihat inventaris ruangan ini
-          </p>
-        </div>
-      </div>
+      {/* Area cetak di-portal langsung ke body agar saat print TIDAK ada
+          sisa layout halaman (sidebar/konten dashboard) yang membuat halaman
+          kosong kedua: seluruh anak body kecuali root ini disembunyikan. */}
+      {isClient &&
+        createPortal(
+          <>
+            <style>{`@page { margin: 12mm; } @media print { body > *:not([data-qr-print]) { display: none !important; } [data-qr-print] { display: block !important; } }`}</style>
+            <div data-qr-print id="room-qr-print" className="hidden print:block">
+              <div className="mx-auto flex w-full max-w-[520px] flex-col items-center gap-4 rounded-lg border border-neutral-900 bg-white p-8 text-center">
+                <p className="text-xs font-bold uppercase tracking-wide text-neutral-900">
+                  UPTD Puskesmas Baruharjo — SIDIRA
+                </p>
+                <p className="text-2xl font-bold text-neutral-900">
+                  {"\u25A6"} {roomName}
+                </p>
+                {qrValue ? (
+                  <QRCodeSVG
+                    value={qrValue}
+                    size={QR_PRINT_SIZE}
+                    level="Q"
+                    bgColor="#ffffff"
+                    fgColor="#000000"
+                  />
+                ) : null}
+                <p className="text-xs text-neutral-700 break-all">{qrValue}</p>
+                <p className="text-sm text-neutral-900">
+                  Pindai untuk melihat inventaris ruangan ini
+                </p>
+              </div>
+            </div>
+          </>,
+          document.body
+        )}
     </>
   );
 }
