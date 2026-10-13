@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import type { Item, ItemCategory, Room } from "@/types/database";
+import { RefreshButton } from "./refresh-button";
 
 export const dynamic = "force-dynamic";
 
@@ -115,6 +116,16 @@ export default async function PublicRoomPage({ params }: PageProps) {
     grouped.get(key)!.push(item);
   }
   const orderedGroups = CATEGORY_ORDER.filter((cat) => (grouped.get(cat)?.length ?? 0) > 0);
+
+  // Waktu render halaman (server, WIB) — selalu segar karena force-dynamic.
+  const updatedLabel = new Date().toLocaleString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Jakarta",
+  });
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -267,6 +278,17 @@ export default async function PublicRoomPage({ params }: PageProps) {
             })}
           </div>
         )}
+
+        {/* Status segar + muat ulang */}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-3">
+          <p className="text-xs text-neutral-500">
+            🕒 Terakhir diperbarui:{" "}
+            <span className="font-semibold text-neutral-700">
+              {updatedLabel} WIB
+            </span>
+          </p>
+          <RefreshButton />
+        </div>
 
         {/* Penutup */}
         <p className="mt-8 text-center font-mono text-[11px] uppercase tracking-widest text-neutral-400">
