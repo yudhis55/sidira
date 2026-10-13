@@ -271,32 +271,54 @@ export default function RekapPage() {
     );
   };
 
+  /** GAS `riEdit` — simpan identitas; dipakai tabel (sm+) & kartu (<sm). */
+  const handleEditPemegang = async (
+    p: PemegangInventaris,
+    values: PemegangIdentity
+  ) => {
+    try {
+      await updatePemegang(p.id, values);
+      reloadServer();
+      toast.success(
+        `Identitas "${values.nama.trim()}" disimpan. Selebihnya edit di menu Pakta.`
+      );
+    } catch {
+      // Tabel belum ada (pra-migrasi): fallback lokal lama.
+      savePemegangIdentity(p.id, values);
+      toast.success(
+        `Identitas "${values.nama.trim()}" disimpan (mode demo — tersimpan lokal). Selebihnya edit di menu Pakta.`
+      );
+    }
+  };
+
   return (
     <div>
       {/* ── Header (GAS .ri-hdr) ── */}
       <div
-        className="flex items-center gap-3.5 rounded-lg border border-line bg-white p-5 mb-5"
+        className="flex flex-col items-stretch sm:flex-row sm:items-center gap-3.5 rounded-lg border border-line bg-white p-5 mb-5"
         style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
       >
-        <div
-          className="w-[52px] h-[52px] rounded-[14px] flex items-center justify-center text-[26px] shrink-0"
-          style={{ background: "linear-gradient(135deg, #065f46, #059669)" }}
-          aria-hidden
-        >
-          {"\uD83D\uDCCA"}
-        </div>
-
-        <div className="flex flex-col min-w-0">
-          <div className="text-lg font-extrabold text-ink">
-            Rekap Pemegang Inventaris 2025
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div
+            className="w-[52px] h-[52px] rounded-[14px] flex items-center justify-center text-[26px] shrink-0"
+            style={{ background: "linear-gradient(135deg, #065f46, #059669)" }}
+            aria-hidden
+          >
+            {"\uD83D\uDCCA"}
           </div>
-          <div className="text-xs text-ink3 mt-0.5">
-            Puskesmas Baruharjo · Peralatan Mesin & Rumah Dinas
+
+          <div className="flex flex-col min-w-0">
+            <div className="text-lg font-extrabold text-ink">
+              Rekap Pemegang Inventaris 2025
+            </div>
+            <div className="text-xs text-ink3 mt-0.5">
+              Puskesmas Baruharjo · Peralatan Mesin & Rumah Dinas
+            </div>
           </div>
         </div>
 
         {/* Summary chips — GAS .ri-stat: Pemegang / Item / Pakta Ada / Belum */}
-        <div className="flex gap-2.5 ml-auto flex-wrap justify-end">
+        <div className="grid grid-cols-2 sm:flex gap-2.5 w-full sm:w-auto sm:ml-auto flex-wrap sm:justify-end">
           <div className="text-center px-4 py-2 rounded-lg bg-line2">
             <div className="text-xl font-black font-mono text-teal leading-none">
               {totalPemegang}
@@ -345,7 +367,7 @@ export default function RekapPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={"\uD83D\uDD0D Cari nama / jabatan..."}
-          className="flex-1 min-w-[200px] max-w-[300px] py-[9px] px-3.5 rounded-[10px] border-[1.5px] border-line bg-white text-[13px] outline-none transition-colors focus:border-[#059669]"
+          className="flex-1 min-w-[140px] sm:min-w-[200px] max-w-[300px] py-[9px] px-3.5 rounded-[10px] border-[1.5px] border-line bg-white text-[13px] outline-none transition-colors focus:border-[#059669]"
           aria-label="Cari pemegang"
         />
 
@@ -373,10 +395,7 @@ export default function RekapPage() {
           </button>
         ))}
 
-        <div
-          className="flex items-center gap-2 flex-wrap"
-          style={{ marginLeft: "auto" }}
-        >
+        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto sm:ml-auto">
           <Button
             type="button"
             onClick={handleBuatSemuaPakta}
@@ -432,7 +451,7 @@ export default function RekapPage() {
 
       {/* ── Table (GAS .ri-wrap + .ri-tbl) ── */}
       <div
-        className="rounded-lg border border-line bg-white overflow-hidden"
+        className="hidden sm:block rounded-lg border border-line bg-white overflow-hidden"
         style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
       >
         {filtered.length === 0 ? (
@@ -486,21 +505,9 @@ export default function RekapPage() {
                       isOpen={isOpen}
                       hasPakta={hasPakta(pemegang)}
                       onToggle={() => toggleRow(pemegang.id)}
-                      onEdit={async (values: PemegangIdentity) => {
-                        try {
-                          await updatePemegang(pemegang.id, values);
-                          reloadServer();
-                          toast.success(
-                            `Identitas "${values.nama.trim()}" disimpan. Selebihnya edit di menu Pakta.`
-                          );
-                        } catch {
-                          // Tabel belum ada (pra-migrasi): fallback lokal lama.
-                          savePemegangIdentity(pemegang.id, values);
-                          toast.success(
-                            `Identitas "${values.nama.trim()}" disimpan (mode demo — tersimpan lokal). Selebihnya edit di menu Pakta.`
-                          );
-                        }
-                      }}
+                      onEdit={(values: PemegangIdentity) =>
+                        handleEditPemegang(pemegang, values)
+                      }
                       onDelete={() => handleDeletePemegang(pemegang)}
                     />
                   );
@@ -510,7 +517,170 @@ export default function RekapPage() {
           </div>
         )}
       </div>
+
+      {/* ── Mobile cards (<sm) — data & aksi sama dengan tabel ── */}
+      {filtered.length === 0 ? (
+        <div
+          className="sm:hidden text-center text-ink3 text-[13px] rounded-lg border border-line bg-white"
+          style={{ padding: "48px" }}
+        >
+          Tidak ada data yang cocok
+        </div>
+      ) : (
+        <div className="sm:hidden flex flex-col gap-3">
+          {filtered.map((pemegang) => {
+            const asetList = asetGrouped[pemegang.id] || [];
+            const counts = countByJenis(asetList);
+            const isOpen = openRows.has(pemegang.id);
+            return (
+              <RekapCard
+                key={pemegang.id}
+                pemegang={pemegang}
+                asetList={asetList}
+                counts={counts}
+                isOpen={isOpen}
+                hasPakta={hasPakta(pemegang)}
+                onToggle={() => toggleRow(pemegang.id)}
+                onEdit={(values: PemegangIdentity) =>
+                  handleEditPemegang(pemegang, values)
+                }
+                onDelete={() => handleDeletePemegang(pemegang)}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
+  );
+}
+
+/* ── Card (<sm) — presentasi mobile dari baris tabel yang sama ── */
+
+function RekapCard({
+  pemegang,
+  asetList,
+  counts,
+  isOpen,
+  hasPakta,
+  onToggle,
+  onEdit,
+  onDelete,
+}: {
+  pemegang: PemegangInventaris;
+  asetList: AsetPemegang[];
+  counts: Record<AsetPemegangJenis, number>;
+  isOpen: boolean;
+  hasPakta: boolean;
+  onToggle: () => void;
+  onEdit: (values: PemegangIdentity) => void;
+  onDelete: () => void;
+}) {
+  const isPppk = pemegang.status.toUpperCase() === "PPPK";
+  const statusBadgeStyle = isPppk
+    ? { background: "#dbeafe", color: "#1e40af" }
+    : { background: "#d1fae5", color: "#065f46" };
+
+  const badges = JENIS_ORDER.filter((j) => counts[j] > 0).map((j) => {
+    const meta = JENIS_META[j];
+    return (
+      <span
+        key={j}
+        className="inline-block py-0.5 px-2 rounded-[10px] text-[10.5px] font-bold mr-[3px] mb-0.5"
+        style={{ background: meta.bg, color: meta.text }}
+      >
+        {meta.icon} {counts[j]}
+      </span>
+    );
+  });
+
+  const paktaBadge = hasPakta ? (
+    <span
+      className="inline-block py-0.5 px-[9px] rounded-[10px] text-[10.5px] font-bold"
+      style={{ background: "#d1fae5", color: "#065f46" }}
+    >
+      &#9989; Ada
+    </span>
+  ) : (
+    <span
+      className="inline-block py-0.5 px-[9px] rounded-[10px] text-[10.5px] font-bold"
+      style={{ background: "#fee2e2", color: "#b91c1c" }}
+    >
+      &#9888; Belum
+    </span>
+  );
+
+  return (
+    <article
+      className="rounded-lg border border-line bg-white p-4"
+      style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="font-bold text-ink text-[13.5px]">{pemegang.nama}</h3>
+          <div className="text-[10.5px] text-ink3 font-mono mt-px">
+            NIP. {pemegang.nip || "—"}
+          </div>
+          <div className="text-xs font-semibold text-ink mt-1">
+            {pemegang.jabatan || "—"}
+          </div>
+        </div>
+        <span
+          className="inline-block py-0.5 px-2 rounded-[8px] text-[10.5px] font-bold shrink-0"
+          style={statusBadgeStyle}
+        >
+          {pemegang.status}
+        </span>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        {badges.length > 0 ? (
+          badges
+        ) : (
+          <span className="text-ink3 text-[11px]">—</span>
+        )}
+        {paktaBadge}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-[3px]">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={isOpen}
+          className="py-1 px-2.5 rounded-md border-[1.5px] border-line text-[11px] font-semibold text-ink2 bg-white transition-colors hover:border-[#059669] hover:text-[#059669]"
+        >
+          &#128203; Detail
+        </button>
+        <PemegangFormDialog
+          key={`pemegang-edit-${pemegang.id}`}
+          pemegang={pemegang}
+          trigger={
+            <button
+              type="button"
+              className="py-1 px-2.5 rounded-md border-[1.5px] border-[#059669] text-[11px] font-semibold text-[#059669] bg-[#ecfdf5] transition-colors hover:bg-[#059669] hover:text-white"
+            >
+              &#9997;&#65039; Edit
+            </button>
+          }
+          onSaved={onEdit}
+        />
+        <RekapPaktaButton pemegang={pemegang} asetList={asetList} />
+        <button
+          type="button"
+          onClick={onDelete}
+          title={`Hapus ${pemegang.nama}`}
+          aria-label={`Hapus ${pemegang.nama}`}
+          className="py-1 px-2.5 rounded-md border-[1.5px] border-line text-[11px] font-semibold text-ink2 bg-white transition-colors hover:border-[#b91c1c] hover:text-[#b91c1c]"
+        >
+          &#128465;&#65039; Hapus
+        </button>
+      </div>
+      {isOpen && (
+        <div
+          className="mt-3 rounded-md px-2 py-3"
+          style={{ background: "#f0fdf4" }}
+        >
+          <DetailGrid asetList={asetList} />
+        </div>
+      )}
+    </article>
   );
 }
 
@@ -617,6 +787,7 @@ const paktaBadge = hasPakta ? (
             <button
               type="button"
               onClick={onToggle}
+              aria-expanded={isOpen}
               className="py-1 px-2.5 rounded-md border-[1.5px] border-line text-[11px] font-semibold text-ink2 bg-white transition-colors hover:border-[#059669] hover:text-[#059669]"
             >
               {"\uD83D\uDCCB"} Detail
