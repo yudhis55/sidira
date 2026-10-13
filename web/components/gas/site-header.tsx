@@ -263,6 +263,27 @@ export function SiteHeader({ roomCount, itemCount, profile }: SiteHeaderProps) {
           flexWrap: "wrap",
         }}
       >
+        {/* ── Hamburger (mobile saja) — buka drawer navigasi via event ── */}
+        <button
+          type="button"
+          aria-label="Buka navigasi"
+          onClick={() => window.dispatchEvent(new CustomEvent("sidira:toggle-nav"))}
+          className="md:hidden"
+          style={{
+            flexShrink: 0,
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            border: "1px solid rgba(255,255,255,0.25)",
+            background: "rgba(255,255,255,0.08)",
+            color: "#fff",
+            fontSize: 18,
+            lineHeight: 1,
+            cursor: "pointer",
+          }}
+        >
+          ☰
+        </button>
         {/* ── 2. Logo badge ── */}
         <Link
           href="/"

@@ -27,6 +27,20 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
   const [addRoomOpen, setAddRoomOpen] = React.useState(false);
   const [addUtilOpen, setAddUtilOpen] = React.useState(false);
 
+  // Drawer off-canvas di mobile (<md): dibuka via tombol hamburger di
+  // SiteHeader lewat custom window event (tanpa prop-drilling — AppLayout
+  // adalah server component). Di desktop (>=md) selalu terlihat via CSS.
+  const [open, setOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const onToggle = () => setOpen((v) => !v);
+    window.addEventListener("sidira:toggle-nav", onToggle);
+    return () => window.removeEventListener("sidira:toggle-nav", onToggle);
+  }, []);
+
+  // Drawer ditutup via onClick tiap tab (lihat makeTab), overlay, tombol ✕,
+  // dan onCreated modal di bawah — tanpa effect agar lolos react-hooks/set-state-in-effect.
+
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
   const tabStyle = (active: boolean) => ({
@@ -72,6 +86,7 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
         className={act ? "active" : ""}
         onMouseEnter={tabHover}
         onMouseLeave={tabLeave}
+        onClick={() => setOpen(false)}
         style={{
           ...tabStyle(act),
           display: "flex",
@@ -95,23 +110,64 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
   };
 
   return (
-    <aside
-      style={{
-        width: 220,
-        flexShrink: 0,
-        background: "#0a3d32",
-        borderRight: "1px solid rgba(255,255,255,0.1)",
-        display: "flex",
-        flexDirection: "column",
-        // GAS `.room-nav-outer`: sidebar yang sticky, bukan header.
-        position: "sticky",
-        top: 0,
-        height: "100vh",
-        overflow: "hidden",
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.overflowY = "auto"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.overflowY = "hidden"; }}
-    >
+    <>
+      {/* Overlay gelap di mobile — klik menutup drawer. Di bawah drawer (z-40 < z-50), di atas konten. */}
+      {open && (
+        <button
+          type="button"
+          aria-label="Tutup navigasi"
+          onClick={() => setOpen(false)}
+          className="fixed inset-0 z-40 md:hidden"
+          style={{
+            background: "rgba(0,0,0,0.5)",
+            border: "none",
+            padding: 0,
+            cursor: "default",
+          }}
+        />
+      )}
+      <aside
+        aria-label="Navigasi utama"
+        className={`z-50 transition-all duration-200 ${
+          open ? "visible translate-x-0" : "invisible -translate-x-full md:visible md:translate-x-0"
+        } fixed inset-y-0 left-0 md:sticky md:top-0 md:h-[100vh]`}
+        style={{
+          width: 220,
+          flexShrink: 0,
+          background: "#0a3d32",
+          borderRight: "1px solid rgba(255,255,255,0.1)",
+          display: "flex",
+          flexDirection: "column",
+          // GAS `.room-nav-outer`: sidebar yang sticky, bukan header.
+          // Positioning di mobile (fixed off-canvas) vs desktop (sticky)
+          // diatur via className Tailwind di atas; di sini hanya visual.
+          overflow: "hidden",
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.overflowY = "auto"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.overflowY = "hidden"; }}
+      >
+      {/* Tombol tutup drawer — hanya di mobile */}
+      <button
+        type="button"
+        aria-label="Tutup navigasi"
+        onClick={() => setOpen(false)}
+        className="md:hidden"
+        style={{
+          alignSelf: "flex-end",
+          margin: "8px 8px 0",
+          width: 32,
+          height: 32,
+          borderRadius: 8,
+          border: "1px solid rgba(255,255,255,0.2)",
+          background: "rgba(255,255,255,0.08)",
+          color: "#fff",
+          fontSize: 14,
+          lineHeight: 1,
+          cursor: "pointer",
+        }}
+      >
+        ✕
+      </button>
       {/* ═══ Seksi Ruangan ═══ */}
       <div
         style={{
@@ -300,14 +356,21 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
         key={addRoomOpen ? "room-open" : "room-closed"}
         open={addRoomOpen}
         onClose={() => setAddRoomOpen(false)}
-        onCreated={(roomId) => router.push(`/inventaris/${roomId}`)}
+        onCreated={(roomId) => {
+          setOpen(false);
+          router.push(`/inventaris/${roomId}`);
+        }}
       />
       <AddUtilitasModal
         key={addUtilOpen ? "util-open" : "util-closed"}
         open={addUtilOpen}
         onClose={() => setAddUtilOpen(false)}
-        onCreated={(utilId) => router.push(`/utilitas/${utilId}`)}
+        onCreated={(utilId) => {
+          setOpen(false);
+          router.push(`/utilitas/${utilId}`);
+        }}
       />
-    </aside>
+      </aside>
+    </>
   );
 }
