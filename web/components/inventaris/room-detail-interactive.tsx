@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChecklistRoomModal } from "@/components/inventaris/checklist-room-modal";
+import { RoomQrDialog } from "@/components/inventaris/room-qr-dialog";
 import { MoveAllModal } from "@/components/inventaris/move-all-modal";
 import { MoveItemModal } from "@/components/inventaris/move-item-modal";
 import { Dialog } from "@/components/gas/dialog";
@@ -737,6 +738,7 @@ export function RoomDetailInteractive({
         >
           {"↗"} Pindah Item
         </button>
+        {isDbRoom && <RoomQrDialog roomId={room.id} roomName={room.name} />}
         <button
           type="button"
           onClick={() => setDeleteOpen(true)}
