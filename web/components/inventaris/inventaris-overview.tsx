@@ -193,6 +193,9 @@ export function InventarisOverview({
           daftar hanya menyimpan Tambah Ruangan + Export CSV. */}
       <div className="flex flex-wrap items-center justify-end gap-2">
         <InventarisCsvExport />
+        <Link href="/qr-cetak">
+          <Button>▦ Cetak Semua QR</Button>
+        </Link>
         <Link href="/inventaris/new">
           <Button>➕ Tambah Ruangan</Button>
         </Link>
