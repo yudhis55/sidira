@@ -123,6 +123,108 @@ const PRIORITY_CLASS: Record<ItemPriority, string> = {
 const TH_BASE =
   "bg-[#f8fafc] px-3.5 py-2.5 text-[10.5px] font-bold uppercase tracking-wide text-ink3 border-b border-line whitespace-nowrap";
 
+/** Kolom yang bisa diurut — klik header: naik → turun → kembali awal. */
+type SortKey =
+  | "name"
+  | "year"
+  | "merk"
+  | "noreg"
+  | "unit"
+  | "std"
+  | "quantity"
+  | "prio"
+  | "condition"
+  | "notes";
+type SortState = { key: SortKey; dir: "asc" | "desc" } | null;
+
+const CONDITION_RANK: Record<string, number> = {
+  baik: 0,
+  rr: 1,
+  rb: 2,
+  ta: 3,
+};
+const PRIO_RANK: Record<string, number> = {
+  wajib: 0,
+  penting: 1,
+  pendukung: 2,
+};
+
+function sortValue(item: Item, key: SortKey): string | number | null {
+  switch (key) {
+    case "name":
+      return item.name || null;
+    case "year":
+      return item.year ?? null;
+    case "merk":
+      return item.merk || item.type || null;
+    case "noreg":
+      return item.noreg || null;
+    case "unit":
+      return item.unit || null;
+    case "std":
+      return item.std ?? null;
+    case "quantity":
+      return item.quantity ?? null;
+    case "prio":
+      return item.prio ? (PRIO_RANK[item.prio] ?? 99) : null;
+    case "condition":
+      return item.condition ? (CONDITION_RANK[item.condition] ?? 99) : null;
+    case "notes":
+      return item.notes || null;
+  }
+}
+
+function compareSort(a: Item, b: Item, sort: NonNullable<SortState>): number {
+  const va = sortValue(a, sort.key);
+  const vb = sortValue(b, sort.key);
+  // Kosong selalu di bawah, di kedua arah.
+  if (va == null && vb == null) return a.id - b.id;
+  if (va == null) return 1;
+  if (vb == null) return -1;
+  let c: number;
+  if (typeof va === "number" && typeof vb === "number") c = va - vb;
+  else c = String(va).localeCompare(String(vb), "id");
+  if (c === 0) return a.id - b.id;
+  return sort.dir === "asc" ? c : -c;
+}
+
+function SortableTh({
+  label,
+  sortKey,
+  sort,
+  onToggle,
+  className,
+}: {
+  label: string;
+  sortKey: SortKey;
+  sort: SortState;
+  onToggle: (key: SortKey) => void;
+  className?: string;
+}) {
+  const active = sort?.key === sortKey;
+  return (
+    <th
+      className={className ?? TH_BASE}
+      aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
+    >
+      <button
+        type="button"
+        onClick={() => onToggle(sortKey)}
+        title={`Urutkan berdasarkan ${label}`}
+        aria-label={`Urutkan berdasarkan ${label}${
+          active ? (sort.dir === "asc" ? " (menaik)" : " (menurun)") : ""
+        }`}
+        className="inline-flex items-center gap-1 uppercase tracking-wide hover:text-teal"
+      >
+        {label}
+        <span aria-hidden className={active ? "text-teal" : "text-ink3/40"}>
+          {active ? (sort.dir === "asc" ? "▲" : "▼") : "⇅"}
+        </span>
+      </button>
+    </th>
+  );
+}
+
 /**
  * Detail ruangan — port GAS buildPanels (index.html ~19103).
  * Seluruh sel dapat diedit langsung seperti spreadsheet; perubahan sel
@@ -180,6 +282,23 @@ export function RoomDetailInteractive({
 
   // Ceklist harian modal (GAS openChecklist — room-scoped matrix)
   const [checklistOpen, setChecklistOpen] = useState(false);
+
+  // Urutan tampil tabel — null = urutan KIR (index_in_room). Klik header:
+  // menaik → menurun → kembali ke awal.
+  const [sort, setSort] = useState<SortState>(null);
+  const toggleSort = (key: SortKey) => {
+    setSort((prev) =>
+      !prev || prev.key !== key
+        ? { key, dir: "asc" }
+        : prev.dir === "asc"
+          ? { key, dir: "desc" }
+          : null
+    );
+  };
+  const sortItems = (list: Item[]): Item[] => {
+    if (!sort) return list;
+    return [...list].sort((a, b) => compareSort(a, b, sort));
+  };
 
   /** Baris baru dari addRow — nama-nya difokuskan sekali setelah render. */
   const focusItemId = useRef<number | null>(null);
@@ -751,7 +870,7 @@ export function RoomDetailInteractive({
       {/* ── Kategori: GAS hanya merender kategori yang berisi (~19148) ── */}
       <div className="space-y-5">
         {CATEGORY_CONFIG.map((cat) => {
-          const catItems = grouped[cat.value];
+          const catItems = sortItems(grouped[cat.value]);
           if (catItems.length === 0) return null;
           return (
             <details key={cat.value} open className="cat-section">
@@ -792,30 +911,76 @@ export function RoomDetailInteractive({
                     <thead>
                       <tr>
                         <th className={`${TH_BASE} w-9 text-center`}>No</th>
-                        <th className={`${TH_BASE} text-left`}>
-                          Nama &amp; Spesifikasi
-                        </th>
-                        <th className={`${TH_BASE} text-center min-w-[92px]`}>
-                          Tahun
-                        </th>
-                        <th className={`${TH_BASE} text-left min-w-[140px]`}>
-                          Merek / Tipe
-                        </th>
-                        <th className={`${TH_BASE} text-left min-w-[130px]`}>
-                          No. Register
-                        </th>
-                        <th className={`${TH_BASE} text-left`}>Satuan</th>
-                        <th className={`${TH_BASE} text-center`}>Standar</th>
-                        <th className={`${TH_BASE} text-center`}>Jml Ada</th>
-                        <th className={`${TH_BASE} text-center min-w-[132px]`}>
-                          Prioritas
-                        </th>
-                        <th className={`${TH_BASE} text-center min-w-[152px]`}>
-                          Kondisi
-                        </th>
-                        <th className={`${TH_BASE} text-left min-w-[160px]`}>
-                          Keterangan
-                        </th>
+                        <SortableTh
+                          label="Nama & Spesifikasi"
+                          sortKey="name"
+                          sort={sort}
+                          onToggle={toggleSort}
+                          className={`${TH_BASE} text-left`}
+                        />
+                        <SortableTh
+                          label="Tahun"
+                          sortKey="year"
+                          sort={sort}
+                          onToggle={toggleSort}
+                          className={`${TH_BASE} text-center min-w-[92px]`}
+                        />
+                        <SortableTh
+                          label="Merek / Tipe"
+                          sortKey="merk"
+                          sort={sort}
+                          onToggle={toggleSort}
+                          className={`${TH_BASE} text-left min-w-[140px]`}
+                        />
+                        <SortableTh
+                          label="No. Register"
+                          sortKey="noreg"
+                          sort={sort}
+                          onToggle={toggleSort}
+                          className={`${TH_BASE} text-left min-w-[130px]`}
+                        />
+                        <SortableTh
+                          label="Satuan"
+                          sortKey="unit"
+                          sort={sort}
+                          onToggle={toggleSort}
+                          className={`${TH_BASE} text-left`}
+                        />
+                        <SortableTh
+                          label="Standar"
+                          sortKey="std"
+                          sort={sort}
+                          onToggle={toggleSort}
+                          className={`${TH_BASE} text-center`}
+                        />
+                        <SortableTh
+                          label="Jml Ada"
+                          sortKey="quantity"
+                          sort={sort}
+                          onToggle={toggleSort}
+                          className={`${TH_BASE} text-center`}
+                        />
+                        <SortableTh
+                          label="Prioritas"
+                          sortKey="prio"
+                          sort={sort}
+                          onToggle={toggleSort}
+                          className={`${TH_BASE} text-center min-w-[132px]`}
+                        />
+                        <SortableTh
+                          label="Kondisi"
+                          sortKey="condition"
+                          sort={sort}
+                          onToggle={toggleSort}
+                          className={`${TH_BASE} text-center min-w-[152px]`}
+                        />
+                        <SortableTh
+                          label="Keterangan"
+                          sortKey="notes"
+                          sort={sort}
+                          onToggle={toggleSort}
+                          className={`${TH_BASE} text-left min-w-[160px]`}
+                        />
                         <th className={`${TH_BASE} text-center min-w-[80px]`}>
                           Ceklist
                         </th>
