@@ -245,11 +245,12 @@ export default async function DashboardPage() {
       color: "var(--blue)",
     },
     {
-      emoji: "🔴",
+      emoji: "⚠️",
       value: perluPerhatian,
       label: "Perlu Perhatian",
       bg: "var(--red2)",
       color: "var(--red)",
+      href: "/laporan",
     },
     {
       emoji: "📋",
@@ -257,173 +258,95 @@ export default async function DashboardPage() {
       label: "Usulan Aktif",
       bg: "#f5f3ff",
       color: "#7c3aed",
+      href: "/usulan",
     },
-  ];
-
-  const legendItems = [
-    { color: "var(--teal)", label: "Alat Kesehatan" },
-    { color: "var(--amber)", label: "Meubelair" },
-    { color: "var(--blue)", label: "Elektronik" },
-    { color: "var(--slate)", label: "Lainnya" },
-  ];
-
-  const spillItems = [
-    { label: "Wajib", bg: "#fef3c7", color: "#92400e" },
-    { label: "Penting", bg: "var(--blue2)", color: "var(--blue)" },
-    { label: "Pendukung", bg: "var(--slate2)", color: "var(--slate)" },
   ];
 
   return (
     <div>
-      {/* ── Legend Bar — GAS .legend-bar ───────────────────────────── */}
+      {/* ── Global Stats — 6 kartu pas: 2 kolom HP, 3 tablet, 6 desktop ── */}
       <div
-        className="legend-bar"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "16px",
-          flexWrap: "wrap",
-          padding: "12px 16px",
-          background: "#fff",
-          border: "1px solid var(--line)",
-          borderRadius: "var(--r)",
-          marginBottom: "20px",
-          fontSize: "11.5px",
-        }}
-      >
-        <span
-          className="legend-title"
-          style={{
-            fontWeight: 700,
-            color: "var(--ink2)",
-            marginRight: "4px",
-          }}
-        >
-          Keterangan:
-        </span>
-        {legendItems.map((leg) => (
-          <span
-            key={leg.label}
-            className="legend-item"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "5px",
-              color: "var(--ink3)",
-            }}
-          >
-            <span
-              className="legend-dot"
-              style={{
-                width: "10px",
-                height: "10px",
-                borderRadius: "50%",
-                background: leg.color,
-                flexShrink: 0,
-              }}
-            />
-            {leg.label}
-          </span>
-        ))}
-        <span
-          style={{
-            marginLeft: "auto",
-            display: "flex",
-            gap: "8px",
-            alignItems: "center",
-          }}
-        >
-          {spillItems.map((sp) => (
-            <span
-              key={sp.label}
-              className="spill"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-                padding: "3px 9px",
-                borderRadius: "20px",
-                fontSize: "10.5px",
-                fontWeight: 700,
-                whiteSpace: "nowrap",
-                background: sp.bg,
-                color: sp.color,
-              }}
-            >
-              {sp.label}
-            </span>
-          ))}
-        </span>
-      </div>
-
-      {/* ── Global Stats — GAS .gstats (5 kolom + mobile 2 kolom) ─── */}
-      <div
-        className="gstats grid grid-cols-2 gap-3 md:grid-cols-5"
+        className="gstats grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6"
         id="gstats"
         style={{
           marginBottom: "20px",
         }}
       >
-        {stats.map((s) => (
-          <div
-            key={s.label}
-            className="gstat"
-            style={{
-              background: "#fff",
-              border: "1px solid var(--line)",
-              borderRadius: "var(--r)",
-              padding: "16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-            }}
-          >
-            <div
-              className="gstat-ico"
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "10px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "20px",
-                flexShrink: 0,
-                background: s.bg,
-                lineHeight: 1,
-              }}
+        {stats.map((s) => {
+          const body = (
+            <>
+              <div
+                className="gstat-ico"
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "10px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "20px",
+                  flexShrink: 0,
+                  background: s.bg,
+                  lineHeight: 1,
+                }}
+              >
+                {s.emoji}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div
+                  className="gstat-v"
+                  style={{
+                    fontSize: "22px",
+                    fontWeight: 800,
+                    fontFamily: "var(--font-mono), 'JetBrains Mono', monospace",
+                    color: s.color,
+                    lineHeight: 1.15,
+                  }}
+                >
+                  {s.value}
+                </div>
+                <div
+                  className="gstat-l"
+                  style={{
+                    fontSize: "10.5px",
+                    color: "var(--ink3)",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px",
+                    marginTop: "2px",
+                  }}
+                >
+                  {s.label}
+                </div>
+              </div>
+            </>
+          );
+          const cardStyle = {
+            background: "#fff",
+            border: "1px solid var(--line)",
+            borderRadius: "var(--r)",
+            padding: "16px",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            height: "100%",
+          } as const;
+          return "href" in s && s.href ? (
+            <a
+              key={s.label}
+              href={s.href}
+              className="gstat block transition-shadow hover:shadow-md"
+              style={cardStyle}
+              title={`Buka ${s.label.toLowerCase()}`}
             >
-              {s.emoji}
+              {body}
+            </a>
+          ) : (
+            <div key={s.label} className="gstat" style={cardStyle}>
+              {body}
             </div>
-            <div style={{ minWidth: 0 }}>
-              <div
-                className="gstat-v"
-                style={{
-                  fontSize: "22px",
-                  fontWeight: 800,
-                  fontFamily: "var(--font-mono), 'JetBrains Mono', monospace",
-                  color: s.color,
-                  lineHeight: 1.15,
-                }}
-              >
-                {s.value}
-              </div>
-              <div
-                className="gstat-l"
-                style={{
-                  fontSize: "10.5px",
-                  color: "var(--ink3)",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.3px",
-                  marginTop: "2px",
-                }}
-              >
-                {s.label}
-              </div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* ── Widget overview — 5 kartu di bawah gstats ─────────────── */}
