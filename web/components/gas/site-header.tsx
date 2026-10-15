@@ -43,6 +43,7 @@ function HeaderStat({
 }) {
   return (
     <div
+      className="sh-stat"
       style={{
         background: accent ? "rgba(32,224,160,0.12)" : "rgba(255,255,255,0.08)",
         border: `1px solid ${
@@ -55,6 +56,7 @@ function HeaderStat({
       }}
     >
       <div
+        className="sh-stat-val"
         style={{
           fontSize: "20px",
           fontWeight: 800,
@@ -107,7 +109,7 @@ function YearChip() {
   }, [open ]);
 
   return (
-    <div ref={wrapRef} style={{ position: "relative" }}>
+    <div ref={wrapRef} className="sh-chip" style={{ position: "relative" }}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -250,7 +252,29 @@ export function SiteHeader({ roomCount, itemCount, profile }: SiteHeaderProps) {
       />
 
       {/* ── Main content wrap ── */}
+      {/* Blok <style> di bawah hanya menargetkan <md via media query,
+          sehingga tampilan desktop (≥md) piksel-identik. */}
+      <style>{`
+@media (max-width: 767.98px) {
+  .sh-wrap { padding: 12px 16px 14px !important; gap: 10px !important; }
+  .sh-logo { width: 44px !important; height: 44px !important; border-radius: 14px !important; }
+  .sh-logo-cap { display: none !important; }
+  .sh-divider { display: none !important; }
+  .sh-acronym span { font-size: 28px !important; letter-spacing: -1px !important; }
+  .sh-tagline { display: none !important; }
+  .sh-instansi { display: none !important; }
+  .sh-stats { width: 100% !important; align-items: stretch !important; }
+  .sh-stat-row { width: 100% !important; display: grid !important; grid-template-columns: 1fr 1fr !important; }
+  .sh-stat { min-width: 0 !important; padding: 6px 8px !important; }
+  .sh-stat-val { font-size: 17px !important; }
+  .sh-chip { align-self: center !important; }
+  .sh-userbar { padding: 6px 8px !important; gap: 8px !important; }
+  .sh-usermeta { display: none !important; }
+  .sh-logout { padding: 6px 10px !important; font-size: 11px !important; }
+}
+`}</style>
       <div
+        className="sh-wrap"
         style={{
           maxWidth: "1200px",
           margin: "0 auto",
@@ -298,6 +322,7 @@ export function SiteHeader({ roomCount, itemCount, profile }: SiteHeaderProps) {
           }}
         >
           <div
+            className="sh-logo"
             style={{
               width: "64px",
               height: "64px",
@@ -327,6 +352,7 @@ export function SiteHeader({ roomCount, itemCount, profile }: SiteHeaderProps) {
             />
           </div>
           <span
+            className="sh-logo-cap"
             style={{
               fontSize: "10px",
               fontWeight: 700,
@@ -341,6 +367,7 @@ export function SiteHeader({ roomCount, itemCount, profile }: SiteHeaderProps) {
 
         {/* Divider */}
           <div
+            className="sh-divider"
             style={{
               width: "1px",
               height: "64px",
@@ -351,9 +378,10 @@ export function SiteHeader({ roomCount, itemCount, profile }: SiteHeaderProps) {
         />
 
         {/* ── Branding block ── */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="sh-brand" style={{ flex: 1, minWidth: 0 }}>
           {/* Brand acronym SIDIRA */}
           <div
+            className="sh-acronym"
             style={{
               display: "flex",
               alignItems: "baseline",
@@ -388,6 +416,7 @@ export function SiteHeader({ roomCount, itemCount, profile }: SiteHeaderProps) {
 
           {/* ── 4. Tagline dua baris: kepanjangan + instansi ── */}
           <div
+            className="sh-tagline"
             style={{
               fontSize: "13px",
               fontWeight: 700,
@@ -419,6 +448,7 @@ export function SiteHeader({ roomCount, itemCount, profile }: SiteHeaderProps) {
             ))}
           </div>
           <div
+            className="sh-instansi"
             style={{
               marginTop: "5px",
               fontSize: "11px",
@@ -433,6 +463,7 @@ export function SiteHeader({ roomCount, itemCount, profile }: SiteHeaderProps) {
 
         {/* ── 5. Header stats — GAS `.header-stats` ── */}
         <div
+          className="sh-stats"
           style={{
             flexShrink: 0,
             display: "flex",
@@ -441,7 +472,7 @@ export function SiteHeader({ roomCount, itemCount, profile }: SiteHeaderProps) {
             gap: "8px",
           }}
         >
-          <div style={{ display: "flex", gap: "8px" }}>
+          <div className="sh-stat-row" style={{ display: "flex", gap: "8px" }}>
             <HeaderStat value={String(roomCount)} label="Ruangan" accent />
             <HeaderStat value={String(itemCount)} label="Total Item" />
           </div>
@@ -450,6 +481,7 @@ export function SiteHeader({ roomCount, itemCount, profile }: SiteHeaderProps) {
 
         {/* ── 6. User bar ── */}
         <div
+          className="sh-userbar"
           style={{
             flexShrink: 0,
             display: "flex",
@@ -479,7 +511,7 @@ export function SiteHeader({ roomCount, itemCount, profile }: SiteHeaderProps) {
           >
             {avatar}
           </div>
-          <div style={{ minWidth: 0 }}>
+          <div className="sh-usermeta" style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: "12px" }}>{nama}</div>
             <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.45)" }}>
               {jabatan}
@@ -524,6 +556,7 @@ export function SiteHeader({ roomCount, itemCount, profile }: SiteHeaderProps) {
           ) : (
             <button
               type="button"
+              className="sh-logout"
               // GAS memakai confirm() bawaan; di sini diganti konfirmasi inline.
               onClick={() => setConfirmingLogout(true)}
               style={{

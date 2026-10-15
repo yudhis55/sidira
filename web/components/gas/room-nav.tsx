@@ -16,6 +16,9 @@ export interface RoomNavProps {
   utilitas?: UtilMeta[];
 }
 
+/** Key sessionStorage untuk status collapse seksi sidebar (per sesi). */
+const NAV_COLLAPSE_KEY = "sidira:nav-collapsed";
+
 export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: RoomNavProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -42,6 +45,82 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
   // dan onCreated modal di bawah — tanpa effect agar lolos react-hooks/set-state-in-effect.
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+
+  // ═══ Collapse seksi (ingat per sesi via sessionStorage) ═══
+  const [collapsed, setCollapsed] = React.useState<string[]>(() => {
+    try {
+      const raw = sessionStorage.getItem(NAV_COLLAPSE_KEY);
+      const parsed: unknown = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter((k): k is string => typeof k === "string") : [];
+    } catch {
+      return [];
+    }
+  });
+
+  React.useEffect(() => {
+    try {
+      sessionStorage.setItem(NAV_COLLAPSE_KEY, JSON.stringify(collapsed));
+    } catch {
+      // Abaikan bila storage tidak tersedia.
+    }
+  }, [collapsed]);
+
+  // Seksi yang memuat path aktif selalu dianggap terbuka (tanpa setState
+  // di effect agar lolos react-hooks/set-state-in-effect).
+  const sectionOfPath = (p: string): string | null => {
+    if (p.startsWith("/inventaris/")) return "ruangan";
+    if (p.startsWith("/utilitas/")) return "utilitas";
+    if (p.startsWith("/sbbk")) return "sbbk";
+    if (p.startsWith("/rekap")) return "rekap";
+    if (p.startsWith("/pakta")) return "pakta";
+    if (p.startsWith("/admin")) return "admin";
+    return null;
+  };
+  const activeSection = sectionOfPath(pathname);
+  const isCollapsed = (key: string) => collapsed.includes(key) && key !== activeSection;
+  const toggleSection = (key: string) =>
+    setCollapsed((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+
+  const sectionHeaderStyle: React.CSSProperties = {
+    padding: "10px 12px 4px",
+    fontSize: 9,
+    fontWeight: 800,
+    letterSpacing: "0.12em",
+    color: "rgba(255,255,255,0.35)",
+    textTransform: "uppercase",
+  };
+
+  const renderSectionHeader = (key: string, label: string) => {
+    const shut = isCollapsed(key);
+    return (
+      <button
+        type="button"
+        aria-expanded={!shut}
+        onClick={() => toggleSection(key)}
+        style={{
+          ...sectionHeaderStyle,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          width: "100%",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          textAlign: "left",
+        }}
+      >
+        <span>{label}</span>
+        <span aria-hidden="true" style={{ fontSize: 9 }}>
+          {shut ? "▸" : "▾"}
+        </span>
+      </button>
+    );
+  };
+
+  // ═══ Search ruangan (filter contains, case-insensitive) ═══
+  const [roomQuery, setRoomQuery] = React.useState("");
+  const roomQ = roomQuery.trim().toLowerCase();
+  const visibleRooms = roomQ ? rooms.filter((r) => r.name.toLowerCase().includes(roomQ)) : rooms;
 
   const tabStyle = (active: boolean) => ({
     color: active ? "#4eebd0" : "rgba(255,255,255,0.55)",
@@ -168,188 +247,179 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
       >
         ✕
       </button>
-      {/* ═══ Seksi Ruangan ═══ */}
-      <div
-        style={{
-          padding: "10px 12px 4px",
-          fontSize: 9,
-          fontWeight: 800,
-          letterSpacing: "0.12em",
-          color: "rgba(255,255,255,0.35)",
-          textTransform: "uppercase",
-        }}
-      >
-        🏥 Ruangan
-      </div>
+      {/* ═══ Menu utama ═══ */}
+      <div style={sectionHeaderStyle}>🏠 Utama</div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
-        {rooms.map((room) => makeTab(`/inventaris/${room.id}`, room.icon, room.name))}
+        {makeTab("/", "🏠", "Dashboard", pathname === "/")}
       </div>
 
-      <button
-        type="button"
-        onClick={() => setAddRoomOpen(true)}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.color = "rgba(255,255,255,0.9)";
-          e.currentTarget.style.background = "rgba(255,255,255,0.07)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.color = "rgba(255,255,255,0.35)";
-          e.currentTarget.style.background = "transparent";
-        }}
-        style={{
-          display: "block",
-          padding: "8px 10px",
-          margin: "0 8px",
-          fontSize: "11.5px",
-          fontWeight: 600,
-          borderRadius: 7,
-          color: "rgba(255,255,255,0.35)",
-          background: "transparent",
-          border: "none",
-          textAlign: "left",
-          cursor: "pointer",
-          transition: "all 0.15s",
-          whiteSpace: "nowrap",
-        }}
-      >
-        ＋ Tambah Ruangan
-      </button>
+      {/* ═══ Divider ═══ */}
+      <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "6px 12px" }} />
+
+      {/* ═══ Seksi Ruangan ═══ */}
+      {renderSectionHeader("ruangan", "🏥 Ruangan")}
+
+      {(!isCollapsed("ruangan") || roomQ !== "") && (
+        <>
+          <div style={{ padding: "4px 8px" }}>
+            <input
+              type="search"
+              value={roomQuery}
+              onChange={(e) => setRoomQuery(e.target.value)}
+              placeholder="Cari ruangan…"
+              aria-label="Cari ruangan"
+              style={{
+                width: "100%",
+                padding: "6px 8px",
+                fontSize: "11.5px",
+                borderRadius: 7,
+                border: "1px solid rgba(255,255,255,0.15)",
+                background: "rgba(255,255,255,0.08)",
+                color: "#fff",
+                outline: "none",
+              }}
+            />
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
+            {visibleRooms.map((room) => makeTab(`/inventaris/${room.id}`, room.icon, room.name))}
+            {visibleRooms.length === 0 && (
+              <div
+                style={{
+                  padding: "8px 10px",
+                  fontSize: "11.5px",
+                  color: "rgba(255,255,255,0.35)",
+                }}
+              >
+                Tidak cocok
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setAddRoomOpen(true)}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "rgba(255,255,255,0.9)";
+              e.currentTarget.style.background = "rgba(255,255,255,0.07)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "rgba(255,255,255,0.35)";
+              e.currentTarget.style.background = "transparent";
+            }}
+            style={{
+              display: "block",
+              padding: "8px 10px",
+              margin: "0 8px",
+              fontSize: "11.5px",
+              fontWeight: 600,
+              borderRadius: 7,
+              color: "rgba(255,255,255,0.35)",
+              background: "transparent",
+              border: "none",
+              textAlign: "left",
+              cursor: "pointer",
+              transition: "all 0.15s",
+              whiteSpace: "nowrap",
+            }}
+          >
+            ＋ Tambah Ruangan
+          </button>
+        </>
+      )}
 
       {/* ═══ Divider ═══ */}
       <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "6px 12px" }} />
 
       {/* ═══ Seksi Utilitas ═══ */}
-      <div
-        style={{
-          padding: "10px 12px 4px",
-          fontSize: 9,
-          fontWeight: 800,
-          letterSpacing: "0.12em",
-          color: "rgba(255,255,255,0.35)",
-          textTransform: "uppercase",
-        }}
-      >
-        ⚙️ Utilitas
-      </div>
+      {renderSectionHeader("utilitas", "⚙️ Utilitas")}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
-        {utilitas.map((u) => makeTab(`/utilitas/${u.util_id}`, u.icon, u.label))}
-      </div>
+      {!isCollapsed("utilitas") && (
+        <>
+          <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
+            {utilitas.map((u) => makeTab(`/utilitas/${u.util_id}`, u.icon, u.label))}
+          </div>
 
-      <button
-        type="button"
-        onClick={() => setAddUtilOpen(true)}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.color = "rgba(255,255,255,0.9)";
-          e.currentTarget.style.background = "rgba(255,255,255,0.07)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.color = "rgba(255,255,255,0.35)";
-          e.currentTarget.style.background = "transparent";
-        }}
-        style={{
-          display: "block",
-          padding: "8px 10px",
-          margin: "0 8px",
-          fontSize: "11.5px",
-          fontWeight: 600,
-          borderRadius: 7,
-          color: "rgba(255,255,255,0.35)",
-          background: "transparent",
-          border: "none",
-          textAlign: "left",
-          cursor: "pointer",
-          transition: "all 0.15s",
-          whiteSpace: "nowrap",
-        }}
-      >
-        ＋ Tambah Utilitas
-      </button>
+          <button
+            type="button"
+            onClick={() => setAddUtilOpen(true)}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "rgba(255,255,255,0.9)";
+              e.currentTarget.style.background = "rgba(255,255,255,0.07)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "rgba(255,255,255,0.35)";
+              e.currentTarget.style.background = "transparent";
+            }}
+            style={{
+              display: "block",
+              padding: "8px 10px",
+              margin: "0 8px",
+              fontSize: "11.5px",
+              fontWeight: 600,
+              borderRadius: 7,
+              color: "rgba(255,255,255,0.35)",
+              background: "transparent",
+              border: "none",
+              textAlign: "left",
+              cursor: "pointer",
+              transition: "all 0.15s",
+              whiteSpace: "nowrap",
+            }}
+          >
+            ＋ Tambah Utilitas
+          </button>
+        </>
+      )}
 
       {/* ═══ Divider ═══ */}
       <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "6px 12px" }} />
 
       {/* ═══ Seksi Barang Keluar (SBBK) ═══ */}
-      <div
-        style={{
-          padding: "10px 12px 4px",
-          fontSize: 9,
-          fontWeight: 800,
-          letterSpacing: "0.12em",
-          color: "rgba(255,255,255,0.35)",
-          textTransform: "uppercase",
-        }}
-      >
-        📋 Barang Keluar
-      </div>
+      {renderSectionHeader("sbbk", "📋 Barang Keluar")}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
-        {makeTab("/sbbk", "📤", "SBBK")}
-      </div>
+      {!isCollapsed("sbbk") && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
+          {makeTab("/sbbk", "📤", "SBBK")}
+        </div>
+      )}
 
       {/* ═══ Divider ═══ */}
       <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "6px 12px" }} />
 
       {/* ═══ Seksi Rekap Inventaris ═══ */}
-      <div
-        style={{
-          padding: "10px 12px 4px",
-          fontSize: 9,
-          fontWeight: 800,
-          letterSpacing: "0.12em",
-          color: "rgba(255,255,255,0.35)",
-          textTransform: "uppercase",
-        }}
-      >
-        📊 Rekap Inventaris
-      </div>
+      {renderSectionHeader("rekap", "📊 Rekap Inventaris")}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
-        {makeTab("/rekap", "📊", "Pemegang Inventaris")}
-      </div>
+      {!isCollapsed("rekap") && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
+          {makeTab("/rekap", "📊", "Pemegang Inventaris")}
+        </div>
+      )}
 
       {/* ═══ Divider ═══ */}
       <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "6px 12px" }} />
 
       {/* ═══ Seksi Pakta Integritas ═══ */}
-      <div
-        style={{
-          padding: "10px 12px 4px",
-          fontSize: 9,
-          fontWeight: 800,
-          letterSpacing: "0.12em",
-          color: "rgba(255,255,255,0.35)",
-          textTransform: "uppercase",
-        }}
-      >
-        📝 Pakta Integritas
-      </div>
+      {renderSectionHeader("pakta", "📝 Pakta Integritas")}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
-        {makeTab("/pakta", "📝", "Pakta")}
-      </div>
+      {!isCollapsed("pakta") && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
+          {makeTab("/pakta", "📝", "Pakta")}
+        </div>
+      )}
 
       {/* ═══ Divider ═══ */}
       <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "6px 12px" }} />
 
       {/* ═══ Seksi Admin ═══ */}
-      <div
-        style={{
-          padding: "10px 12px 4px",
-          fontSize: 9,
-          fontWeight: 800,
-          letterSpacing: "0.12em",
-          color: "rgba(255,255,255,0.35)",
-          textTransform: "uppercase",
-        }}
-      >
-        🛡️ Admin
-      </div>
+      {renderSectionHeader("admin", "🛡️ Admin")}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
-        {makeTab("/admin", "👥", "Users")}
-      </div>
+      {!isCollapsed("admin") && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
+          {makeTab("/admin", "👥", "Users")}
+        </div>
+      )}
 
       {/* GAS #modalOverlay & #utilModalOverlay — dibuka dari sidebar */}
       <AddRoomModal
