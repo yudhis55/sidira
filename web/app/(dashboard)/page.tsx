@@ -1,5 +1,6 @@
 import { Suspense } from "react";
-import { getMockItems } from "@/lib/mock-data";
+import { getRooms } from "@/lib/auth/rooms";
+import { getAllItems } from "@/lib/auth/items";
 import { getUsulanList } from "@/lib/auth/usulan";
 import { getRiwayatList } from "@/lib/auth/riwayat";
 import { getLaporanSummary, getLaporanPerRoom } from "@/lib/auth/laporan";
@@ -35,14 +36,20 @@ function toRiwayatPindah(row: RiwayatRow): RiwayatPindah {
  * Density/colors match gas-legacy .legend-bar / .gstats / .page-actions.
  */
 export default async function DashboardPage() {
-  const items = getMockItems();
   // Nilai awal untuk modal laporan (diambil ulang live saat dibuka).
-  // Gagal → nol; dashboard tetap tampil, modal menampilkan toast.
+  // Gagal → fallback dihitung dari rooms/items asli di bawah.
   const now = new Date();
   const laporanFilter = { bulan: now.getMonth() + 1, tahun: now.getFullYear() };
-  // Paralel: 4 roundtrip jadi 1 gelombang.
-  const [usulan, riwayatRes, laporanSummary, laporanRooms] = await Promise.all(
-    [
+  // Hitungan ASLI Supabase — gagal → daftar kosong, dashboard tetap tampil.
+  // Paralel: 2 query inventaris + usulan + riwayat + 2 laporan jadi 1 gelombang.
+  const [rooms, items, usulan, riwayatRes, laporanSummary, laporanRooms] =
+    await Promise.all([
+      getRooms().catch(
+        () => [] as Awaited<ReturnType<typeof getRooms>>
+      ),
+      getAllItems().catch(
+        () => [] as Awaited<ReturnType<typeof getAllItems>>
+      ),
       getUsulanList().catch(
         () => [] as Awaited<ReturnType<typeof getUsulanList>>
       ),
@@ -69,10 +76,22 @@ export default async function DashboardPage() {
         percentage_ta: 0,
       })),
       getLaporanPerRoom(laporanFilter).catch(() => []),
-    ]
-  );
+    ]);
   const riwayatItems = riwayatRes.items;
   const riwayatError = riwayatRes.error;
+
+  // Bila ringkasan laporan gagal dimuat, jangan tampilkan nol palsu di modal:
+  // pakai hitungan asli rooms/items sebagai nilai awal.
+  const summary =
+    laporanSummary.total_rooms === 0 &&
+    laporanSummary.total_items === 0 &&
+    (rooms.length > 0 || items.length > 0)
+      ? {
+          ...laporanSummary,
+          total_rooms: rooms.length,
+          total_items: items.length,
+        }
+      : laporanSummary;
 
   const totalItems = items.length;
   const alkes = items.filter((i) => i.category === "alkes").length;
@@ -305,7 +324,7 @@ export default async function DashboardPage() {
       <Suspense fallback={null}>
         <PageActionsHost
           riwayatItems={riwayatItems}
-          laporanSummary={laporanSummary}
+          laporanSummary={summary}
           laporanRooms={laporanRooms}
           withDivider
         />

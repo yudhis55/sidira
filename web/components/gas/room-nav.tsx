@@ -7,6 +7,7 @@ import { AddRoomModal } from "@/components/inventaris/add-room-modal";
 import { AddUtilitasModal } from "@/components/utilitas/add-utilitas-modal";
 import { useRoomList } from "@/lib/room-store";
 import { useUtilitasList } from "@/lib/utilitas-store";
+import { useNavUi } from "@/lib/nav-ui-store";
 import type { Room, UtilMeta } from "@/types/database";
 
 export interface RoomNavProps {
@@ -25,6 +26,12 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
   // Ruangan/utilitas tambahan serta hasil sunting ikut tercermin di sidebar.
   const rooms = useRoomList(baseRooms);
   const utilitas = useUtilitasList(baseUtilitas);
+
+  // Mode lipat (icon rail) khusus desktop (>=md) — store dibuat agen lain
+  // (persist key "sidira:nav-ui", field `collapsed: boolean`).
+  // Di mobile (<md) nilai ini diabaikan: drawer selalu 220px penuh karena
+  // semua penyesuaian rail memakai varian `md:` (base `w-[220px]` tetap).
+  const railCollapsed = useNavUi((s) => s.collapsed);
 
   // GAS membuka modal langsung dari sidebar (openModal / openUtilModal).
   const [addRoomOpen, setAddRoomOpen] = React.useState(false);
@@ -96,12 +103,14 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
       <button
         type="button"
         aria-expanded={!shut}
+        aria-label={label}
+        title={label}
         onClick={() => toggleSection(key)}
+        className={railCollapsed ? "justify-between md:justify-center" : "justify-between"}
         style={{
           ...sectionHeaderStyle,
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
           width: "100%",
           background: "transparent",
           border: "none",
@@ -109,10 +118,24 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
           textAlign: "left",
         }}
       >
-        <span>{label}</span>
-        <span aria-hidden="true" style={{ fontSize: 9 }}>
+        {/* Label + chevron terlihat di mobile & mode penuh; di mode lipat
+            desktop (>=md) disembunyikan dan diganti divider tipis agar
+            tinggi ritme seksi tetap terjaga. */}
+        <span className={railCollapsed ? "md:hidden" : undefined}>{label}</span>
+        <span
+          aria-hidden="true"
+          className={railCollapsed ? "md:hidden" : undefined}
+          style={{ fontSize: 9 }}
+        >
           {shut ? "▸" : "▾"}
         </span>
+        {railCollapsed && (
+          <span
+            aria-hidden="true"
+            className="hidden md:block"
+            style={{ height: 1, width: 24, background: "rgba(255,255,255,0.2)" }}
+          />
+        )}
       </button>
     );
   };
@@ -157,7 +180,9 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
       <Link
         key={href}
         href={href}
-        className={act ? "active" : ""}
+        title={label}
+        aria-label={label}
+        className={`${act ? "active" : ""}${railCollapsed ? " md:justify-center" : ""}`}
         onMouseEnter={tabHover}
         onMouseLeave={tabLeave}
         onClick={() => setOpen(false)}
@@ -178,7 +203,9 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
         }}
       >
         <span style={iconStyle(act)}>{icon}</span>
-        <span>{label}</span>
+        {/* Label disembunyikan hanya di desktop (>=md) saat mode lipat;
+            di drawer mobile label selalu terlihat. */}
+        <span className={railCollapsed ? "md:hidden" : undefined}>{label}</span>
       </Link>
     );
   };
@@ -202,11 +229,12 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
       )}
       <aside
         aria-label="Navigasi utama"
-        className={`z-50 transition-all duration-200 ${
+        className={`z-50 w-[220px] transition-all duration-200 ${
+          railCollapsed ? "md:w-16" : "md:w-[220px]"
+        } ${
           open ? "visible translate-x-0" : "invisible -translate-x-full md:visible md:translate-x-0"
         } fixed inset-y-0 left-0 md:sticky md:top-0 md:h-[100vh]`}
         style={{
-          width: 220,
           flexShrink: 0,
           background: "#0a3d32",
           borderRight: "1px solid rgba(255,255,255,0.1)",
@@ -243,7 +271,9 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
         ✕
       </button>
       {/* ═══ Menu utama ═══ */}
-      <div style={sectionHeaderStyle}>🏠 Utama</div>
+      <div style={sectionHeaderStyle} className={railCollapsed ? "md:hidden" : undefined}>
+        🏠 Utama
+      </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
         {makeTab("/", "🏠", "Dashboard", pathname === "/")}
@@ -263,6 +293,8 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
 
           <button
             type="button"
+            title="Tambah Ruangan"
+            aria-label="Tambah Ruangan"
             onClick={() => setAddRoomOpen(true)}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = "rgba(255,255,255,0.9)";
@@ -287,8 +319,14 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
               transition: "all 0.15s",
               whiteSpace: "nowrap",
             }}
+            className={railCollapsed ? "md:mx-auto! md:text-center!" : undefined}
           >
-            ＋ Tambah Ruangan
+            <span className={railCollapsed ? "md:hidden" : undefined}>＋ Tambah Ruangan</span>
+            {railCollapsed && (
+              <span aria-hidden="true" className="hidden md:inline">
+                ＋
+              </span>
+            )}
           </button>
         </>
       )}
@@ -307,6 +345,8 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
 
           <button
             type="button"
+            title="Tambah Utilitas"
+            aria-label="Tambah Utilitas"
             onClick={() => setAddUtilOpen(true)}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = "rgba(255,255,255,0.9)";
@@ -331,8 +371,14 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
               transition: "all 0.15s",
               whiteSpace: "nowrap",
             }}
+            className={railCollapsed ? "md:mx-auto! md:text-center!" : undefined}
           >
-            ＋ Tambah Utilitas
+            <span className={railCollapsed ? "md:hidden" : undefined}>＋ Tambah Utilitas</span>
+            {railCollapsed && (
+              <span aria-hidden="true" className="hidden md:inline">
+                ＋
+              </span>
+            )}
           </button>
         </>
       )}

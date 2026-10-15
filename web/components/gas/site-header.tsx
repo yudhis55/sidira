@@ -5,8 +5,7 @@ import Link from "next/link";
 import { GlobalSearchBar } from "@/components/gas/global-search-bar";
 import { logout } from "@/lib/auth/actions";
 import { AVAILABLE_YEARS, useActiveYear } from "@/lib/year-store";
-
-const TAGLINE_WORDS = ["Sistem", "Digital", "Inventaris", "Ruangan"];
+import { useNavUi } from "@/lib/nav-ui-store";
 
 export interface SiteHeaderProfile {
   nama: string;
@@ -15,77 +14,13 @@ export interface SiteHeaderProfile {
 }
 
 export interface SiteHeaderProps {
-  /** Jumlah ruangan — GAS `#hs-rooms`. */
-  roomCount: number;
-  /** Jumlah seluruh item — GAS `#hs-items`. */
-  itemCount: number;
   /** Profil pengguna dari Supabase Auth (via getUser di layout server). */
   profile?: SiteHeaderProfile | null;
 }
 
-const ACRONYM_LETTERS = [
-  { char: "S", accent: true },
-  { char: "I", accent: false },
-  { char: "D", accent: true },
-  { char: "I", accent: false },
-  { char: "R", accent: true },
-  { char: "A", accent: false },
-] as const;
-
-function HeaderStat({
-  value,
-  label,
-  accent = false,
-}: {
-  value: string;
-  label: string;
-  accent?: boolean;
-}) {
-  return (
-    <div
-      className="sh-stat"
-      style={{
-        background: accent ? "rgba(32,224,160,0.12)" : "rgba(255,255,255,0.08)",
-        border: `1px solid ${
-          accent ? "rgba(32,224,160,0.25)" : "rgba(255,255,255,0.14)"
-        }`,
-        borderRadius: "10px",
-        padding: "8px 14px",
-        minWidth: "70px",
-        textAlign: "center",
-      }}
-    >
-      <div
-        className="sh-stat-val"
-        style={{
-          fontSize: "20px",
-          fontWeight: 800,
-          lineHeight: 1,
-          color: accent ? "#ffffff" : "#5fffc8",
-          fontFamily: "'JetBrains Mono', monospace",
-        }}
-      >
-        {value}
-      </div>
-      <div
-        style={{
-          fontSize: "9.5px",
-          fontWeight: 600,
-          textTransform: "uppercase",
-          letterSpacing: "0.5px",
-          color: "rgba(255,255,255,0.5)",
-          marginTop: "3px",
-        }}
-      >
-        {label}
-      </div>
-    </div>
-  );
-}
-
 /**
- * Chip KIR — di GAS label statis; di v4 menjadi pemilih tahun aktif
- * global (tersimpan lokal). Checklist & laporan menjadikannya tahun awal.
+ * Chip KIR — pemilih tahun aktif global (tersimpan lokal).
+ * Checklist & laporan menjadikannya tahun awal.
  */
 function YearChip() {
   const [year, setYear] = useActiveYear();
@@ -106,7 +41,7 @@ function YearChip() {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open ]);
+  }, [open]);
 
   return (
     <div ref={wrapRef} className="sh-chip" style={{ position: "relative" }}>
@@ -166,7 +101,8 @@ function YearChip() {
                 padding: "7px 10px",
                 borderRadius: "7px",
                 border: "none",
-                background: y === year ? "rgba(32,224,160,0.15)" : "transparent",
+                background:
+                  y === year ? "rgba(32,224,160,0.15)" : "transparent",
                 color: y === year ? "#5fffc8" : "rgba(255,255,255,0.75)",
                 fontSize: "12px",
                 fontWeight: y === year ? 800 : 500,
@@ -187,7 +123,13 @@ function YearChip() {
   );
 }
 
-export function SiteHeader({ roomCount, itemCount, profile }: SiteHeaderProps) {
+/**
+ * Topbar ramping SIDIRA — pengganti hero header.
+ * Sticky ~60px: hamburger, logo + "SIDIRA", search global, chip tahun,
+ * avatar + keluar. Gradien gelap dipertahankan untuk kontinuitas brand.
+ */
+export function SiteHeader({ profile }: SiteHeaderProps) {
+  const toggleCollapsed = useNavUi((s) => s.toggleCollapsed);
   const [confirmingLogout, setConfirmingLogout] = React.useState(false);
 
   // Tanpa profil (belum login / fallback) tampilkan akun default GAS
@@ -195,6 +137,14 @@ export function SiteHeader({ roomCount, itemCount, profile }: SiteHeaderProps) {
   const nama = profile?.nama ?? "Administrator SIDIRA";
   const jabatan = profile?.jabatan ?? "Admin Sistem";
   const avatar = profile?.avatar ?? nama.charAt(0).toUpperCase();
+
+  const handleHamburger = () => {
+    if (window.matchMedia("(min-width: 768px)").matches) {
+      toggleCollapsed();
+    } else {
+      window.dispatchEvent(new CustomEvent("sidira:toggle-nav"));
+    }
+  };
 
   const handleLogout = () => {
     setConfirmingLogout(false);
@@ -207,136 +157,76 @@ export function SiteHeader({ roomCount, itemCount, profile }: SiteHeaderProps) {
       style={{
         background:
           "linear-gradient(150deg, #062820 0%, #0a3d32 35%, #0e6654 75%, #12876e 100%)",
-        // GAS `.site-header`: position relative — ikut scroll hilang.
-        // Yang sticky di GAS adalah sidebar, bukan header.
-        position: "relative",
-        overflow: "hidden",
+        position: "sticky",
+        top: 0,
+        zIndex: 50,
+        minHeight: "60px",
       }}
     >
-      {/* ── 0. Decorative layers — GAS `.site-header::before/::after` ── */}
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          zIndex: 0,
-          pointerEvents: "none",
-          background:
-            "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.025'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
-        }}
-      />
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          top: "-80px",
-          right: "-80px",
-          zIndex: 0,
-          width: "380px",
-          height: "380px",
-          borderRadius: "50%",
-          pointerEvents: "none",
-          background:
-            "radial-gradient(circle, rgba(22, 200, 150, 0.15) 0%, transparent 70%)",
-        }}
-      />
-
-      {/* ── 1. Accent bar (3px gradient) ── */}
-      <div
-        style={{
-          background:
-            "linear-gradient(90deg, #20e0a0, #16c891, #0fa878, #0e6654)",
-          height: "3px",
-          width: "100%",
-        }}
-      />
-
-      {/* ── Main content wrap ── */}
-      {/* Blok <style> di bawah hanya menargetkan <md via media query,
-          sehingga tampilan desktop (≥md) piksel-identik. */}
       <style>{`
 @media (max-width: 767.98px) {
-  .sh-wrap { padding: 12px 16px 14px !important; gap: 10px !important; }
-  .sh-logo { width: 44px !important; height: 44px !important; border-radius: 14px !important; }
-  .sh-logo-cap { display: none !important; }
-  .sh-divider { display: none !important; }
-  .sh-acronym span { font-size: 28px !important; letter-spacing: -1px !important; }
-  .sh-tagline { display: none !important; }
-  .sh-instansi { display: none !important; }
-  .sh-stats { width: 100% !important; align-items: stretch !important; }
-  .sh-stat-row { width: 100% !important; display: grid !important; grid-template-columns: 1fr 1fr !important; }
-  .sh-stat { min-width: 0 !important; padding: 6px 8px !important; }
-  .sh-stat-val { font-size: 17px !important; }
-  .sh-chip { align-self: center !important; }
-  .sh-userbar { padding: 6px 8px !important; gap: 8px !important; }
   .sh-usermeta { display: none !important; }
-  .sh-logout { padding: 6px 10px !important; font-size: 11px !important; }
+  .sh-logout-label { display: none !important; }
 }
 `}</style>
       <div
-        className="sh-wrap"
+        className="sh-topbar"
         style={{
           maxWidth: "1200px",
           margin: "0 auto",
-          padding: "22px 32px 24px",
-          position: "relative",
-          zIndex: 1,
+          padding: "8px 16px",
+          minHeight: "60px",
           display: "flex",
           alignItems: "center",
-          gap: "24px",
+          gap: "12px",
           flexWrap: "wrap",
         }}
       >
-        {/* ── Hamburger (mobile saja) — buka drawer navigasi via event ── */}
+        {/* ── Hamburger ── */}
         <button
           type="button"
-          aria-label="Buka navigasi"
-          onClick={() => window.dispatchEvent(new CustomEvent("sidira:toggle-nav"))}
-          className="md:hidden"
+          aria-label="Buka/tutup navigasi"
+          onClick={handleHamburger}
           style={{
             flexShrink: 0,
-            width: 40,
-            height: 40,
-            borderRadius: 10,
+            width: 36,
+            height: 36,
+            borderRadius: 9,
             border: "1px solid rgba(255,255,255,0.25)",
             background: "rgba(255,255,255,0.08)",
             color: "#fff",
-            fontSize: 18,
+            fontSize: 17,
             lineHeight: 1,
             cursor: "pointer",
           }}
         >
           ☰
         </button>
-        {/* ── 2. Logo badge ── */}
+
+        {/* ── Logo + SIDIRA ── */}
         <Link
           href="/"
           style={{
             flexShrink: 0,
             display: "flex",
-            flexDirection: "column",
             alignItems: "center",
-            gap: "4px",
+            gap: "8px",
             textDecoration: "none",
             color: "inherit",
           }}
         >
-          <div
-            className="sh-logo"
+          <span
             style={{
-              width: "64px",
-              height: "64px",
-              background:
-                "linear-gradient(145deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
+              width: "32px",
+              height: "32px",
+              borderRadius: "9px",
               overflow: "hidden",
-              border: "1.5px solid rgba(255,255,255,0.25)",
-              borderRadius: "20px",
+              border: "1px solid rgba(255,255,255,0.25)",
+              background: "rgba(255,255,255,0.08)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow:
-                "0 8px 24px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2)",
-              backdropFilter: "blur(4px)",
+              flexShrink: 0,
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -350,171 +240,71 @@ export function SiteHeader({ roomCount, itemCount, profile }: SiteHeaderProps) {
                 borderRadius: "inherit",
               }}
             />
-          </div>
+          </span>
           <span
-            className="sh-logo-cap"
             style={{
-              fontSize: "10px",
-              fontWeight: 700,
-              letterSpacing: "1px",
-              color: "rgba(255,255,255,0.45)",
-              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "16px",
+              fontWeight: 800,
+              letterSpacing: "0.5px",
+              color: "#fff",
+              fontFamily: "Inter, system-ui, sans-serif",
+              whiteSpace: "nowrap",
             }}
           >
-            2026
+            SIDIRA
           </span>
         </Link>
 
-        {/* Divider */}
-          <div
-            className="sh-divider"
-            style={{
-              width: "1px",
-              height: "64px",
-              flexShrink: 0,
-            background:
-              "linear-gradient(to bottom, transparent, rgba(255,255,255,0.25), transparent)",
-          }}
-        />
-
-        {/* ── Branding block ── */}
-        <div className="sh-brand" style={{ flex: 1, minWidth: 0 }}>
-          {/* Brand acronym SIDIRA */}
-          <div
-            className="sh-acronym"
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              gap: 0,
-              lineHeight: 1,
-              marginBottom: "4px",
-            }}
-          >
-            {ACRONYM_LETTERS.map((l, i) => (
-              <span
-                key={i}
-                style={{
-                  fontSize: "44px",
-                  fontWeight: 900,
-                  letterSpacing: "-1.5px",
-                  fontFamily: "Inter, system-ui, sans-serif",
-                  ...(l.accent
-                    ? {
-                        background:
-                          "linear-gradient(135deg, #5fffc8 0%, #20e0a0 50%, #00c980 100%)",
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent",
-                        filter: "drop-shadow(0 2px 8px rgba(32,224,160,0.4))",
-                      }
-                    : { color: "rgba(255,255,255,0.92)" }),
-                }}
-              >
-                {l.char}
-              </span>
-            ))}
-          </div>
-
-          {/* ── 4. Tagline dua baris: kepanjangan + instansi ── */}
-          <div
-            className="sh-tagline"
-            style={{
-              fontSize: "13px",
-              fontWeight: 700,
-              color: "rgba(255,255,255,0.85)",
-              letterSpacing: "0.1px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              flexWrap: "wrap",
-            }}
-          >
-            {TAGLINE_WORDS.map((word, i) => (
-              <span key={i} style={{ display: "contents" }}>
-                <span>{word}</span>
-                {i < TAGLINE_WORDS.length - 1 && (
-                  <span
-                    style={{
-                      width: "4px",
-                      height: "4px",
-                      borderRadius: "50%",
-                      background: "rgba(255,255,255,0.3)",
-                      flexShrink: 0,
-                      display: "inline-block",
-                      alignSelf: "center",
-                    }}
-                  />
-                )}
-              </span>
-            ))}
-          </div>
-          <div
-            className="sh-instansi"
-            style={{
-              marginTop: "5px",
-              fontSize: "11px",
-              fontWeight: 500,
-              color: "rgba(255,255,255,0.55)",
-              letterSpacing: "0.2px",
-            }}
-          >
-            UPTD Puskesmas Baruharjo · Trenggalek
-          </div>
-        </div>
-
-        {/* ── 5. Header stats — GAS `.header-stats` ── */}
+        {/* ── Search global — flex-1, baris kedua full-width di mobile ── */}
         <div
-          className="sh-stats"
-          style={{
-            flexShrink: 0,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-end",
-            gap: "8px",
-          }}
+          className="sh-search"
+          style={{ flex: "1 1 200px", minWidth: 0, maxWidth: "480px" }}
         >
-          <div className="sh-stat-row" style={{ display: "flex", gap: "8px" }}>
-            <HeaderStat value={String(roomCount)} label="Ruangan" accent />
-            <HeaderStat value={String(itemCount)} label="Total Item" />
-          </div>
-          <YearChip />
+          <GlobalSearchBar />
         </div>
 
-        {/* ── 6. User bar ── */}
+        {/* ── Kanan: chip tahun + user ── */}
         <div
-          className="sh-userbar"
           style={{
-            flexShrink: 0,
             display: "flex",
             alignItems: "center",
-            gap: "12px",
+            gap: "10px",
             marginLeft: "auto",
-            background: "rgba(255,255,255,0.08)",
-            border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: "10px",
-            padding: "8px 14px",
+            flexShrink: 0,
+            minWidth: 0,
           }}
         >
+          <YearChip />
           <div
             style={{
-              width: "32px",
-              height: "32px",
+              width: "30px",
+              height: "30px",
               borderRadius: "50%",
               background: "linear-gradient(135deg, #14a98f, #0e7c6b)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontWeight: 800,
-              fontSize: "14px",
+              fontSize: "13px",
               color: "#ffffff",
               flexShrink: 0,
             }}
+            title={`${nama}${jabatan ? ` — ${jabatan}` : ""}`}
           >
             {avatar}
           </div>
           <div className="sh-usermeta" style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: "12px" }}>{nama}</div>
-            <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.45)" }}>
-              {jabatan}
+            <div
+              style={{
+                fontWeight: 700,
+                fontSize: "12px",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                maxWidth: "140px",
+              }}
+            >
+              {nama}
             </div>
           </div>
           {confirmingLogout ? (
@@ -556,63 +346,27 @@ export function SiteHeader({ roomCount, itemCount, profile }: SiteHeaderProps) {
           ) : (
             <button
               type="button"
-              className="sh-logout"
-              // GAS memakai confirm() bawaan; di sini diganti konfirmasi inline.
+              aria-label="Keluar"
+              title="Keluar"
               onClick={() => setConfirmingLogout(true)}
               style={{
                 background: "rgba(255,255,255,0.1)",
                 border: "1px solid rgba(255,255,255,0.2)",
                 borderRadius: "8px",
-                padding: "6px 14px",
+                padding: "6px 10px",
                 color: "rgba(255,255,255,0.8)",
                 fontSize: "12px",
                 fontWeight: 600,
                 cursor: "pointer",
-                transition: "all 0.15s",
                 whiteSpace: "nowrap",
                 flexShrink: 0,
               }}
-              onMouseEnter={(e) => {
-                const el = e.currentTarget;
-                el.style.background = "rgba(255,80,80,0.2)";
-                el.style.borderColor = "rgba(255,80,80,0.4)";
-                el.style.color = "#ff6b6b";
-              }}
-              onMouseLeave={(e) => {
-                const el = e.currentTarget;
-                el.style.background = "rgba(255,255,255,0.1)";
-                el.style.borderColor = "rgba(255,255,255,0.2)";
-                el.style.color = "rgba(255,255,255,0.8)";
-              }}
             >
-              ⏻ Keluar
+              ⏻ <span className="sh-logout-label">Keluar</span>
             </button>
           )}
         </div>
-
-        {/* ── 7. Search bar global — GAS `.global-search-bar` ── */}
-        <GlobalSearchBar />
       </div>
-
-      {/* ── 8. Wave SVG bottom ── */}
-      <svg
-        viewBox="0 0 1440 28"
-        preserveAspectRatio="none"
-        xmlns="http://www.w3.org/2000/svg"
-        style={{
-          display: "block",
-          width: "100%",
-          height: "28px",
-          marginBottom: "-1px",
-          position: "relative",
-          zIndex: 1,
-        }}
-      >
-        <path
-          d="M0,0 C360,28 1080,28 1440,0 L1440,28 L0,28 Z"
-          style={{ fill: "var(--background)" }}
-        />
-      </svg>
     </header>
   );
 }
