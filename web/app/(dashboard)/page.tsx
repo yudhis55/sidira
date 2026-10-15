@@ -215,11 +215,15 @@ export default async function DashboardPage() {
 
   // GAS gstat icon bg: teal3 / teal3 / amber2 / blue2 / red2 / #f5f3ff
   // GAS value colors: teal / teal / amber / blue / red / #7c3aed
+  const pctOf = (v: number) =>
+    totalItems > 0 ? Math.round((v / totalItems) * 100) : 0;
   const stats = [
     {
       emoji: "📦",
       value: totalItems,
       label: "Total Item",
+      sub: `di ${rooms.length} ruangan`,
+      share: 100,
       bg: "var(--teal3)",
       color: "var(--teal)",
     },
@@ -227,6 +231,8 @@ export default async function DashboardPage() {
       emoji: "🩺",
       value: alkes,
       label: "Alat Kesehatan",
+      sub: `${pctOf(alkes)}% dari total`,
+      share: pctOf(alkes),
       bg: "var(--teal3)",
       color: "var(--teal)",
     },
@@ -234,6 +240,8 @@ export default async function DashboardPage() {
       emoji: "🪑",
       value: meubelair,
       label: "Meubelair",
+      sub: `${pctOf(meubelair)}% dari total`,
+      share: pctOf(meubelair),
       bg: "var(--amber2)",
       color: "var(--amber)",
     },
@@ -241,6 +249,8 @@ export default async function DashboardPage() {
       emoji: "💻",
       value: elektronik,
       label: "Elektronik",
+      sub: `${pctOf(elektronik)}% dari total`,
+      share: pctOf(elektronik),
       bg: "var(--blue2)",
       color: "var(--blue)",
     },
@@ -248,6 +258,8 @@ export default async function DashboardPage() {
       emoji: "⚠️",
       value: perluPerhatian,
       label: "Perlu Perhatian",
+      sub: `${pctOf(perluPerhatian)}% perlu tindak lanjut`,
+      share: pctOf(perluPerhatian),
       bg: "var(--red2)",
       color: "var(--red)",
       href: "/laporan",
@@ -256,6 +268,8 @@ export default async function DashboardPage() {
       emoji: "📋",
       value: usulanAktif,
       label: "Usulan Aktif",
+      sub: usulanAktif > 0 ? "menunggu diproses" : "antrean kosong 🎉",
+      share: usulanAktif > 0 ? 100 : 0,
       bg: "#f5f3ff",
       color: "#7c3aed",
       href: "/usulan",
@@ -275,74 +289,113 @@ export default async function DashboardPage() {
         {stats.map((s) => {
           const body = (
             <>
+              <div className="flex items-start justify-between gap-2">
+                <div
+                  className="gstat-ico"
+                  style={{
+                    width: "42px",
+                    height: "42px",
+                    borderRadius: "12px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "21px",
+                    flexShrink: 0,
+                    background: s.bg,
+                    lineHeight: 1,
+                  }}
+                >
+                  {s.emoji}
+                </div>
+                {"href" in s && s.href && (
+                  <span
+                    aria-hidden
+                    className="text-ink3 transition-transform group-hover:translate-x-0.5"
+                    style={{ fontSize: "15px", lineHeight: 1 }}
+                  >
+                    →
+                  </span>
+                )}
+              </div>
               <div
-                className="gstat-ico"
+                className="gstat-v"
                 style={{
-                  width: "40px",
-                  height: "40px",
-                  borderRadius: "10px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "20px",
-                  flexShrink: 0,
-                  background: s.bg,
-                  lineHeight: 1,
+                  fontSize: "30px",
+                  fontWeight: 800,
+                  fontFamily: "var(--font-mono), 'JetBrains Mono', monospace",
+                  color: s.color,
+                  lineHeight: 1.1,
+                  marginTop: "10px",
                 }}
               >
-                {s.emoji}
+                {s.value}
               </div>
-              <div style={{ minWidth: 0 }}>
+              <div
+                className="gstat-l"
+                style={{
+                  fontSize: "11px",
+                  color: "var(--ink)",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.4px",
+                  marginTop: "2px",
+                }}
+              >
+                {s.label}
+              </div>
+              <div
+                style={{
+                  fontSize: "11px",
+                  color: "var(--ink3)",
+                  marginTop: "1px",
+                }}
+              >
+                {s.sub}
+              </div>
+              <div
+                className="gstat-bar"
+                style={{
+                  height: "5px",
+                  borderRadius: "99px",
+                  background: "var(--line2)",
+                  marginTop: "10px",
+                  overflow: "hidden",
+                }}
+              >
                 <div
-                  className="gstat-v"
                   style={{
-                    fontSize: "22px",
-                    fontWeight: 800,
-                    fontFamily: "var(--font-mono), 'JetBrains Mono', monospace",
-                    color: s.color,
-                    lineHeight: 1.15,
+                    height: "100%",
+                    width: `${Math.min(100, Math.max(0, s.share))}%`,
+                    borderRadius: "99px",
+                    background: s.color,
                   }}
-                >
-                  {s.value}
-                </div>
-                <div
-                  className="gstat-l"
-                  style={{
-                    fontSize: "10.5px",
-                    color: "var(--ink3)",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.3px",
-                    marginTop: "2px",
-                  }}
-                >
-                  {s.label}
-                </div>
+                />
               </div>
             </>
           );
           const cardStyle = {
             background: "#fff",
             border: "1px solid var(--line)",
-            borderRadius: "var(--r)",
-            padding: "16px",
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
+            borderRadius: "16px",
+            padding: "18px",
             height: "100%",
           } as const;
           return "href" in s && s.href ? (
             <a
               key={s.label}
               href={s.href}
-              className="gstat block transition-shadow hover:shadow-md"
+              className="gstat group block transition-all hover:-translate-y-0.5 hover:shadow-md"
               style={cardStyle}
               title={`Buka ${s.label.toLowerCase()}`}
             >
               {body}
             </a>
           ) : (
-            <div key={s.label} className="gstat" style={cardStyle}>
+            <div
+              key={s.label}
+              className="gstat"
+              style={cardStyle}
+            >
               {body}
             </div>
           );
