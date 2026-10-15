@@ -25,15 +25,8 @@ const SATUAN_OPTIONS = [
   "Lainnya",
 ];
 
-/** GAS memakai tahun anggaran berjalan; tahun lama tetap ada untuk sunting. */
-const ANGGARAN_OPTIONS = [
-  "BLUD TH 2026",
-  "APBD 2026",
-  "DAK 2026",
-  "BLUD TH 2025",
-  "APBD 2025",
-  "Lainnya",
-];
+/** Daftar sumber anggaran — nilai lama bertahun tetap terbaca saat sunting. */
+const ANGGARAN_OPTIONS = ["BLUD", "APBD", "DAK", "Lainnya"];
 
 const JENIS_OPTIONS = [
   { value: "Puskesmas", label: "Ruangan Puskesmas" },
@@ -129,6 +122,12 @@ export function SbbkModal({ open, onClose, sbbk, onSaved }: SbbkModalProps) {
     sbbk?.anggaran ?? ANGGARAN_OPTIONS[0]
   );
   const [kepada, setKepada] = React.useState(sbbk?.kepada ?? "");
+  const [penerimaNama, setPenerimaNama] = React.useState(
+    sbbk?.penerima_nama ?? ""
+  );
+  const [penerimaNip, setPenerimaNip] = React.useState(
+    sbbk?.penerima_nip ?? ""
+  );
   const [jenis, setJenis] = React.useState(sbbk?.jenis ?? "Puskesmas");
   const [ketUmum, setKetUmum] = React.useState(sbbk?.ket_umum ?? "");
   const [items, setItems] = React.useState<DraftItem[]>(
@@ -202,6 +201,8 @@ export function SbbkModal({ open, onClose, sbbk, onSaved }: SbbkModalProps) {
         no: noVal,
         tgl,
         kepada: kepadaVal,
+        penerima_nama: penerimaNama.trim(),
+        penerima_nip: penerimaNip.trim(),
         jenis,
         anggaran,
         ket_umum: ketUmum,
@@ -341,6 +342,22 @@ export function SbbkModal({ open, onClose, sbbk, onSaved }: SbbkModalProps) {
                 </option>
               ))}
             </select>
+          </Field>
+          <Field label="Nama Penerima">
+            <input
+              value={penerimaNama}
+              onChange={(e) => setPenerimaNama(e.target.value)}
+              placeholder="cth: Siti Rahayu"
+              className={FIELD_INPUT}
+            />
+          </Field>
+          <Field label="NIP Penerima">
+            <input
+              value={penerimaNip}
+              onChange={(e) => setPenerimaNip(e.target.value)}
+              placeholder="cth: 19850101 201001 2 001"
+              className={FIELD_INPUT}
+            />
           </Field>
         </div>
 

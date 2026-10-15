@@ -98,6 +98,8 @@ export interface SBBK {
   no: string;
   tgl: string; // ISO date
   kepada: string;
+  penerima_nama?: string;
+  penerima_nip?: string;
   jenis?: string;
   anggaran?: string;
   ket_umum?: string;

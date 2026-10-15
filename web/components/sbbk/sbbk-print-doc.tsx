@@ -72,7 +72,7 @@ export function SbbkPrintDoc({ sbbk, id, minRows = 10 }: SbbkPrintDocProps) {
               <td style={{ width: "95px", verticalAlign: "middle", padding: "4px 0" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/logo-puskesmas.png"
+                  src="/logo-trenggalek.png"
                   alt="Logo Puskesmas Baruharjo"
                   style={{ width: "88px", height: "auto", display: "block" }}
                 />
@@ -275,9 +275,9 @@ export function SbbkPrintDoc({ sbbk, id, minRows = 10 }: SbbkPrintDocProps) {
                   }}
                 />
                 <div>
-                  <b>{sbbk.kepada || "Penerima"}</b>
+                  <b>{sbbk.penerima_nama || sbbk.kepada || "Penerima"}</b>
                 </div>
-                <div>NIP. &nbsp;&nbsp;:</div>
+                <div>NIP. {sbbk.penerima_nip || "-"}</div>
               </td>
             </tr>
           </tbody>

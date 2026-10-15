@@ -19,6 +19,8 @@ export interface Sbbk {
   no: string;
   tgl: string;
   kepada: string;
+  penerima_nama?: string;
+  penerima_nip?: string;
   jenis?: string;
   anggaran?: string;
   ket_umum?: string;
@@ -37,6 +39,8 @@ export async function getSbbkList() {
       no,
       tgl,
       kepada,
+      penerima_nama,
+      penerima_nip,
       jenis,
       anggaran,
       ket_umum,
@@ -58,7 +62,7 @@ export async function getSbbkListFull(): Promise<Sbbk[]> {
 
   const { data, error } = await supabase
     .from("sbbk")
-    .select("id, no, tgl, kepada, jenis, anggaran, ket_umum, items, created_at, updated_at")
+    .select("id, no, tgl, kepada, penerima_nama, penerima_nip, jenis, anggaran, ket_umum, items, created_at, updated_at")
     .order("tgl", { ascending: false });
 
   if (error) throw error;
@@ -68,6 +72,8 @@ export async function getSbbkListFull(): Promise<Sbbk[]> {
     no: d.no as string,
     tgl: d.tgl as string,
     kepada: d.kepada as string,
+    penerima_nama: (d.penerima_nama as string) ?? undefined,
+    penerima_nip: (d.penerima_nip as string) ?? undefined,
     jenis: (d.jenis as string) ?? undefined,
     anggaran: (d.anggaran as string) ?? undefined,
     ket_umum: (d.ket_umum as string) ?? undefined,
@@ -89,6 +95,8 @@ export async function exportSbbkCSV(): Promise<string> {
     "No SBBK",
     "Tanggal",
     "Kepada",
+    "Nama Penerima",
+    "NIP Penerima",
     "Jenis",
     "Anggaran",
     "Nama Barang",
@@ -128,6 +136,8 @@ export async function exportSbbkCSV(): Promise<string> {
           escape(d.no),
           escape(fmtDate(d.tgl)),
           escape(d.kepada),
+          escape(d.penerima_nama),
+          escape(d.penerima_nip),
           escape(d.jenis),
           escape(d.anggaran),
           escape(""),
@@ -147,6 +157,8 @@ export async function exportSbbkCSV(): Promise<string> {
           escape(d.no),
           escape(fmtDate(d.tgl)),
           escape(d.kepada),
+          escape(d.penerima_nama),
+          escape(d.penerima_nip),
           escape(d.jenis),
           escape(d.anggaran),
           escape(it.nama),
@@ -214,6 +226,8 @@ export async function createSbbk(sbbkData: Omit<Sbbk, "id" | "created_at" | "upd
       no: sbbkWithoutItems.no,
       tgl: sbbkWithoutItems.tgl,
       kepada: sbbkWithoutItems.kepada,
+      penerima_nama: sbbkWithoutItems.penerima_nama,
+      penerima_nip: sbbkWithoutItems.penerima_nip,
       jenis: sbbkWithoutItems.jenis,
       anggaran: sbbkWithoutItems.anggaran,
       ket_umum: sbbkWithoutItems.ket_umum,
