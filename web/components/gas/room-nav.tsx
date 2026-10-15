@@ -117,11 +117,6 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
     );
   };
 
-  // ═══ Search ruangan (filter contains, case-insensitive) ═══
-  const [roomQuery, setRoomQuery] = React.useState("");
-  const roomQ = roomQuery.trim().toLowerCase();
-  const visibleRooms = roomQ ? rooms.filter((r) => r.name.toLowerCase().includes(roomQ)) : rooms;
-
   const tabStyle = (active: boolean) => ({
     color: active ? "#4eebd0" : "rgba(255,255,255,0.55)",
     borderLeft: active ? "3px solid #4eebd0" : "3px solid transparent",
@@ -260,41 +255,10 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
       {/* ═══ Seksi Ruangan ═══ */}
       {renderSectionHeader("ruangan", "🏥 Ruangan")}
 
-      {(!isCollapsed("ruangan") || roomQ !== "") && (
+      {!isCollapsed("ruangan") && (
         <>
-          <div style={{ padding: "4px 8px" }}>
-            <input
-              type="search"
-              value={roomQuery}
-              onChange={(e) => setRoomQuery(e.target.value)}
-              placeholder="Cari ruangan…"
-              aria-label="Cari ruangan"
-              style={{
-                width: "100%",
-                padding: "6px 8px",
-                fontSize: "11.5px",
-                borderRadius: 7,
-                border: "1px solid rgba(255,255,255,0.15)",
-                background: "rgba(255,255,255,0.08)",
-                color: "#fff",
-                outline: "none",
-              }}
-            />
-          </div>
-
           <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
-            {visibleRooms.map((room) => makeTab(`/inventaris/${room.id}`, room.icon, room.name))}
-            {visibleRooms.length === 0 && (
-              <div
-                style={{
-                  padding: "8px 10px",
-                  fontSize: "11.5px",
-                  color: "rgba(255,255,255,0.35)",
-                }}
-              >
-                Tidak cocok
-              </div>
-            )}
+            {rooms.map((room) => makeTab(`/inventaris/${room.id}`, room.icon, room.name))}
           </div>
 
           <button
