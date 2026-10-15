@@ -3,9 +3,19 @@ import { getRooms } from "@/lib/auth/rooms";
 import { getAllItems } from "@/lib/auth/items";
 import { getUsulanList } from "@/lib/auth/usulan";
 import { getRiwayatList } from "@/lib/auth/riwayat";
+import { getSbbkList } from "@/lib/auth/sbbk";
+import { createClient } from "@/lib/supabase/server";
 import { getLaporanSummary, getLaporanPerRoom } from "@/lib/auth/laporan";
 import type { ItemCategory, RiwayatPindah } from "@/types/database";
 import { PageActionsHost } from "@/components/gas/page-actions-host";
+import { DonutKondisi } from "@/components/dashboard/donut-kondisi";
+import { TopRuangan } from "@/components/dashboard/top-ruangan";
+import type { TopRuanganRow } from "@/components/dashboard/top-ruangan";
+import { UsulanMenunggu } from "@/components/dashboard/usulan-menunggu";
+import type { UsulanMenungguRow } from "@/components/dashboard/usulan-menunggu";
+import { CeklistHariIni } from "@/components/dashboard/ceklist-hari-ini";
+import { AktivitasTerakhir } from "@/components/dashboard/aktivitas-terakhir";
+import type { AktivitasRow } from "@/components/dashboard/aktivitas-terakhir";
 
 type RiwayatRow = Awaited<ReturnType<typeof getRiwayatList>>[number];
 
@@ -31,6 +41,24 @@ function toRiwayatPindah(row: RiwayatRow): RiwayatPindah {
 }
 
 /**
+ * Ruangan yang sudah punya ≥1 entri ceklist hari ini (date_key lokal
+ * YYYY-MM-DD). Gagal → daftar kosong, widget tetap tampil jujur.
+ */
+async function getChecklistRoomsToday(today: string): Promise<string[]> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("checklist")
+      .select("room_id")
+      .eq("date_key", today);
+    if (error) return [];
+    return [...new Set((data ?? []).map((r) => r.room_id as string))];
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Dashboard shell — GAS v3 parity:
  * legend-bar + 6 gstats + PageActionsHost (Laporan/Riwayat modals).
  * Density/colors match gas-legacy .legend-bar / .gstats / .page-actions.
@@ -39,10 +67,11 @@ export default async function DashboardPage() {
   // Nilai awal untuk modal laporan (diambil ulang live saat dibuka).
   // Gagal → fallback dihitung dari rooms/items asli di bawah.
   const now = new Date();
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const laporanFilter = { bulan: now.getMonth() + 1, tahun: now.getFullYear() };
   // Hitungan ASLI Supabase — gagal → daftar kosong, dashboard tetap tampil.
-  // Paralel: 2 query inventaris + usulan + riwayat + 2 laporan jadi 1 gelombang.
-  const [rooms, items, usulan, riwayatRes, laporanSummary, laporanRooms] =
+  // Paralel: 2 query inventaris + usulan + riwayat + 2 laporan + sbbk + ceklist hari ini.
+  const [rooms, items, usulan, riwayatRes, laporanSummary, laporanRooms, sbbkList, checklistRoomsToday] =
     await Promise.all([
       getRooms().catch(
         () => [] as Awaited<ReturnType<typeof getRooms>>
@@ -76,6 +105,10 @@ export default async function DashboardPage() {
         percentage_ta: 0,
       })),
       getLaporanPerRoom(laporanFilter).catch(() => []),
+      getSbbkList().catch(
+        () => [] as Awaited<ReturnType<typeof getSbbkList>>
+      ),
+      getChecklistRoomsToday(todayKey).catch(() => [] as string[]),
     ]);
   const riwayatItems = riwayatRes.items;
   const riwayatError = riwayatRes.error;
@@ -101,6 +134,84 @@ export default async function DashboardPage() {
     ["rr", "rb", "ta"].includes(i.condition),
   ).length;
   const usulanAktif = usulan.length;
+
+  // ── Widget overview (data asli, dihitung di server) ────────────────
+  const roomNameById = new Map(rooms.map((r) => [r.id, r.name]));
+
+  // (1) Donat kondisi dari items.
+  const donutCounts = {
+    baik: items.filter((i) => i.condition === "baik").length,
+    rr: items.filter((i) => i.condition === "rr").length,
+    rb: items.filter((i) => i.condition === "rb").length,
+    ta: items.filter((i) => i.condition === "ta").length,
+  };
+
+  // (2) Top-5 ruangan: % (rr+rb+ta)/total tertinggi, hanya yang punya item.
+  const topRuanganRows: TopRuanganRow[] = rooms
+    .map((room) => {
+      const roomItems = items.filter((i) => i.room_id === room.id);
+      const perhatian = roomItems.filter((i) =>
+        ["rr", "rb", "ta"].includes(i.condition)
+      ).length;
+      return {
+        roomId: room.id,
+        roomName: room.name,
+        roomIcon: room.icon,
+        total: roomItems.length,
+        perhatian,
+        pct:
+          roomItems.length === 0
+            ? 0
+            : Math.round((perhatian / roomItems.length) * 100),
+      };
+    })
+    .filter((r) => r.total > 0)
+    .sort((a, b) => b.pct - a.pct || b.perhatian - a.perhatian)
+    .slice(0, 5);
+
+  // (3) Usulan menunggu = item usulan berstatus "diajukan".
+  const usulanMenungguAll: UsulanMenungguRow[] = usulan.flatMap((u) =>
+    (u.payload?.items ?? [])
+      .filter((it) => it.status === "diajukan")
+      .map((it) => ({
+        usulanId: u.id,
+        roomName: u.rooms?.name ?? roomNameById.get(u.room_id) ?? "—",
+        nama: it.nama,
+        prioritas: it.prioritas,
+        qty: it.qty,
+        satuan: it.satuan,
+      }))
+  );
+  const usulanMenungguRows = usulanMenungguAll.slice(0, 5);
+
+  // (4) Ceklist hari ini: ruangan ber-item yang sudah ada entri hari ini.
+  const roomsWithItems = new Set(items.map((i) => i.room_id));
+  const ceklistChecked = checklistRoomsToday.filter((id) =>
+    roomsWithItems.has(id)
+  ).length;
+  const todayLabel = now.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
+  // (5) Aktivitas: 7 riwayat pindah + 3 SBBK terbaru, urut waktu menurun.
+  const aktivitasRows: AktivitasRow[] = [
+    ...riwayatItems.slice(0, 7).map((r) => ({
+      key: `riwayat-${r.id}`,
+      kind: "pindah" as const,
+      text: `${r.nama} dipindah ${r.dari_name ?? r.dari ?? "—"} → ${r.ke_name ?? r.ke ?? "—"}`,
+      ts: r.ts,
+    })),
+    ...sbbkList.slice(0, 3).map((s) => ({
+      key: `sbbk-${s.id}`,
+      kind: "sbbk" as const,
+      text: `SBBK ${s.no} diterbitkan ke ${s.kepada}`,
+      ts: s.tgl,
+    })),
+  ]
+    .sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime())
+    .slice(0, 7);
 
   // GAS gstat icon bg: teal3 / teal3 / amber2 / blue2 / red2 / #f5f3ff
   // GAS value colors: teal / teal / amber / blue / red / #7c3aed
@@ -313,6 +424,27 @@ export default async function DashboardPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* ── Widget overview — 5 kartu di bawah gstats ─────────────── */}
+      <div
+        className="grid gap-4 md:grid-cols-2"
+        style={{ marginBottom: "20px" }}
+      >
+        <DonutKondisi counts={donutCounts} />
+        <TopRuangan rows={topRuanganRows} />
+        <UsulanMenunggu
+          rows={usulanMenungguRows}
+          hasMore={usulanMenungguAll.length > usulanMenungguRows.length}
+        />
+        <CeklistHariIni
+          checked={ceklistChecked}
+          total={roomsWithItems.size}
+          todayLabel={todayLabel}
+        />
+        <div className="md:col-span-2">
+          <AktivitasTerakhir rows={aktivitasRows} />
+        </div>
       </div>
 
       {/* ── Page Actions — Laporan + Riwayat modals (T6 wiring) ────── */}
