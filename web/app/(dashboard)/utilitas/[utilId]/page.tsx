@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { UtilitasEditModal } from "@/components/utilitas/utilitas-edit-modal";
+import { UtilDeleteButton } from "@/components/utilitas/util-delete-button";
 import { UtilDetailPanels } from "@/components/utilitas/util-detail-panels";
 import { AddedUtilDetail } from "@/components/utilitas/added-util-detail";
 import {
@@ -131,9 +132,10 @@ export default async function UtilitasDetailPage({
           {utilMeta.icon}
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="flex flex-wrap items-center gap-2.5 text-lg font-extrabold leading-tight text-ink">
-            Pemeliharaan {utilMeta.label} <UtilitasEditModal utilitas={utilMeta} />
-          </h1>
+            <h1 className="flex flex-wrap items-center gap-2.5 text-lg font-extrabold leading-tight text-ink">
+              Pemeliharaan {utilMeta.label} <UtilitasEditModal utilitas={utilMeta} />
+              <UtilDeleteButton utilId={utilMeta.util_id} label={utilMeta.label} />
+            </h1>
           <p className="mt-0.5 text-xs text-ink3">
             Puskesmas Baruharjo · {items.length} item pemeliharaan
           </p>
