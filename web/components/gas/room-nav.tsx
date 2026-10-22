@@ -212,13 +212,15 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
 
   return (
     <>
-      {/* Overlay gelap di mobile — klik menutup drawer. Di bawah drawer (z-40 < z-50), di atas konten. */}
+      {/* Overlay gelap di mobile — klik menutup drawer. Di bawah drawer
+          (z-[55] < z-[60]), di atas topbar sticky (z-50) agar seluruh layar
+          termasuk topbar ikut redup dan bisa diklik untuk menutup. */}
       {open && (
         <button
           type="button"
           aria-label="Tutup navigasi"
           onClick={() => setOpen(false)}
-          className="fixed inset-0 z-40 md:hidden"
+          className="fixed inset-0 z-[55] md:hidden"
           style={{
             background: "rgba(0,0,0,0.5)",
             border: "none",
@@ -229,7 +231,7 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
       )}
       <aside
         aria-label="Navigasi utama"
-        className={`z-50 w-[220px] transition-all duration-200 ${
+        className={`z-[60] w-[220px] transition-all duration-200 ${
           railCollapsed ? "md:w-16" : "md:w-[220px]"
         } ${
           open ? "visible translate-x-0" : "invisible -translate-x-full md:visible md:translate-x-0"
@@ -248,28 +250,96 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
         onMouseEnter={(e) => { e.currentTarget.style.overflowY = "auto"; }}
         onMouseLeave={(e) => { e.currentTarget.style.overflowY = "hidden"; }}
       >
-      {/* Tombol tutup drawer — hanya di mobile */}
-      <button
-        type="button"
-        aria-label="Tutup navigasi"
-        onClick={() => setOpen(false)}
-        className="md:hidden"
+      {/* ═══ Blok logo — slot teratas sidebar ═══
+          Tinggi band 60px = minHeight topbar agar garis horizontal topbar
+          menyambung mulus ke border bawah blok logo. Di mode lipat desktop
+          (>=md) wordmark disembunyikan, ikon 32px dipusatkan di rail 64px.
+          Di drawer mobile logo selalu tampil penuh. */}
+      <div
+        className={railCollapsed ? "md:justify-center md:px-0!" : undefined}
         style={{
-          alignSelf: "flex-end",
-          margin: "8px 8px 0",
-          width: 32,
-          height: 32,
-          borderRadius: 8,
-          border: "1px solid rgba(255,255,255,0.2)",
-          background: "rgba(255,255,255,0.08)",
-          color: "#fff",
-          fontSize: 14,
-          lineHeight: 1,
-          cursor: "pointer",
+          height: 60,
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "0 14px",
+          borderBottom: "1px solid rgba(255,255,255,0.1)",
         }}
       >
-        ✕
-      </button>
+        <Link
+          href="/"
+          style={{
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            textDecoration: "none",
+            color: "inherit",
+          }}
+        >
+          <span
+            style={{
+              width: "32px",
+              height: "32px",
+              borderRadius: "9px",
+              overflow: "hidden",
+              border: "1px solid rgba(255,255,255,0.25)",
+              background: "rgba(255,255,255,0.08)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo-puskesmas.png"
+              alt="Puskesmas Baruharjo"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                borderRadius: "inherit",
+              }}
+            />
+          </span>
+          <span
+            className={railCollapsed ? "md:hidden" : undefined}
+            style={{
+              fontSize: "16px",
+              fontWeight: 800,
+              letterSpacing: "0.5px",
+              color: "#fff",
+              fontFamily: "Inter, system-ui, sans-serif",
+              whiteSpace: "nowrap",
+            }}
+          >
+            SIDIRA
+          </span>
+        </Link>
+        {/* Tombol tutup drawer — hanya di mobile, di ujung kanan band logo */}
+        <button
+          type="button"
+          aria-label="Tutup navigasi"
+          onClick={() => setOpen(false)}
+          className="ml-auto md:hidden"
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            border: "1px solid rgba(255,255,255,0.2)",
+            background: "rgba(255,255,255,0.08)",
+            color: "#fff",
+            fontSize: 14,
+            lineHeight: 1,
+            cursor: "pointer",
+            flexShrink: 0,
+          }}
+        >
+          ✕
+        </button>
+      </div>
       {/* ═══ Menu utama ═══ */}
       <div style={sectionHeaderStyle} className={railCollapsed ? "md:hidden" : undefined}>
         🏠 Utama

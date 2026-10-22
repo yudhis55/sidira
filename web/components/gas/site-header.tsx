@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { GlobalSearchBar } from "@/components/gas/global-search-bar";
 import { logout } from "@/lib/auth/actions";
 import { AVAILABLE_YEARS, useActiveYear } from "@/lib/year-store";
@@ -125,8 +124,10 @@ function YearChip() {
 
 /**
  * Topbar ramping SIDIRA — pengganti hero header.
- * Sticky ~60px: hamburger, logo + "SIDIRA", search global, chip tahun,
- * avatar + keluar. Gradien gelap dipertahankan untuk kontinuitas brand.
+ * Sticky ~60px di atas kolom konten saja (sidebar kiri full-height terpisah):
+ * hamburger, search global, chip tahun, avatar + keluar. Logo "SIDIRA" kini
+ * hidup di slot teratas sidebar (lihat RoomNav). Gradien gelap dipertahankan
+ * untuk kontinuitas brand.
  */
 export function SiteHeader({ profile }: SiteHeaderProps) {
   const toggleCollapsed = useNavUi((s) => s.toggleCollapsed);
@@ -202,58 +203,6 @@ export function SiteHeader({ profile }: SiteHeaderProps) {
         >
           ☰
         </button>
-
-        {/* ── Logo + SIDIRA ── */}
-        <Link
-          href="/"
-          style={{
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            textDecoration: "none",
-            color: "inherit",
-          }}
-        >
-          <span
-            style={{
-              width: "32px",
-              height: "32px",
-              borderRadius: "9px",
-              overflow: "hidden",
-              border: "1px solid rgba(255,255,255,0.25)",
-              background: "rgba(255,255,255,0.08)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo-puskesmas.png"
-              alt="Puskesmas Baruharjo"
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-                borderRadius: "inherit",
-              }}
-            />
-          </span>
-          <span
-            style={{
-              fontSize: "16px",
-              fontWeight: 800,
-              letterSpacing: "0.5px",
-              color: "#fff",
-              fontFamily: "Inter, system-ui, sans-serif",
-              whiteSpace: "nowrap",
-            }}
-          >
-            SIDIRA
-          </span>
-        </Link>
 
         {/* ── Search global — flex-1, baris kedua full-width di mobile ── */}
         <div

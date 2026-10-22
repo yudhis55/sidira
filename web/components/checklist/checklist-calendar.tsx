@@ -787,19 +787,22 @@ export function ChecklistCalendar({
                   const day = i + 1;
                   const dk = formatDateKey(year, month0, day);
                   const isToday = dk === tds;
-                  const isSunday = new Date(dk + "T00:00:00").getDay() === 0;
+                  const dow = new Date(dk + "T00:00:00").getDay();
+                  // GAS openChecklist: kolom Sabtu/Minggu bg #fdf4ff, angka ungu.
+                  const isWeekend = dow === 0 || dow === 6;
                   return (
                     <th
                       key={day}
                       className={cn(
                         "sticky top-0 z-10 w-[34px] bg-[#f0f4f8] px-1 py-2.5 text-center text-[10px] font-bold uppercase tracking-wide text-ink3",
-                        isSunday && "text-[#a855f7]"
+                        isWeekend && "bg-[#fdf4ff]"
                       )}
                     >
                       <span
                         className={cn(
                           "block font-mono text-[9px]",
-                          isToday && "font-extrabold text-teal"
+                          isToday && "font-extrabold text-teal",
+                          !isToday && isWeekend && "text-[#a855f7]"
                         )}
                       >
                         {day}
@@ -843,6 +846,11 @@ export function ChecklistCalendar({
                         const dk = formatDateKey(year, month0, day);
                         const isFuture = dk > tds;
                         const isToday = dk === tds;
+                        // GAS: sel kosong Sabtu/Minggu border #e9d5ff bg #fdf4ff
+                        // (sel terisi tetap memakai warna statusnya).
+                        const isWeekend =
+                          new Date(dk + "T00:00:00").getDay() === 0 ||
+                          new Date(dk + "T00:00:00").getDay() === 6;
                         const entry = getEntry(item.index_in_room, dk);
                         const st = entry?.payload?.status;
                         const style = st ? CL_STYLE[st] : null;
@@ -867,10 +875,21 @@ export function ChecklistCalendar({
                               className={cn(
                                 "mx-auto flex size-[26px] items-center justify-center rounded-md border-2 text-[13px] transition-all",
                                 isFuture &&
+                                  !st &&
+                                  !isWeekend &&
                                   "cursor-not-allowed border-line bg-white opacity-35",
+                                isFuture &&
+                                  !st &&
+                                  isWeekend &&
+                                  "cursor-not-allowed border-[#e9d5ff] bg-[#fdf4ff] opacity-35",
                                 !isFuture &&
                                   !st &&
+                                  !isWeekend &&
                                   "cursor-pointer border-line bg-white text-ink3 hover:border-teal hover:bg-[var(--teal4)]",
+                                !isFuture &&
+                                  !st &&
+                                  isWeekend &&
+                                  "cursor-pointer border-[#e9d5ff] bg-[#fdf4ff] text-ink3 hover:border-teal",
                                 isToday && !st && !isFuture && "ring-1 ring-teal/40"
                               )}
                               style={

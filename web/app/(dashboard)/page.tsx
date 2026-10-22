@@ -278,6 +278,17 @@ export default async function DashboardPage() {
 
   return (
     <div>
+      {/* ── Judul halaman — pola sama dengan PageHeader modul lain
+          (h1 font-mono + subtitle), tanpa aksen warna (akromatik). ── */}
+      <div style={{ marginBottom: "20px" }}>
+        <h1 className="font-mono text-xl font-bold tracking-tight text-ink">
+          Dashboard
+        </h1>
+        <p className="text-xs text-muted-foreground">
+          Ringkasan aset Puskesmas Baruharjo · {todayLabel}
+        </p>
+      </div>
+
       {/* ── Global Stats — 6 kartu pas: 2 kolom HP, 3 tablet, 6 desktop ── */}
       <div
         className="gstats grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6"

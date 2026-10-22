@@ -1,4 +1,3 @@
-import { SiteHeader } from "@/components/gas/site-header";
 import { AppLayout } from "@/components/gas/app-layout";
 import { getUser } from "@/lib/auth/utils";
 
@@ -6,7 +5,8 @@ import { getUser } from "@/lib/auth/utils";
  * Dashboard layout shell.
  *
  * - Auth gating is delegated to middleware.
- * - Shell: SiteHeader (topbar ramping) + AppLayout (RoomNav + MainContent).
+ * - Shell: AppLayout (RoomNav full-height kiri + kolom konten berisi
+ *   SiteHeader sticky + MainContent).
  *
  * Hitungan ruangan/item tidak lagi ditampilkan di header — angka statistik
  * dihitung langsung di halaman dashboard dari Supabase.
@@ -19,9 +19,9 @@ export default async function DashboardLayout({
   const user = await getUser();
 
   return (
-    // Topbar sticky di atas, konten + sidebar di bawahnya.
-    <div className="dashboard-shell flex min-h-screen flex-col">
-      <SiteHeader
+    // Baris flex: sidebar kiri full-height + kolom konten di kanannya.
+    <div className="dashboard-shell flex min-h-screen">
+      <AppLayout
         profile={
           user
             ? {
@@ -31,8 +31,9 @@ export default async function DashboardLayout({
               }
             : null
         }
-      />
-      <AppLayout>{children}</AppLayout>
+      >
+        {children}
+      </AppLayout>
     </div>
   );
 }
