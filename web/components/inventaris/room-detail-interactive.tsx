@@ -698,8 +698,9 @@ export function RoomDetailInteractive({
 
   return (
     <>
-      {/* Room Header (matches GAS .room-header) */}
-      <div className="flex items-center gap-4 mb-[22px] px-6 py-5 bg-white rounded-[var(--r)] border border-line shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
+      {/* Room Header (matches GAS .room-header) — layar sempit: elemen
+          membungkus ke baris baru, bukan meluber horizontal. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 max-md:gap-y-3 mb-[22px] px-6 py-5 bg-white rounded-[var(--r)] border border-line shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
         <div
           className="w-[52px] h-[52px] rounded-[14px] flex items-center justify-center text-[26px] shrink-0"
           style={{ background: room.bg }}
@@ -745,7 +746,7 @@ export function RoomDetailInteractive({
           )}
         </div>
 
-        <div className="ml-auto flex gap-3">
+        <div className="ml-auto flex gap-3 max-md:ml-0 max-md:w-full max-md:justify-center">
           <div className="text-center px-4 py-2 rounded-lg bg-line2">
             <div className="text-[20px] font-extrabold text-teal font-mono leading-none">
               {totalItems}

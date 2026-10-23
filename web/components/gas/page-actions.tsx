@@ -19,7 +19,7 @@ export interface PageActionsProps {
 }
 
 const btnBase: CSSProperties = {
-  padding: "10px 22px",
+  padding: "10px 18px",
   borderRadius: "var(--r2)",
   fontFamily: "inherit",
   fontSize: "13px",
@@ -54,7 +54,12 @@ export function PageActions({
 }: PageActionsProps) {
   return (
     <div
-      className={cn("page-actions", className)}
+      className={cn(
+        // Desktop: rata kanan biasa. Layar kecil: tombol jadi full-width
+        // tersusun vertikal supaya 7 tombol Muat tidak meluber keluar layar.
+        "page-actions flex flex-wrap justify-end gap-[10px] max-md:flex-col max-md:items-stretch",
+        className,
+      )}
       style={{
         display: "flex",
         gap: "10px",
@@ -77,6 +82,7 @@ export function PageActions({
           background: "linear-gradient(135deg, #7c3aed, #a855f7)",
           color: "#fff",
         }}
+        className="max-md:w-full max-md:justify-center"
       >
         📄 Laporan Monitoring
       </button>
@@ -84,6 +90,7 @@ export function PageActions({
         <button
           type="button"
           onClick={onOpenRekap}
+          className="max-md:w-full max-md:justify-center"
           style={{
             ...btnBase,
             border: "none",
@@ -98,6 +105,7 @@ export function PageActions({
         <button
           type="button"
           onClick={onPrint}
+          className="max-md:w-full max-md:justify-center"
           style={{
             ...btnBase,
             background: "#fff",
@@ -112,6 +120,7 @@ export function PageActions({
         <button
           type="button"
           onClick={onOpenRiwayat}
+          className="max-md:w-full max-md:justify-center"
           style={{
             ...btnBase,
             background: "#fff",
@@ -126,6 +135,7 @@ export function PageActions({
         <button
           type="button"
           onClick={onExportUsulan}
+          className="max-md:w-full max-md:justify-center"
           style={{
             ...btnBase,
             background: "#fff",
@@ -140,6 +150,7 @@ export function PageActions({
         <button
           type="button"
           onClick={onExportCsv}
+          className="max-md:w-full max-md:justify-center"
           style={{
             ...btnBase,
             background: "#fff",
@@ -154,6 +165,7 @@ export function PageActions({
         <button
           type="button"
           onClick={onSimpan}
+          className="max-md:w-full max-md:justify-center"
           style={{
             ...btnBase,
             border: "none",
