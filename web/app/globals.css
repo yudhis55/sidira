@@ -347,3 +347,15 @@
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   .scroll-hide — sembunyikan scrollbar visual, scroll tetap aktif.
+   Dipakai sidebar navigasi (room-nav) yang gelap: scroll harus bisa
+   lewat sentuhan HP juga (bukan hanya hover mouse), tapi garis
+   scrollbar di latar gelap mengganggu.
+   ══════════════════════════════════════════════════════════════════ */
+.scroll-hide {
+  scrollbar-width: none; /* Firefox */
+}
+.scroll-hide::-webkit-scrollbar {
+  display: none; /* Chromium / Safari */
+}

@@ -231,7 +231,7 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
       )}
       <aside
         aria-label="Navigasi utama"
-        className={`z-[60] w-[220px] transition-all duration-200 ${
+        className={`scroll-hide z-[60] w-[220px] transition-all duration-200 ${
           railCollapsed ? "md:w-16" : "md:w-[220px]"
         } ${
           open ? "visible translate-x-0" : "invisible -translate-x-full md:visible md:translate-x-0"
@@ -245,10 +245,11 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
           // GAS `.room-nav-outer`: sidebar yang sticky, bukan header.
           // Positioning di mobile (fixed off-canvas) vs desktop (sticky)
           // diatur via className Tailwind di atas; di sini hanya visual.
-          overflow: "hidden",
+          // Scroll selalu aktif (juga sentuhan HP — bukan hanya hover mouse):
+          // scrollbar disembunyikan visual via .scroll-hide di globals.css.
+          overflowY: "auto",
+          overflowX: "hidden",
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.overflowY = "auto"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.overflowY = "hidden"; }}
       >
       {/* ═══ Blok logo — slot teratas sidebar ═══
           Tinggi band 60px = minHeight topbar agar garis horizontal topbar
