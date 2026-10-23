@@ -132,12 +132,37 @@ function YearChip() {
 export function SiteHeader({ profile }: SiteHeaderProps) {
   const toggleCollapsed = useNavUi((s) => s.toggleCollapsed);
   const [confirmingLogout, setConfirmingLogout] = React.useState(false);
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const accountRef = React.useRef<HTMLDivElement | null>(null);
 
   // Tanpa profil (belum login / fallback) tampilkan akun default GAS
   // agar tidak ada pergeseran layout.
   const nama = profile?.nama ?? "Administrator SIDIRA";
   const jabatan = profile?.jabatan ?? "Admin Sistem";
   const avatar = profile?.avatar ?? nama.charAt(0).toUpperCase();
+
+  // Popover akun: tutup saat klik di luar atau tekan Escape.
+  React.useEffect(() => {
+    if (!menuOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+        setConfirmingLogout(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+        setConfirmingLogout(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
 
   const handleHamburger = () => {
     if (window.matchMedia("(min-width: 768px)").matches) {
@@ -149,6 +174,7 @@ export function SiteHeader({ profile }: SiteHeaderProps) {
 
   const handleLogout = () => {
     setConfirmingLogout(false);
+    setMenuOpen(false);
     void logout();
   };
 
@@ -167,7 +193,6 @@ export function SiteHeader({ profile }: SiteHeaderProps) {
       <style>{`
 @media (max-width: 767.98px) {
   .sh-usermeta { display: none !important; }
-  .sh-logout-label { display: none !important; }
 }
 `}</style>
       <div
@@ -224,96 +249,237 @@ export function SiteHeader({ profile }: SiteHeaderProps) {
           }}
         >
           <YearChip />
-          <div
-            style={{
-              width: "30px",
-              height: "30px",
-              borderRadius: "50%",
-              background: "linear-gradient(135deg, #14a98f, #0e7c6b)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 800,
-              fontSize: "13px",
-              color: "#ffffff",
-              flexShrink: 0,
-            }}
-            title={`${nama}${jabatan ? ` — ${jabatan}` : ""}`}
-          >
-            {avatar}
-          </div>
-          <div className="sh-usermeta" style={{ minWidth: 0 }}>
-            <div
-              style={{
-                fontWeight: 700,
-                fontSize: "12px",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                maxWidth: "140px",
-              }}
-            >
-              {nama}
-            </div>
-          </div>
-          {confirmingLogout ? (
-            <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
-              <button
-                type="button"
-                onClick={() => setConfirmingLogout(false)}
-                style={{
-                  background: "rgba(255,255,255,0.1)",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                  borderRadius: "8px",
-                  padding: "6px 10px",
-                  color: "rgba(255,255,255,0.8)",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleLogout}
-                style={{
-                  background: "rgba(255,80,80,0.25)",
-                  border: "1px solid rgba(255,80,80,0.45)",
-                  borderRadius: "8px",
-                  padding: "6px 10px",
-                  color: "#ff8f8f",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Ya, keluar
-              </button>
-            </div>
-          ) : (
+
+          {/* ── Blok akun: klik → popover identitas + keluar ── */}
+          <div ref={accountRef} style={{ position: "relative", flexShrink: 0 }}>
             <button
               type="button"
-              aria-label="Keluar"
-              title="Keluar"
-              onClick={() => setConfirmingLogout(true)}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              aria-label={`Akun: ${nama}`}
+              title={`${nama}${jabatan ? ` — ${jabatan}` : ""}`}
+              onClick={() => {
+                setMenuOpen((v) => !v);
+                setConfirmingLogout(false);
+              }}
               style={{
-                background: "rgba(255,255,255,0.1)",
-                border: "1px solid rgba(255,255,255,0.2)",
-                borderRadius: "8px",
-                padding: "6px 10px",
-                color: "rgba(255,255,255,0.8)",
-                fontSize: "12px",
-                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: "9px",
+                background: menuOpen
+                  ? "rgba(255,255,255,0.14)"
+                  : "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.22)",
+                borderRadius: "10px",
+                padding: "4px 10px 4px 4px",
+                color: "#fff",
                 cursor: "pointer",
-                whiteSpace: "nowrap",
-                flexShrink: 0,
+                transition: "background 0.15s",
+                minHeight: 0,
               }}
             >
-              ⏻ <span className="sh-logout-label">Keluar</span>
+              <span
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #14a98f, #0e7c6b)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 800,
+                  fontSize: "13px",
+                  color: "#ffffff",
+                  flexShrink: 0,
+                }}
+                aria-hidden
+              >
+                {avatar}
+              </span>
+              <span
+                className="sh-usermeta"
+                style={{
+                  fontWeight: 700,
+                  fontSize: "12px",
+                  lineHeight: 1.2,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  maxWidth: "140px",
+                  display: "block",
+                }}
+              >
+                {nama}
+              </span>
             </button>
-          )}
+
+            {menuOpen && (
+              <div
+                role="menu"
+                aria-label="Menu akun"
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 8px)",
+                  right: 0,
+                  width: "248px",
+                  maxWidth: "calc(100vw - 24px)",
+                  background: "#fff",
+                  border: "1px solid var(--line)",
+                  borderRadius: "14px",
+                  boxShadow: "0 10px 32px rgba(2, 20, 16, 0.28)",
+                  overflow: "hidden",
+                  zIndex: 60,
+                }}
+              >
+                {/* Identitas */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    padding: "14px 16px 12px",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "50%",
+                      background: "linear-gradient(135deg, #14a98f, #0e7c6b)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: 800,
+                      fontSize: "16px",
+                      color: "#fff",
+                      flexShrink: 0,
+                    }}
+                    aria-hidden
+                  >
+                    {avatar}
+                  </span>
+                  <div style={{ minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontWeight: 800,
+                        fontSize: "13px",
+                        color: "var(--ink)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {nama}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: "var(--ink3)",
+                        marginTop: "2px",
+                      }}
+                    >
+                      {jabatan}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ height: 1, background: "var(--line)" }} />
+
+                {/* Aksi keluar — konfirmasi dua langkah di dalam popover */}
+                {confirmingLogout ? (
+                  <div
+                    style={{
+                      padding: "12px 14px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: "var(--ink2)",
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      Keluar dari SIDIRA sekarang?
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingLogout(false)}
+                        style={{
+                          flex: 1,
+                          background: "var(--line2)",
+                          border: "none",
+                          borderRadius: "9px",
+                          padding: "8px 10px",
+                          color: "var(--ink2)",
+                          fontSize: "12px",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Batal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        style={{
+                          flex: 1,
+                          background: "var(--red2)",
+                          border: "1.5px solid rgba(185, 28, 28, 0.4)",
+                          borderRadius: "9px",
+                          padding: "8px 10px",
+                          color: "var(--red)",
+                          fontSize: "12px",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        ⏻ Ya, keluar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setConfirmingLogout(true);
+                    }}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "9px",
+                      background: "transparent",
+                      border: "none",
+                      padding: "11px 16px",
+                      color: "var(--ink2)",
+                      fontSize: "12.5px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      textAlign: "left",
+                      transition: "background 0.12s",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "var(--red2)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent";
+                    }}
+                  >
+                    <span aria-hidden style={{ fontSize: "14px" }}>
+                      ⏻
+                    </span>
+                    Keluar dari akun
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>
