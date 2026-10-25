@@ -35,6 +35,10 @@ const SITE_DESC =
 
 export const metadata: Metadata = {
   metadataBase: siteUrl ? new URL(siteUrl) : undefined,
+  verification: {
+    // Google Search Console — verifikasi kepemilikan domain via meta tag.
+    google: "pIQVablaFyGDEcY46TKtSSFQu7Ygynh8slg_j6Pfhh8",
+  },
   title: {
     default: SITE_NAME,
     template: "%s · SIDIRA",
