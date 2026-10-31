@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import type {
   PemegangInventaris,
   AsetPemegang,
+  Pegawai,
   PemegangStatus,
   AsetPemegangJenis,
   PaktaAsetKendaraan,
@@ -15,12 +16,14 @@ import type {
 /**
  * Server actions untuk modul Rekap Pemegang Inventaris.
  *
- * Diport dari GAS legacy `riBuild` / `riRenderTable`. Dua tabel:
- *   - pemegang_inventaris (orang pemegang aset)
+ * Diport dari GAS legacy `riBuild` / `riRenderTable`. Tiga tabel:
+ *   - pegawai             (master identitas — sumber kebenaran, Opsi B)
+ *   - pemegang_inventaris (orang pemegang aset, FK → pegawai.id)
  *   - aset_pemegang       (aset yang dipegang, 4 jenis: kendaraan/laptop/alat/rumah)
  *
  * Pakta matching: pemegang dianggap "sudah pakta" bila ada baris di tabel
- * `pakta` dengan nama yang sama (case-insensitive, trim).
+ * `pakta` dengan `pegawai_id` yang sama. Fallback nama (case-insensitive,
+ * trim) hanya dipakai untuk baris lama yang belum punya pegawai_id.
  */
 
 const HARI_ID = [
@@ -34,10 +37,124 @@ const HARI_ID = [
 ];
 
 // ══════════════════════════════════════════════════════════════════════
-//  READ — Pemegang
+//  MASTER PEGAWAI (Opsi B)
 // ══════════════════════════════════════════════════════════════════════
 
-/** Ambil daftar seluruh pemegang, urut nama. */
+/** Daftar master pegawai, urut nama. */
+export async function getPegawaiList(): Promise<Pegawai[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("pegawai")
+    .select("*")
+    .order("nama", { ascending: true });
+
+  if (error) throw error;
+  return (data || []) as Pegawai[];
+}
+
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Pastikan baris master pegawai ada untuk identitas ini, lalu kembalikan id.
+ * Urutan pencarian: NIP (unik) → nama ternormalisasi → buat baru.
+ */
+async function ensurePegawaiId(
+  supabase: SupabaseClient,
+  data: {
+    nama: string;
+    nip?: string | null;
+    jabatan?: string | null;
+    status: PemegangStatus;
+  },
+): Promise<string | null> {
+  const nama = data.nama.trim();
+  const nip = data.nip?.trim() || null;
+  const key = nama.toLowerCase();
+
+  if (nip) {
+    const { data: byNip } = await supabase
+      .from("pegawai")
+      .select("id")
+      .eq("nip", nip)
+      .maybeSingle();
+    if (byNip?.id) return byNip.id as string;
+  }
+
+  const { data: all } = await supabase.from("pegawai").select("id, nama, nip");
+  const byName = (all || []).find(
+    (g) => (g.nama || "").trim().toLowerCase() === key,
+  );
+  if (byName?.id) {
+    // Lengkapi NIP bila master belum punya tapi data ini punya.
+    if (nip && !byName.nip) {
+      await supabase.from("pegawai").update({ nip }).eq("id", byName.id);
+    }
+    return byName.id as string;
+  }
+
+  const { data: inserted, error } = await supabase
+    .from("pegawai")
+    .insert({
+      nama,
+      nip,
+      jabatan: data.jabatan?.trim() || null,
+      status: data.status,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    // NIP bentrok dengan baris lain (data sumber salah ketik) → pakai baris itu.
+    if (nip) {
+      const { data: fallback } = await supabase
+        .from("pegawai")
+        .select("id")
+        .eq("nip", nip)
+        .maybeSingle();
+      if (fallback?.id) return fallback.id as string;
+    }
+    console.error("Error creating pegawai:", error);
+    return null;
+  }
+
+  return (inserted?.id as string) ?? null;
+}
+
+/**
+ * Pastikan sebuah baris `pakta` tertaut ke master pegawai.
+ * Dipakai setelah input/edit manual Pakta agar kaitan FK tetap konsisten
+ * dengan Rekap Pemegang (bukan hanya hasil tombol "Buat Pakta").
+ */
+export async function linkPaktaPegawai(paktaId: string): Promise<void> {
+  const supabase = await createClient();
+
+  const { data: pakta } = await supabase
+    .from("pakta")
+    .select("id, nama, nip, jabatan, pegawai_id")
+    .eq("id", paktaId)
+    .maybeSingle();
+
+  if (!pakta) return;
+
+  const pegawaiId = await ensurePegawaiId(supabase, {
+    nama: pakta.nama as string,
+    nip: (pakta.nip as string | null) ?? null,
+    jabatan: (pakta.jabatan as string | null) ?? null,
+    status: "PNS",
+  });
+
+  if (pegawaiId && pegawaiId !== pakta.pegawai_id) {
+    await supabase
+      .from("pakta")
+      .update({ pegawai_id: pegawaiId })
+      .eq("id", paktaId);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  READ — Pemegang
+// ══════════════════════════════════════════════════════════════════════/** Ambil daftar seluruh pemegang, urut nama. */
 export async function getPemegangList(): Promise<PemegangInventaris[]> {
   const supabase = await createClient();
 
@@ -140,6 +257,13 @@ export async function createPemegang(
     throw new Error("Status harus PNS atau PPPK");
   }
 
+  const pegawaiId = await ensurePegawaiId(supabase, {
+    nama: data.nama,
+    nip: data.nip ?? null,
+    jabatan: data.jabatan ?? null,
+    status: data.status,
+  });
+
   const { data: inserted, error } = await supabase
     .from("pemegang_inventaris")
     .insert({
@@ -147,6 +271,7 @@ export async function createPemegang(
       nip: data.nip?.trim() || null,
       jabatan: data.jabatan?.trim() || null,
       status: data.status,
+      pegawai_id: pegawaiId,
     })
     .select()
     .single();
@@ -187,6 +312,45 @@ export async function updatePemegang(
   if (error) {
     console.error("Error updating pemegang:", error);
     throw error;
+  }
+
+  // Sinkronkan master pegawai agar identitas tetap satu sumber.
+  const { data: current } = await supabase
+    .from("pemegang_inventaris")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (current) {
+    const p = current as PemegangInventaris;
+    const pegawaiId =
+      p.pegawai_id ??
+      (await ensurePegawaiId(supabase, {
+        nama: p.nama,
+        nip: p.nip ?? null,
+        jabatan: p.jabatan ?? null,
+        status: p.status,
+      }));
+
+    if (!p.pegawai_id && pegawaiId) {
+      await supabase
+        .from("pemegang_inventaris")
+        .update({ pegawai_id: pegawaiId })
+        .eq("id", id);
+    }
+
+    if (pegawaiId) {
+      await supabase
+        .from("pegawai")
+        .update({
+          nama: p.nama.trim(),
+          nip: p.nip?.trim() || null,
+          jabatan: p.jabatan?.trim() || null,
+          status: p.status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", pegawaiId);
+    }
   }
 
   revalidatePath("/rekap");
@@ -322,9 +486,22 @@ export async function deleteAset(
 //  PAKTA MATCHING
 // ══════════════════════════════════════════════════════════════════════
 
-/** Cek apakah ada pakta dengan nama yang cocok (case-insensitive, trim). */
-export async function hasPakta(nama: string): Promise<boolean> {
+/** Cek apakah ada pakta untuk pegawai ini (via FK, fallback nama lama). */
+export async function hasPakta(
+  nama: string,
+  pegawaiId?: string | null,
+): Promise<boolean> {
   const supabase = await createClient();
+
+  if (pegawaiId) {
+    const { data, error } = await supabase
+      .from("pakta")
+      .select("id")
+      .eq("pegawai_id", pegawaiId)
+      .limit(1);
+    if (error) throw error;
+    if ((data || []).length > 0) return true;
+  }
 
   const { data, error } = await supabase
     .from("pakta")
@@ -345,8 +522,8 @@ export interface PaktaStatus {
 
 /**
  * Bangun map pemegang_id → { hasPakta, paktaId }.
- * Pendekatan efisien: ambil seluruh pakta (id+nama) + seluruh pemegang,
- * lalu cocokkan nama di JS (case-insensitive, trim).
+ * Utama: cocokkan `pegawai_id` (FK). Fallback: nama ternormalisasi untuk
+ * baris lama yang belum punya pegawai_id.
  */
 export async function getPaktaStatusMap(): Promise<
   Record<string, PaktaStatus>
@@ -355,26 +532,32 @@ export async function getPaktaStatusMap(): Promise<
 
   const [{ data: paktaRows, error: paktaErr }, { data: pemegangRows, error: pemegangErr }] =
     await Promise.all([
-      supabase.from("pakta").select("id, nama"),
-      supabase.from("pemegang_inventaris").select("id, nama"),
+      supabase.from("pakta").select("id, nama, pegawai_id"),
+      supabase.from("pemegang_inventaris").select("id, nama, pegawai_id"),
     ]);
 
   if (paktaErr) throw paktaErr;
   if (pemegangErr) throw pemegangErr;
 
-  // Index pakta by normalized nama → id (first match wins)
-  const paktaIndex = new Map<string, string>();
+  // Index pakta: prioritas pegawai_id (akurat), lalu nama (fallback).
+  const byPegawai = new Map<string, string>();
+  const byNama = new Map<string, string>();
   for (const p of paktaRows || []) {
+    if (p.pegawai_id && !byPegawai.has(p.pegawai_id)) {
+      byPegawai.set(p.pegawai_id, p.id as string);
+    }
     const key = (p.nama || "").toLowerCase().trim();
-    if (key && !paktaIndex.has(key)) {
-      paktaIndex.set(key, p.id as string);
+    if (key && !byNama.has(key)) {
+      byNama.set(key, p.id as string);
     }
   }
 
   const map: Record<string, PaktaStatus> = {};
   for (const pem of pemegangRows || []) {
-    const key = (pem.nama || "").toLowerCase().trim();
-    const paktaId = paktaIndex.get(key) ?? null;
+    const paktaId =
+      (pem.pegawai_id ? byPegawai.get(pem.pegawai_id) : null) ??
+      byNama.get((pem.nama || "").toLowerCase().trim()) ??
+      null;
     map[pem.id as string] = {
       hasPakta: paktaId !== null,
       paktaId,
@@ -421,8 +604,25 @@ export async function buatPaktaDariPemegang(
     throw new Error("Pemegang tidak ditemukan");
   }
 
-  // Cek duplikat — bila sudah ada pakta untuk nama ini, lewati (tidak error)
-  const sudah = await hasPakta(pemegang.nama);
+  // Pastikan pemegang punya pegawai_id (baris lama bisa belum ter-link).
+  let pegawaiId = pemegang.pegawai_id ?? null;
+  if (!pegawaiId) {
+    pegawaiId = await ensurePegawaiId(supabase, {
+      nama: pemegang.nama,
+      nip: pemegang.nip ?? null,
+      jabatan: pemegang.jabatan ?? null,
+      status: pemegang.status,
+    });
+    if (pegawaiId) {
+      await supabase
+        .from("pemegang_inventaris")
+        .update({ pegawai_id: pegawaiId })
+        .eq("id", pemegangId);
+    }
+  }
+
+  // Cek duplikat — via FK, fallback nama untuk baris lama.
+  const sudah = await hasPakta(pemegang.nama, pegawaiId);
   if (sudah) {
     throw new Error(
       `Pakta untuk ${pemegang.nama} sudah ada. Buka lampiran yang sudah ada.`,
@@ -480,6 +680,7 @@ export async function buatPaktaDariPemegang(
     nip: pemegang.nip?.trim() || null,
     jabatan: pemegang.jabatan?.trim() || null,
     alamat: null,
+    pegawai_id: pegawaiId,
     aset_kendaraan: asetKendaraan,
     aset_laptop: asetLaptop,
     aset_alat: asetAlat,

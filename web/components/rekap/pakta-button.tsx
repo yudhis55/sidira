@@ -1,84 +1,81 @@
 "use client";
 
 /**
- * Tombol 📜 Pakta pada Rekap Pemegang — port GAS `riBuatPakta`
- * (gas-legacy/index.html 26994+).
+ * Tombol 📜 Pakta pada Rekap Pemegang — port GAS `riBuatPakta`.
  *
- * GAS tidak membuka form kosong: bila pemegang sudah punya pakta → konfirmasi
- * lalu buka lampiran yang ada; bila belum → record dibuat pre-filled dari data
- * pemegang + asetnya, lalu lampirannya langsung dibuka.
- *
- * Di SIDIRA v4 (multi-route) keduanya berakhir di panel Pakta dengan panel
- * lampiran terbuka — `/pakta?lampiran=<id>` (daftar pakta membaca query itu).
+ * Opsi B: record pakta dibuat LANGSUNG di database dengan `pegawai_id`
+ * (FK ke master pegawai), bukan lagi dititipkan di localStorage.
+ * Alur:
+ *   - Sudah punya pakta → tawarkan buka lampiran yang ada.
+ *   - Belum → server action `buatPaktaDariPemegang` membuat record + lampiran
+ *     pre-filled dari aset pemegang, lalu panel lampiran dibuka.
  */
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { getMockPakta } from "@/lib/mock-data";
-import {
-  addPaktaRecords,
-  buildPaktaFromPemegang,
-  findPaktaForPemegang,
-  useAddedPakta,
-  useHiddenPaktaIds,
-} from "@/lib/pakta-store";
-import type { AsetPemegang, PemegangInventaris } from "@/types/database";
+import { buatPaktaDariPemegang } from "@/lib/auth/rekap";
+import { getPaktaList } from "@/lib/auth/pakta";
+import type { PemegangInventaris } from "@/types/database";
 
 export function RekapPaktaButton({
   pemegang,
-  asetList,
 }: {
   pemegang: PemegangInventaris;
-  asetList: AsetPemegang[];
 }) {
   const router = useRouter();
-  const [added] = useAddedPakta();
-  const [hidden] = useHiddenPaktaIds();
-  const staticPakta = React.useMemo(() => getMockPakta(), []);
+  const [busy, setBusy] = React.useState(false);
 
-  function handle() {
-    const existing = findPaktaForPemegang(
-      pemegang.nama,
-      staticPakta,
-      added,
-      hidden
-    );
+  async function handle() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      // Cari pakta yang sudah ada — prioritas FK pegawai_id, fallback nama
+      // untuk baris lama yang belum punya pegawai_id.
+      const list = await getPaktaList().catch(() => []);
+      const key = (pemegang.nama || "").trim().toLowerCase();
+      const existing =
+        (pemegang.pegawai_id
+          ? list.find((p) => p.pegawai_id === pemegang.pegawai_id)
+          : undefined) ??
+        list.find((p) => (p.nama || "").trim().toLowerCase() === key);
 
-    if (existing) {
-      // GAS `riBuatPakta` (26999-27013): tawarkan lampiran yang sudah ada.
-      if (
-        !confirm(
-          `Pakta untuk ${pemegang.nama} sudah ada.\nBuka lampiran yang sudah ada?`
-        )
-      )
+      if (existing) {
+        if (
+          !window.confirm(
+            `Pakta untuk ${pemegang.nama} sudah ada.\nBuka lampiran yang sudah ada?`,
+          )
+        ) {
+          return;
+        }
+        router.push(`/pakta?lampiran=${existing.id}`);
         return;
-      router.push(`/pakta?lampiran=${existing.id}`);
-      return;
-    }
+      }
 
-    // GAS 27058-27084: susun record + lampiran otomatis, simpan, lalu buka.
-    const rec = buildPaktaFromPemegang(
-      pemegang,
-      asetList,
-      `pakta-${Date.now()}`
-    );
-    addPaktaRecords([rec]);
-    toast.success(
-      `✅ Pakta + lampiran untuk ${pemegang.nama} dibuat otomatis`
-    );
-    router.push(`/pakta?lampiran=${rec.id}`);
+      const paktaId = await buatPaktaDariPemegang(pemegang.id);
+      toast.success(
+        `✅ Pakta + lampiran untuk ${pemegang.nama} dibuat otomatis`,
+      );
+      router.push(`/pakta?lampiran=${paktaId}`);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Gagal membuat pakta",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <button
       type="button"
       onClick={handle}
+      disabled={busy}
       title={
         "Buat pakta pre-filled dari data pemegang ini, atau buka yang sudah ada"
       }
-      className="py-1 px-2.5 rounded-md border-[1.5px] border-line text-[11px] font-semibold text-ink2 bg-white transition-colors hover:border-[#1e40af] hover:text-[#1e40af]"
+      className="py-1 px-2.5 rounded-md border-[1.5px] border-line text-[11px] font-semibold text-ink2 bg-white transition-colors hover:border-[#1e40af] hover:text-[#1e40af] disabled:cursor-not-allowed disabled:opacity-50"
     >
-      {"\uD83D\uDCDC"} Pakta
+      {busy ? "⏳ Membuat…" : "📜 Pakta"}
     </button>
   );
 }

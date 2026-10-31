@@ -1,6 +1,7 @@
-"use server";
+﻿"use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { linkPaktaPegawai } from "@/lib/auth/rekap";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type {
@@ -96,6 +97,9 @@ export async function createPakta(data: PaktaInput): Promise<void> {
     throw error;
   }
 
+  // Tautkan ke master pegawai (Opsi B) agar rekap mengenali status pakta.
+  await linkPaktaPegawai(id).catch(() => {});
+
   revalidatePath("/pakta");
   redirect(`/pakta/${id}`);
 }
@@ -128,6 +132,11 @@ export async function updatePakta(
     throw error;
   }
 
+  // Sinkronkan tautan pegawai bila nama/nip berubah.
+  if (data.nama !== undefined || data.nip !== undefined) {
+    await linkPaktaPegawai(id).catch(() => {});
+  }
+
   revalidatePath("/pakta");
   revalidatePath(`/pakta/${id}`);
   redirect(`/pakta/${id}`);
@@ -152,7 +161,7 @@ export async function deletePakta(id: string): Promise<void> {
  * Varian tanpa redirect untuk dipakai komponen client (modal identitas,
  * editor lampiran, tombol hapus di daftar). Mengembalikan bentuk
  * `{ success: true }` / `{ error: "<pesan Indonesia>" }` sehingga modal
- * bisa tetap terbuka saat gagal — pola yang sama dengan server actions lain.
+ * bisa tetap terbuka saat gagal â€” pola yang sama dengan server actions lain.
  */
 export async function createPaktaRecord(
   data: PaktaInput,
@@ -188,6 +197,9 @@ export async function createPaktaRecord(
       return { error: "Gagal menyimpan Pakta Integritas" };
     }
 
+    // Tautkan ke master pegawai (Opsi B).
+    await linkPaktaPegawai(id).catch(() => {});
+
     revalidatePath("/pakta");
     return { success: true, id };
   } catch (e) {
@@ -196,7 +208,7 @@ export async function createPaktaRecord(
   }
 }
 
-/** Varian update tanpa redirect — untuk modal identitas & editor lampiran. */
+/** Varian update tanpa redirect â€” untuk modal identitas & editor lampiran. */
 export async function updatePaktaRecord(
   id: string,
   data: Partial<PaktaInput>,
@@ -233,6 +245,11 @@ export async function updatePaktaRecord(
       return { error: "Gagal menyimpan perubahan Pakta Integritas" };
     }
 
+    // Sinkronkan tautan pegawai bila identitas berubah.
+    if (data.nama !== undefined || data.nip !== undefined) {
+      await linkPaktaPegawai(id).catch(() => {});
+    }
+
     revalidatePath("/pakta");
     return { success: true };
   } catch (e) {
@@ -241,7 +258,7 @@ export async function updatePaktaRecord(
   }
 }
 
-/** Varian hapus tanpa redirect — untuk tombol hapus di daftar. */
+/** Varian hapus tanpa redirect â€” untuk tombol hapus di daftar. */
 export async function deletePaktaRecord(
   id: string,
 ): Promise<{ success: true } | { error: string }> {

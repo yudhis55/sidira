@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
@@ -41,7 +41,7 @@ import type {
   PemegangInventaris,
 } from "@/types/database";
 
-/* ── constants (GAS .ri-*) ── */
+/* â”€â”€ constants (GAS .ri-*) â”€â”€ */
 
 const FILTER_CHIPS = [
   { key: "all", label: "Semua" },
@@ -88,7 +88,7 @@ const JENIS_ORDER: AsetPemegangJenis[] = [
   "rumah",
 ];
 
-/** Status pakta per pemegang — GAS `riHasPakta(nama)`: cocok via nama. */
+/** Status pakta per pemegang â€” GAS `riHasPakta(nama)`: cocok via nama. */
 function usePaktaLookup() {
   const [addedPakta] = useAddedPakta();
   const [hiddenIds] = useHiddenPaktaIds();
@@ -107,8 +107,13 @@ function usePaktaLookup() {
       cancelled = true;
     };
   }, []);
-  const hasPakta = (p: PemegangInventaris) =>
-    !!findPaktaForPemegang(p.nama, staticPakta, addedPakta, hiddenIds);
+  const hasPakta = (p: PemegangInventaris) => {
+    if (p.pegawai_id) {
+      const byFk = staticPakta.find((k) => k.pegawai_id === p.pegawai_id);
+      if (byFk) return true;
+    }
+    return !!findPaktaForPemegang(p.nama, staticPakta, addedPakta, hiddenIds);
+  };
   return { hasPakta };
 }
 
@@ -130,7 +135,7 @@ export default function RekapPage() {
 
   const [addedPemegang] = useAddedPemegang();
   const [pemegangOverrides] = usePemegangOverrides();
-  // Daftar live Supabase; null = tabel belum ada / gagal baca → fallback mock
+  // Daftar live Supabase; null = tabel belum ada / gagal baca â†’ fallback mock
   // agar halaman tetap berguna sebelum migrasi dijalankan.
   const [serverPemegang, setServerPemegang] = useState<
     PemegangInventaris[] | null
@@ -226,7 +231,7 @@ export default function RekapPage() {
     });
   };
 
-  /** GAS `riDelete` — konfirmasi, hapus server + sisa lokal, refresh. */
+  /** GAS `riDelete` â€” konfirmasi, hapus server + sisa lokal, refresh. */
   const handleDeletePemegang = async (p: PemegangInventaris) => {
     if (
       !window.confirm(
@@ -245,7 +250,7 @@ export default function RekapPage() {
     toast.success(`Pemegang "${p.nama}" dihapus`);
   };
 
-  /** GAS `riBuatSemuaPakta` — buat pre-filled untuk semua yg belum (yg terfilter). */
+  /** GAS `riBuatSemuaPakta` â€” buat pre-filled untuk semua yg belum (yg terfilter). */
   const handleBuatSemuaPakta = () => {
     const belum = filtered.filter((p) => !hasPakta(p));
     if (belum.length === 0) {
@@ -271,7 +276,7 @@ export default function RekapPage() {
     );
   };
 
-  /** GAS `riEdit` — simpan identitas; dipakai tabel (sm+) & kartu (<sm). */
+  /** GAS `riEdit` â€” simpan identitas; dipakai tabel (sm+) & kartu (<sm). */
   const handleEditPemegang = async (
     p: PemegangInventaris,
     values: PemegangIdentity
@@ -286,14 +291,14 @@ export default function RekapPage() {
       // Tabel belum ada (pra-migrasi): fallback lokal lama.
       savePemegangIdentity(p.id, values);
       toast.success(
-        `Identitas "${values.nama.trim()}" disimpan (mode demo — tersimpan lokal). Selebihnya edit di menu Pakta.`
+        `Identitas "${values.nama.trim()}" disimpan (mode demo â€” tersimpan lokal). Selebihnya edit di menu Pakta.`
       );
     }
   };
 
   return (
     <div>
-      {/* ── Header (GAS .ri-hdr) ── */}
+      {/* â”€â”€ Header (GAS .ri-hdr) â”€â”€ */}
       <div
         className="flex flex-col items-stretch sm:flex-row sm:items-center gap-3.5 rounded-lg border border-line bg-white p-5 mb-5"
         style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
@@ -312,12 +317,12 @@ export default function RekapPage() {
               Rekap Pemegang Inventaris 2025
             </div>
             <div className="text-xs text-ink3 mt-0.5">
-              Puskesmas Baruharjo · Peralatan Mesin & Rumah Dinas
+              Puskesmas Baruharjo Â· Peralatan Mesin & Rumah Dinas
             </div>
           </div>
         </div>
 
-        {/* Summary chips — GAS .ri-stat: Pemegang / Item / Pakta Ada / Belum */}
+        {/* Summary chips â€” GAS .ri-stat: Pemegang / Item / Pakta Ada / Belum */}
         <div className="grid grid-cols-2 sm:flex gap-2.5 w-full sm:w-auto sm:ml-auto flex-wrap sm:justify-end">
           <div className="text-center px-4 py-2 rounded-lg bg-line2">
             <div className="text-xl font-black font-mono text-teal leading-none">
@@ -360,7 +365,7 @@ export default function RekapPage() {
         </div>
       </div>
 
-      {/* ── Toolbar (GAS .ri-toolbar) ── */}
+      {/* â”€â”€ Toolbar (GAS .ri-toolbar) â”€â”€ */}
       <div className="flex gap-2.5 items-center flex-wrap mb-3.5">
         <input
           type="search"
@@ -441,7 +446,7 @@ export default function RekapPage() {
                 // Tabel belum ada (pra-migrasi): fallback lokal lama.
                 const rec = addPemegang(values);
                 toast.success(
-                  `Pemegang "${rec.nama}" ditambahkan (mode demo — tersimpan lokal)`
+                  `Pemegang "${rec.nama}" ditambahkan (mode demo â€” tersimpan lokal)`
                 );
               }
             }}
@@ -449,7 +454,7 @@ export default function RekapPage() {
         </div>
       </div>
 
-      {/* ── Table (GAS .ri-wrap + .ri-tbl) ── */}
+      {/* â”€â”€ Table (GAS .ri-wrap + .ri-tbl) â”€â”€ */}
       <div
         className="hidden sm:block rounded-lg border border-line bg-white overflow-hidden"
         style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
@@ -518,7 +523,7 @@ export default function RekapPage() {
         )}
       </div>
 
-      {/* ── Mobile cards (<sm) — data & aksi sama dengan tabel ── */}
+      {/* â”€â”€ Mobile cards (<sm) â€” data & aksi sama dengan tabel â”€â”€ */}
       {filtered.length === 0 ? (
         <div
           className="sm:hidden text-center text-ink3 text-[13px] rounded-lg border border-line bg-white"
@@ -554,7 +559,7 @@ export default function RekapPage() {
   );
 }
 
-/* ── Card (<sm) — presentasi mobile dari baris tabel yang sama ── */
+/* â”€â”€ Card (<sm) â€” presentasi mobile dari baris tabel yang sama â”€â”€ */
 
 function RekapCard({
   pemegang,
@@ -618,10 +623,10 @@ function RekapCard({
         <div className="min-w-0">
           <h3 className="font-bold text-ink text-[13.5px]">{pemegang.nama}</h3>
           <div className="text-[10.5px] text-ink3 font-mono mt-px">
-            NIP. {pemegang.nip || "—"}
+            NIP. {pemegang.nip || "â€”"}
           </div>
           <div className="text-xs font-semibold text-ink mt-1">
-            {pemegang.jabatan || "—"}
+            {pemegang.jabatan || "â€”"}
           </div>
         </div>
         <span
@@ -635,7 +640,7 @@ function RekapCard({
         {badges.length > 0 ? (
           badges
         ) : (
-          <span className="text-ink3 text-[11px]">—</span>
+          <span className="text-ink3 text-[11px]">â€”</span>
         )}
         {paktaBadge}
       </div>
@@ -661,7 +666,7 @@ function RekapCard({
           }
           onSaved={onEdit}
         />
-        <RekapPaktaButton pemegang={pemegang} asetList={asetList} />
+        <RekapPaktaButton pemegang={pemegang} />
         <button
           type="button"
           onClick={onDelete}
@@ -684,7 +689,7 @@ function RekapCard({
   );
 }
 
-/* ── Row (GAS .ri-tbl tbody) ── */
+/* â”€â”€ Row (GAS .ri-tbl tbody) â”€â”€ */
 
 function RekapRow({
   pemegang,
@@ -775,7 +780,7 @@ const paktaBadge = hasPakta ? (
           {badges.length > 0 ? (
             badges
           ) : (
-            <span className="text-ink3 text-[11px]">—</span>
+            <span className="text-ink3 text-[11px]">â€”</span>
           )}
         </td>
         <td className="px-3 py-[10px] align-middle">{paktaBadge}</td>
@@ -805,7 +810,7 @@ const paktaBadge = hasPakta ? (
               }
               onSaved={onEdit}
             />
-            <RekapPaktaButton pemegang={pemegang} asetList={asetList} />
+            <RekapPaktaButton pemegang={pemegang} />
             <button
               type="button"
               onClick={onDelete}
@@ -813,7 +818,7 @@ const paktaBadge = hasPakta ? (
               aria-label={`Hapus ${pemegang.nama}`}
               className="py-1 px-2.5 rounded-md border-[1.5px] border-line text-[11px] font-semibold text-ink2 bg-white transition-colors hover:border-[#b91c1c] hover:text-[#b91c1c]"
             >
-              {"\uD83D\uDDD1️"} Hapus
+              {"\uD83D\uDDD1ï¸"} Hapus
             </button>
           </div>
         </td>
@@ -836,7 +841,7 @@ const paktaBadge = hasPakta ? (
   );
 }
 
-/* ── Expand (GAS .ri-detail-grid) ── */
+/* â”€â”€ Expand (GAS .ri-detail-grid) â”€â”€ */
 
 function DetailGrid({ asetList }: { asetList: AsetPemegang[] }) {
   const grouped = useMemo(() => {
@@ -877,7 +882,7 @@ function DetailGrid({ asetList }: { asetList: AsetPemegang[] }) {
                 className="text-[11.5px] text-ink2 py-[3px] border-b border-line last:border-0"
               >
                 <b className="font-semibold block">
-                  {item.merk || item.ket || "—"}
+                  {item.merk || item.ket || "â€”"}
                 </b>
                 <small className="text-[10.5px] text-ink3">
                   {[
@@ -887,7 +892,7 @@ function DetailGrid({ asetList }: { asetList: AsetPemegang[] }) {
                     item.nopol,
                   ]
                     .filter(Boolean)
-                    .join(" · ")}
+                    .join(" Â· ")}
                 </small>
               </div>
             ))}

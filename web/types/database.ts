@@ -146,6 +146,8 @@ export interface Pakta {
   nip?: string;
   jabatan?: string;
   alamat?: string;
+  /** FK ke master pegawai — kaitan utama ke Rekap Pemegang. */
+  pegawai_id?: string | null;
   aset_kendaraan: PaktaAsetKendaraan[];
   aset_laptop: PaktaAsetLaptop[];
   aset_alat: PaktaAsetAlat[];
@@ -249,12 +251,29 @@ export interface Log {
 export type PemegangStatus = "PNS" | "PPPK";
 export type AsetPemegangJenis = "kendaraan" | "laptop" | "alat" | "rumah";
 
+/**
+ * Master pegawai — sumber kebenaran identitas (Opsi B).
+ * `pemegang_inventaris` dan `pakta` menunjuk ke baris ini via `pegawai_id`,
+ * sehingga kaitan antar modul tidak lagi bergantung pada teks nama.
+ */
+export interface Pegawai {
+  id: string;
+  nama: string;
+  nip: string | null;
+  jabatan: string | null;
+  status: PemegangStatus;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PemegangInventaris {
   id: string;
   nama: string;
   nip?: string;
   jabatan?: string;
   status: PemegangStatus;
+  /** FK ke master pegawai — kaitan utama ke modul Pakta. */
+  pegawai_id?: string | null;
   created_at: string;
   updated_at: string;
 }
