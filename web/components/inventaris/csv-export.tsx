@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DownloadSimple } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { exportInventarisCSV } from "@/lib/auth/inventaris-export";
 import { exportUsulanCSV } from "@/lib/auth/usulan";
@@ -35,8 +36,15 @@ export function InventarisCsvExport() {
   };
 
   return (
-    <Button type="button" variant="outline" onClick={handleExport} disabled={loading}>
-      {"📥"} {loading ? "Mengekspor..." : "Export CSV"}
+    <Button
+      type="button"
+      variant="secondary"
+      onClick={handleExport}
+      disabled={loading}
+      className="gap-2"
+    >
+      <DownloadSimple size={15} aria-hidden />
+      {loading ? "Mengekspor..." : "Export CSV"}
     </Button>
   );
 }
@@ -59,8 +67,15 @@ export function UsulanRekapCsvExport() {
   };
 
   return (
-    <Button type="button" variant="outline" onClick={handleExport} disabled={loading}>
-      {"📥"} {loading ? "Mengekspor..." : "Export Rekap Usulan"}
+    <Button
+      type="button"
+      variant="secondary"
+      onClick={handleExport}
+      disabled={loading}
+      className="gap-2"
+    >
+      <DownloadSimple size={15} aria-hidden />
+      {loading ? "Mengekspor..." : "Export Rekap Usulan"}
     </Button>
   );
 }

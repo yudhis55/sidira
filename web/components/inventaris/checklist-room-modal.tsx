@@ -3,7 +3,7 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { ChecklistCalendar } from "@/components/checklist/checklist-calendar";
-import { Button } from "@/components/gas/button";
+import { Check } from "@phosphor-icons/react";
 import { useIsClient } from "@/lib/use-is-client";
 import type { Item, Room } from "@/types/database";
 
@@ -60,11 +60,7 @@ export function ChecklistRoomModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[2000] flex items-center justify-center p-3 sm:p-4"
-      style={{
-        background: "rgba(8, 24, 18, 0.65)",
-        backdropFilter: "blur(5px)",
-      }}
+      className="fixed inset-0 z-[2000] flex items-center justify-center bg-foreground/40 p-3 backdrop-blur-[3px] sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -73,7 +69,7 @@ export function ChecklistRoomModal({
       aria-label={`Ceklist Harian — ${room.name}`}
     >
       {/* GAS .cl-modal — 96vw / max 1080 / max-h 90vh */}
-      <div className="flex max-h-[90vh] w-[96vw] max-w-[1080px] flex-col overflow-hidden rounded-[18px] bg-white shadow-[0_32px_80px_rgba(0,0,0,0.3)]">
+      <div className="flex max-h-[90vh] w-[96vw] max-w-[1080px] flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-[0_12px_40px_rgba(0,0,0,0.12)]">
         {/* Body scrolls; calendar includes head + matrix */}
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="[&>div]:rounded-none [&>div]:border-0">
@@ -90,15 +86,24 @@ export function ChecklistRoomModal({
         </div>
 
         {/* GAS .cl-footer — Export CSV + Tutup + Simpan */}
-        <div className="flex shrink-0 items-center justify-end gap-2.5 border-t border-line bg-white px-6 py-3">
-          <Button type="button" variant="modal-cancel" onClick={onClose}>
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-surface-subtle px-5 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-9 items-center justify-center rounded-sm border border-border bg-surface px-4 text-[13px] font-semibold text-foreground transition-colors duration-150 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
+          >
             Tutup
-          </Button>
+          </button>
           {/* Entri sudah tersimpan per klik (localStorage, meniru GAS clData);
               Simpan hanya menutup modal — visual 1:1 GAS .cl-footer. */}
-          <Button type="button" variant="modal-ok" onClick={onClose}>
-            💾 Simpan
-          </Button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-sm bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
+          >
+            <Check size={15} weight="bold" aria-hidden />
+            Simpan
+          </button>
         </div>
       </div>
     </div>,

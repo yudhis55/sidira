@@ -3,6 +3,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowsDownUp,
+  ArrowsLeftRight,
+  CalendarBlank,
+  CaretDown,
+  Check,
+  PencilSimple,
+  Plus,
+  Trash,
+  User,
+  Warning,
+  X,
+} from "@phosphor-icons/react";
 import { ChecklistRoomModal } from "@/components/inventaris/checklist-room-modal";
 import { RoomQrDialog } from "@/components/inventaris/room-qr-dialog";
 import { MoveAllModal } from "@/components/inventaris/move-all-modal";
@@ -37,91 +52,83 @@ type ItemPriority = NonNullable<Item["prio"]>;
 const CATEGORY_CONFIG: {
   value: ItemCategory;
   label: string;
-  headerBg: string;
+  /** Petak kecil berwarna kategori (bukan emoji). */
+  tileClass: string;
+  /** Warna titik/petak kategori untuk summary <details>. */
   dotColor: string;
-  labelColor: string;
-  countBg: string;
 }[] = [
   {
     value: "alkes",
     label: "Alat Kesehatan",
-    headerBg: "bg-teal3",
-    dotColor: "bg-teal",
-    labelColor: "text-teal",
-    countBg: "bg-teal",
+    tileClass: "bg-primary-soft text-primary",
+    dotColor: "bg-primary",
   },
   {
     value: "meubelair",
     label: "Meubelair",
-    headerBg: "bg-amber2",
-    dotColor: "bg-amber",
-    labelColor: "text-amber",
-    countBg: "bg-amber",
+    tileClass: "bg-warning-soft text-warning",
+    dotColor: "bg-warning",
   },
   {
     value: "elektronik",
     label: "Elektronik",
-    headerBg: "bg-blue2",
-    dotColor: "bg-blue",
-    labelColor: "text-blue",
-    countBg: "bg-blue",
+    tileClass: "bg-info-soft text-info",
+    dotColor: "bg-info",
   },
   {
     value: "lainnya",
     label: "Lainnya",
-    headerBg: "bg-slate2",
-    dotColor: "bg-slate",
-    labelColor: "text-slate",
-    countBg: "bg-slate",
+    tileClass: "bg-surface-muted text-text-2",
+    dotColor: "bg-text-3",
   },
 ];
 
 const CONDITION_OPTIONS: { value: ItemCondition; label: string }[] = [
-  { value: "baik", label: "✅ Baik" },
-  { value: "rr", label: "⚠️ Rusak Ringan" },
-  { value: "rb", label: "🔴 Rusak Berat" },
-  { value: "ta", label: "— Tidak Ada" },
+  { value: "baik", label: "Baik" },
+  { value: "rr", label: "Rusak Ringan" },
+  { value: "rb", label: "Rusak Berat" },
+  { value: "ta", label: "Tidak Ada" },
 ];
 
 const PRIORITY_OPTIONS: { value: ItemPriority; label: string }[] = [
-  { value: "wajib", label: "⭐ Wajib" },
-  { value: "penting", label: "🔹 Penting" },
-  { value: "pendukung", label: "· Pendukung" },
+  { value: "wajib", label: "Wajib" },
+  { value: "penting", label: "Penting" },
+  { value: "pendukung", label: "Pendukung" },
 ];
 
 /* ── GAS td input / td select (index.html ~716–771, 2045–2058) ── */
 
 const CELL_BASE =
-  "rounded-[var(--r2)] border-[1.5px] px-2 py-[5px] text-xs outline-none transition-colors";
+  "rounded-sm border px-2 py-[5px] text-[13px] outline-none transition-colors";
 
 /** Input bergaris — GAS `td input[type=text|number]`. */
-const CELL_INPUT = `${CELL_BASE} w-full border-line bg-white text-ink focus:border-teal2`;
+const CELL_INPUT = `${CELL_BASE} w-full border-border bg-surface text-foreground placeholder:text-text-3 focus:border-primary focus:ring-2 focus:ring-ring/25`;
 
 /**
  * Input "hantu" — tampil seperti teks biasa (GAS merender sel ini statis),
  * garisnya baru muncul saat hover/fokus supaya tetap bisa diedit langsung.
  */
-const CELL_GHOST = `${CELL_BASE} w-full border-transparent bg-transparent hover:border-line focus:border-teal2 focus:bg-white`;
+const CELL_GHOST = `${CELL_BASE} w-full border-transparent bg-transparent leading-[1.35] placeholder:text-text-3 hover:border-border focus:border-primary focus:bg-surface focus:ring-2 focus:ring-ring/25`;
 
 const CELL_SELECT = `${CELL_BASE} w-full cursor-pointer font-bold`;
 
 /** GAS `td select.k-*` (~732–754). */
 const CONDITION_CLASS: Record<ItemCondition, string> = {
-  baik: "bg-teal4 text-teal border-teal3",
-  rr: "bg-amber2 text-amber border-[#fde68a]",
-  rb: "bg-red2 text-red border-[#fecaca]",
-  ta: "bg-slate2 text-slate border-line",
+  baik: "bg-success-soft text-success border-transparent",
+  rr: "bg-warning-soft text-warning border-transparent",
+  rb: "bg-danger-soft text-danger border-transparent",
+  ta: "bg-surface-muted text-text-2 border-transparent",
 };
 
 /** GAS `.spill.sp-*` (~702–713), dipakai sebagai warna select prioritas. */
 const PRIORITY_CLASS: Record<ItemPriority, string> = {
-  wajib: "bg-[#fef3c7] text-[#92400e] border-[#fde68a]",
-  penting: "bg-blue2 text-blue border-[#bfdbfe]",
-  pendukung: "bg-slate2 text-slate border-line",
+  wajib: "bg-warning-soft text-warning border-transparent",
+  penting: "bg-info-soft text-info border-transparent",
+  pendukung: "bg-surface-muted text-text-2 border-transparent",
 };
 
 const TH_BASE =
-  "bg-[#f8fafc] px-3.5 py-2.5 text-[10.5px] font-bold uppercase tracking-wide text-ink3 border-b border-line whitespace-nowrap";
+  "bg-surface-muted px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-text-3 border-b border-border whitespace-nowrap";
 
 /** Kolom yang bisa diurut — klik header: naik → turun → kembali awal. */
 type SortKey =
@@ -214,11 +221,24 @@ function SortableTh({
         aria-label={`Urutkan berdasarkan ${label}${
           active ? (sort.dir === "asc" ? " (menaik)" : " (menurun)") : ""
         }`}
-        className="inline-flex items-center gap-1 uppercase tracking-wide hover:text-teal"
+        className="inline-flex items-center gap-1 text-left uppercase tracking-[0.04em] transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
       >
         {label}
-        <span aria-hidden className={active ? "text-teal" : "text-ink3/40"}>
-          {active ? (sort.dir === "asc" ? "▲" : "▼") : "⇅"}
+        <span
+          aria-hidden
+          className={`inline-flex shrink-0 ${
+            active ? "text-primary" : "text-text-3/45"
+          }`}
+        >
+          {active ? (
+            sort.dir === "asc" ? (
+              <ArrowUp size={12} weight="bold" />
+            ) : (
+              <ArrowDown size={12} weight="bold" />
+            )
+          ) : (
+            <ArrowsDownUp size={12} />
+          )}
         </span>
       </button>
     </th>
@@ -700,15 +720,15 @@ export function RoomDetailInteractive({
     <>
       {/* Room Header (matches GAS .room-header) — layar sempit: elemen
           membungkus ke baris baru, bukan meluber horizontal. */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 max-md:gap-y-3 mb-[22px] px-6 py-5 bg-white rounded-[var(--r)] border border-line shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
+      <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-md border border-border bg-surface px-5 py-[18px] max-md:gap-y-3">
         <div
-          className="w-[52px] h-[52px] rounded-[14px] flex items-center justify-center text-[26px] shrink-0"
+          className="flex size-11 shrink-0 items-center justify-center rounded-md bg-primary-soft text-[22px] leading-none"
           style={{ background: room.bg }}
         >
           {room.icon}
         </div>
 
-        <div>
+        <div className="min-w-0">
           {editingName ? (
             <div className="flex items-center gap-1.5">
               <input
@@ -721,65 +741,71 @@ export function RoomDetailInteractive({
                   if (e.key === "Enter") saveName();
                   if (e.key === "Escape") setEditingName(false);
                 }}
-                className="w-[240px] rounded-lg border-[1.5px] border-teal2 bg-white px-2.5 py-1 text-lg font-extrabold text-ink outline-none"
+                className="h-9 w-[240px] max-w-full rounded-sm border border-border bg-surface px-2.5 text-[15px] font-semibold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-ring/25"
               />
               <button
                 type="button"
                 onClick={saveName}
-                className="rounded-lg border-[1.5px] border-[rgba(14,124,107,0.3)] bg-[rgba(14,124,107,0.08)] px-2.5 py-1 text-xs font-bold text-teal transition-colors hover:bg-teal hover:text-white"
+                className="inline-flex size-9 items-center justify-center rounded-sm bg-primary text-primary-foreground transition-colors duration-150 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
+                aria-label="Simpan nama ruangan"
               >
-                ✅
+                <Check size={15} weight="bold" aria-hidden />
               </button>
               <button
                 type="button"
                 onClick={() => setEditingName(false)}
-                className="rounded-lg border-[1.5px] border-line bg-line2 px-2.5 py-1 text-xs font-bold text-ink3 transition-colors hover:border-ink3"
+                className="inline-flex size-9 items-center justify-center rounded-sm border border-border bg-surface text-text-2 transition-colors duration-150 hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
+                aria-label="Batal ubah nama"
               >
-                ✕
+                <X size={15} aria-hidden />
               </button>
             </div>
           ) : (
-            <div className="text-lg font-extrabold text-ink">{room.name}</div>
+            <h2 className="text-[18px] font-semibold leading-tight tracking-[-0.01em] text-foreground">
+              {room.name}
+            </h2>
           )}
           {room.description && (
-            <div className="text-xs text-ink3 mt-0.5">{room.description}</div>
+            <div className="mt-0.5 text-[12px] leading-snug text-text-3">
+              {room.description}
+            </div>
           )}
         </div>
 
-        <div className="ml-auto flex gap-3 max-md:ml-0 max-md:w-full max-md:justify-center">
-          <div className="text-center px-4 py-2 rounded-lg bg-line2">
-            <div className="text-[20px] font-extrabold text-teal font-mono leading-none">
+        <div className="ml-auto flex flex-wrap gap-2 max-md:ml-0 max-md:w-full">
+          <div className="min-w-[86px] flex-1 rounded-sm border border-border px-3 py-2 max-md:flex-none">
+            <div className="font-mono text-[20px] font-semibold leading-none tabular-nums text-foreground">
               {totalItems}
             </div>
-            <div className="text-[10px] text-ink3 font-semibold uppercase tracking-wide mt-1">
+            <div className="mt-1 text-[11px] font-semibold uppercase leading-none tracking-[0.04em] text-text-3">
               Jenis Item
             </div>
           </div>
-          <div className="text-center px-4 py-2 rounded-lg bg-line2">
-            <div className="text-[20px] font-extrabold text-teal font-mono leading-none">
+          <div className="min-w-[86px] flex-1 rounded-sm border border-border px-3 py-2 max-md:flex-none">
+            <div className="font-mono text-[20px] font-semibold leading-none tabular-nums text-foreground">
               {totalUnits}
             </div>
-            <div className="text-[10px] text-ink3 font-semibold uppercase tracking-wide mt-1">
+            <div className="mt-1 text-[11px] font-semibold uppercase leading-none tracking-[0.04em] text-text-3">
               Total Unit
             </div>
           </div>
-          <div className="text-center px-4 py-2 rounded-lg bg-line2">
+          <div className="min-w-[86px] flex-1 rounded-sm border border-border px-3 py-2 max-md:flex-none">
             <div
-              className={`text-[20px] font-extrabold font-mono leading-none ${
-                attentionCount > 0 ? "text-red" : "text-teal"
+              className={`font-mono text-[20px] font-semibold leading-none tabular-nums ${
+                attentionCount > 0 ? "text-danger" : "text-foreground"
               }`}
             >
               {attentionCount}
             </div>
-            <div className="text-[10px] text-ink3 font-semibold uppercase tracking-wide mt-1">
+            <div className="mt-1 text-[11px] font-semibold uppercase leading-none tracking-[0.04em] text-text-3">
               Perlu Perhatian
             </div>
           </div>
         </div>
 
         {editingPj ? (
-          <div className="flex min-w-[200px] max-w-[300px] items-center gap-1.5 rounded-[10px] border-[1.5px] border-teal2 bg-white px-[10px] py-[6px]">
-            <span className="text-base">{"\u{1F464}"}</span>
+          <div className="flex h-9 min-w-[200px] max-w-[300px] items-center gap-2 rounded-sm border border-primary bg-surface px-2.5">
+            <User size={14} aria-hidden className="shrink-0 text-text-3" />
             <input
               type="text"
               value={pjDraft}
@@ -791,23 +817,23 @@ export function RoomDetailInteractive({
                 if (e.key === "Enter") savePj();
                 if (e.key === "Escape") setEditingPj(false);
               }}
-              className="min-w-0 flex-1 border-none bg-transparent text-[12.5px] font-bold text-ink outline-none placeholder:font-normal placeholder:text-ink3"
+              className="min-w-0 flex-1 border-none bg-transparent text-[13px] font-semibold text-foreground outline-none placeholder:font-normal placeholder:text-text-3"
             />
             <button
               type="button"
               onClick={savePj}
-              className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold text-teal transition-colors hover:bg-teal4"
+              className="shrink-0 rounded-sm p-1 text-primary transition-colors duration-150 hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
               aria-label="Simpan penanggung jawab"
             >
-              ✅
+              <Check size={14} weight="bold" aria-hidden />
             </button>
             <button
               type="button"
               onClick={() => setEditingPj(false)}
-              className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold text-ink3 transition-colors hover:bg-line2"
+              className="shrink-0 rounded-sm p-1 text-text-3 transition-colors duration-150 hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
               aria-label="Batal"
             >
-              ✕
+              <X size={14} aria-hidden />
             </button>
           </div>
         ) : (
@@ -815,56 +841,62 @@ export function RoomDetailInteractive({
             type="button"
             onClick={startEditPj}
             title="Klik untuk ubah penanggung jawab"
-            className="flex items-center gap-2 px-[14px] py-[7px] rounded-[10px] bg-line2 border-[1.5px] border-line min-w-[200px] max-w-[280px] text-left hover:border-teal hover:bg-[#f0fdfa] group"
+            className="group flex h-9 min-w-[200px] max-w-[280px] items-center gap-2 rounded-sm border border-border bg-surface px-2.5 text-left transition-colors duration-150 hover:border-border-strong hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
           >
-            <span className="text-base">{"\u{1F464}"}</span>
+            <User size={14} aria-hidden className="shrink-0 text-text-3" />
             <div className="min-w-0 flex-1">
-              <div className="text-[9.5px] font-extrabold text-ink3 uppercase tracking-wide">
+              <div className="text-[10px] font-semibold uppercase leading-none tracking-[0.04em] text-text-3">
                 Penanggung Jawab
               </div>
               <div
-                className={`text-[12.5px] font-bold truncate ${
-                  room.pj ? "text-ink" : "text-ink3 italic font-normal"
+                className={`mt-0.5 truncate text-[13px] font-semibold leading-none ${
+                  room.pj ? "text-foreground" : "font-normal italic text-text-3"
                 }`}
               >
                 {room.pj || "Belum diisi"}
               </div>
             </div>
-            <span className="text-xs text-ink3 opacity-0 group-hover:opacity-100">
-              {"✏️"}
-            </span>
+            <PencilSimple
+              size={13}
+              aria-hidden
+              className="shrink-0 text-text-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+            />
           </button>
         )}
 
         <button
           type="button"
           onClick={handleSemuaBaik}
-          className="px-[14px] py-[6px] rounded-lg text-xs font-bold border-[1.5px] border-[rgba(14,124,107,0.3)] bg-[rgba(14,124,107,0.08)] text-teal hover:bg-teal hover:text-white transition-colors"
+          className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-sm border border-border bg-surface px-3.5 text-[13px] font-semibold text-foreground transition-colors duration-150 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
         >
-          {"✅"} Semua Kondisi Baik
+          <Check size={15} aria-hidden className="text-text-3" />
+          Semua Kondisi Baik
         </button>
         <button
           type="button"
           onClick={startEditName}
           disabled={editingName}
-          className="px-[14px] py-[6px] rounded-lg text-xs font-bold border-[1.5px] border-[#bfdbfe] bg-[#eff6ff] text-[#1d4ed8] hover:bg-[#1d4ed8] hover:text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#eff6ff] disabled:hover:text-[#1d4ed8]"
+          className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-sm border border-border bg-surface px-3.5 text-[13px] font-semibold text-foreground transition-colors duration-150 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 disabled:pointer-events-none disabled:opacity-50"
         >
-          {"✏️"} Edit Nama
+          <PencilSimple size={15} aria-hidden className="text-text-3" />
+          Edit Nama
         </button>
         <button
           type="button"
           onClick={openMoveAll}
-          className="px-[14px] py-[6px] rounded-lg text-xs font-bold border-[1.5px] border-[#bfdbfe] bg-[#eff6ff] text-[#1d4ed8] hover:bg-[#1d4ed8] hover:text-white transition-colors"
+          className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-sm border border-border bg-surface px-3.5 text-[13px] font-semibold text-foreground transition-colors duration-150 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
         >
-          {"↗"} Pindah Item
+          <ArrowsLeftRight size={15} aria-hidden className="text-text-3" />
+          Pindah Item
         </button>
         {isDbRoom && <RoomQrDialog roomId={room.id} roomName={room.name} />}
         <button
           type="button"
           onClick={() => setDeleteOpen(true)}
-          className="del-room-btn px-[14px] py-[6px] rounded-lg text-xs font-bold border-[1.5px] border-red/30 bg-red2 text-red hover:bg-red hover:text-white transition-colors"
+          className="del-room-btn inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-sm border border-border bg-surface px-3.5 text-[13px] font-semibold text-danger transition-colors duration-150 hover:border-danger/40 hover:bg-danger-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/35"
         >
-          {"\u{1F5D1}"} Hapus
+          <Trash size={15} aria-hidden />
+          Hapus
         </button>
       </div>
 
@@ -876,19 +908,18 @@ export function RoomDetailInteractive({
           return (
             <details key={cat.value} open className="cat-section">
               <summary
-                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-md cursor-pointer select-none list-none ${cat.headerBg}`}
+                className="flex cursor-pointer select-none list-none items-center gap-2.5 rounded-t-md border border-border bg-surface px-4 py-2.5 transition-colors duration-150 hover:bg-surface-muted [&::-webkit-details-marker]:hidden"
               >
                 <span
-                  className={`w-2.5 h-2.5 rounded-full shrink-0 ${cat.dotColor}`}
-                />
-                <span
-                  className={`text-xs font-bold uppercase tracking-[0.8px] ${cat.labelColor}`}
+                  className={`flex size-5 shrink-0 items-center justify-center rounded-sm ${cat.tileClass}`}
+                  aria-hidden
                 >
+                  <span className="size-1.5 rounded-full bg-current" />
+                </span>
+                <span className="text-[13px] font-semibold text-foreground">
                   {cat.label}
                 </span>
-                <span
-                  className={`ml-auto text-[11px] font-bold px-2.5 py-0.5 rounded-full text-white ${cat.countBg}`}
-                >
+                <span className="font-mono text-[12px] tabular-nums text-text-3">
                   {catItems.length} item
                 </span>
                 <button
@@ -899,16 +930,21 @@ export function RoomDetailInteractive({
                     e.stopPropagation();
                     handleCategorySemuaBaik(cat.value, cat.label);
                   }}
-                  className="relative z-[2] inline-flex items-center gap-[5px] px-2.5 py-[3px] rounded-[20px] text-[11px] font-bold whitespace-nowrap border-[1.5px] border-[rgba(14,124,107,0.35)] bg-[rgba(14,124,107,0.1)] text-teal hover:bg-teal hover:text-white hover:border-teal transition-colors"
+                  className="relative z-[2] ml-auto inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-sm border border-border bg-surface px-2.5 text-[11px] font-semibold text-text-2 transition-colors duration-150 hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
                 >
-                  {"✅"} Semua Baik
+                  <Check size={12} aria-hidden />
+                  Semua Baik
                 </button>
-                <span className="text-[11px] ml-1.5">▾</span>
+                <CaretDown
+                  size={13}
+                  aria-hidden
+                  className="shrink-0 text-text-3 transition-transform duration-150"
+                />
               </summary>
 
-              <div className="mt-px">
-                <div className="overflow-x-auto rounded-b-lg">
-                  <table className="w-full border-collapse text-[13px] bg-white border border-line border-t-0">
+              <div>
+                <div className="overflow-x-auto rounded-b-md border border-t-0 border-border">
+                  <table className="w-full border-collapse bg-surface text-[13px]">
                     <thead>
                       <tr>
                         <th className={`${TH_BASE} w-9 text-center`}>No</th>
@@ -992,41 +1028,43 @@ export function RoomDetailInteractive({
                       {catItems.map((item, idx) => (
                         <tr
                           key={item.id}
-                          className="border-b border-line last:border-b-0 hover:bg-[#fafcff]"
+                          className="border-b border-border transition-colors duration-150 last:border-b-0 hover:bg-surface-muted"
                         >
                           {/* No — GAS .td-no */}
-                          <td className="w-9 px-3.5 py-2 text-center font-mono text-[11px] text-ink3">
+                          <td className="w-9 px-3.5 py-0 text-center font-mono text-[11px] tabular-nums text-text-3">
                             {idx + 1}
                           </td>
 
                           {/* Nama & Spesifikasi — GAS .td-nama / .td-spec */}
-                          <td className="px-3.5 py-2 align-top">
-                            <input
-                              ref={nameInputRef}
-                              data-item-id={item.id}
-                              type="text"
-                              value={item.name}
-                              placeholder={`Nama ${cat.label.toLowerCase()}...`}
-                              title="Nama barang"
-                              onChange={(e) =>
-                                updateItem(item.id, { name: e.target.value })
-                              }
-                              className={`${CELL_GHOST} min-w-[160px] text-[13px] font-semibold text-ink`}
-                            />
-                            <input
-                              type="text"
-                              value={item.spec ?? ""}
-                              placeholder="Spesifikasi..."
-                              title="Spesifikasi"
-                              onChange={(e) =>
-                                updateItem(item.id, { spec: e.target.value })
-                              }
-                              className={`${CELL_GHOST} mt-0.5 min-w-[160px] py-[3px] text-[11.5px] font-normal text-ink3`}
-                            />
+                          <td className="px-3 py-1">
+                            <div className="flex min-w-[160px] flex-col">
+                              <input
+                                ref={nameInputRef}
+                                data-item-id={item.id}
+                                type="text"
+                                value={item.name}
+                                placeholder={`Nama ${cat.label.toLowerCase()}...`}
+                                title="Nama barang"
+                                onChange={(e) =>
+                                  updateItem(item.id, { name: e.target.value })
+                                }
+                                className={`${CELL_GHOST} !py-[2px] !text-[13px] !leading-[1.2] font-semibold text-foreground`}
+                              />
+                              <input
+                                type="text"
+                                value={item.spec ?? ""}
+                                placeholder="Spesifikasi..."
+                                title="Spesifikasi"
+                                onChange={(e) =>
+                                  updateItem(item.id, { spec: e.target.value })
+                                }
+                                className={`${CELL_GHOST} !border-transparent !px-2 !py-0 !text-[11px] !leading-[1.2] font-normal text-text-3`}
+                              />
+                            </div>
                           </td>
 
                           {/* Tahun — GAS .inp-tahun */}
-                          <td className="px-3.5 py-2">
+                          <td className="px-3 py-1">
                             <input
                               type="number"
                               min={1990}
@@ -1046,7 +1084,7 @@ export function RoomDetailInteractive({
                           </td>
 
                           {/* Merek / Tipe — GAS .inp-merek */}
-                          <td className="px-3.5 py-2">
+                          <td className="px-3 py-1">
                             <input
                               type="text"
                               value={item.merk ?? ""}
@@ -1060,7 +1098,7 @@ export function RoomDetailInteractive({
                           </td>
 
                           {/* No. Register — GAS .inp-noreg */}
-                          <td className="px-3.5 py-2">
+                          <td className="px-3 py-1">
                             <input
                               type="text"
                               value={item.noreg ?? ""}
@@ -1074,7 +1112,7 @@ export function RoomDetailInteractive({
                           </td>
 
                           {/* Satuan — GAS .td-sat */}
-                          <td className="px-3.5 py-2">
+                          <td className="px-3 py-1">
                             <input
                               type="text"
                               value={item.unit ?? ""}
@@ -1083,12 +1121,12 @@ export function RoomDetailInteractive({
                               onChange={(e) =>
                                 updateItem(item.id, { unit: e.target.value })
                               }
-                              className={`${CELL_GHOST} w-[70px] text-ink3`}
+                              className={`${CELL_GHOST} w-[70px] text-text-3`}
                             />
                           </td>
 
                           {/* Standar — GAS .td-std */}
-                          <td className="px-3.5 py-2">
+                          <td className="px-3 py-1">
                             <input
                               type="number"
                               min={0}
@@ -1099,12 +1137,12 @@ export function RoomDetailInteractive({
                                   std: Number(e.target.value) || 0,
                                 })
                               }
-                              className={`${CELL_GHOST} w-[56px] text-center font-mono text-ink3`}
+                              className={`${CELL_GHOST} w-[56px] text-center font-mono text-text-3`}
                             />
                           </td>
 
                           {/* Jml Ada — GAS .td-jml */}
-                          <td className="px-3.5 py-2">
+                          <td className="px-3 py-1">
                             <input
                               type="number"
                               min={0}
@@ -1120,7 +1158,7 @@ export function RoomDetailInteractive({
                           </td>
 
                           {/* Prioritas */}
-                          <td className="px-3.5 py-2">
+                          <td className="px-3 py-1">
                             <select
                               value={item.prio ?? "pendukung"}
                               title="Prioritas"
@@ -1143,7 +1181,7 @@ export function RoomDetailInteractive({
                           </td>
 
                           {/* Kondisi — GAS kondisiOpts + styleKondisi */}
-                          <td className="px-3.5 py-2">
+                          <td className="px-3 py-1">
                             <select
                               value={item.condition}
                               title="Kondisi"
@@ -1164,7 +1202,7 @@ export function RoomDetailInteractive({
                           </td>
 
                           {/* Keterangan */}
-                          <td className="px-3.5 py-2">
+                          <td className="px-3 py-1">
                             <input
                               type="text"
                               value={item.notes ?? ""}
@@ -1178,38 +1216,39 @@ export function RoomDetailInteractive({
                           </td>
 
                           {/* Ceklist — GAS .cl-open-btn */}
-                          <td className="px-3.5 py-2 text-center">
+                          <td className="px-3 py-1 text-center">
                             <button
                               type="button"
                               onClick={openChecklist}
-                              className="inline-flex h-[26px] items-center gap-1 whitespace-nowrap rounded-[5px] border border-line bg-line2 px-2 text-[11px] font-semibold text-ink2 transition-colors hover:bg-line"
+                              className="inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-sm border border-border bg-surface px-2 text-[11px] font-semibold text-text-2 transition-colors duration-150 hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
                               title="Ceklist harian"
                             >
-                              📅 Ceklist
+                              <CalendarBlank size={12} aria-hidden />
+                              Ceklist
                             </button>
                           </td>
 
-                          <td className="px-3.5 py-2">
+                          <td className="px-3 py-1">
                             <div className="flex items-center gap-1">
                               {/* GAS .mv-btn */}
                               <button
                                 type="button"
                                 onClick={() => openMoveItem(item)}
-                                className="inline-flex h-[26px] w-[26px] items-center justify-center rounded-[5px] border-[1.5px] border-[#bfdbfe] bg-[#eff6ff] text-[13px] font-black leading-none text-[#1d4ed8] transition-all duration-150 hover:scale-110 hover:border-[#1d4ed8] hover:bg-[#1d4ed8] hover:text-white"
+                                className="inline-flex size-7 items-center justify-center rounded-sm text-text-3 transition-colors duration-150 hover:bg-surface-subtle hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
                                 title="Pindah ke ruangan lain"
                                 aria-label={`Pindah ${item.name || "item"}`}
                               >
-                                ↗
+                                <ArrowsLeftRight size={16} aria-hidden />
                               </button>
                               {/* GAS .del-btn */}
                               <button
                                 type="button"
                                 onClick={() => handleDeleteItem(item)}
-                                className="inline-flex h-[26px] w-[26px] items-center justify-center rounded-[5px] border-0 bg-red2 text-xs font-bold text-red transition-colors hover:bg-[#fca5a5]"
+                                className="inline-flex size-7 items-center justify-center rounded-sm text-text-3 transition-colors duration-150 hover:bg-danger-soft hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/35"
                                 title="Hapus"
                                 aria-label={`Hapus ${item.name || "item"}`}
                               >
-                                ✕
+                                <Trash size={16} aria-hidden />
                               </button>
                             </div>
                           </td>
@@ -1220,10 +1259,11 @@ export function RoomDetailInteractive({
                 </div>
                 <button
                   type="button"
-                  className="add-btn flex w-full items-center justify-center gap-2 border border-t-0 border-dashed border-line bg-transparent px-[18px] py-[9px] text-xs font-semibold text-ink3 rounded-b-[var(--r)] transition-colors duration-[180ms] hover:border-teal3 hover:bg-teal4 hover:text-teal"
+                  className="add-btn flex w-full items-center justify-center gap-1.5 rounded-b-md border border-t border-border bg-surface px-4 py-2.5 text-[12px] font-semibold text-text-3 transition-colors duration-150 hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
                   onClick={() => addRow(cat.value)}
                 >
-                  ＋ Tambah {cat.label}
+                  <Plus size={13} weight="bold" aria-hidden />
+                  Tambah {cat.label}
                 </button>
               </div>
             </details>
@@ -1236,8 +1276,8 @@ export function RoomDetailInteractive({
           mengubah tampilan kategori yang sudah berisi.
         */}
         {emptyCategories.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 rounded-[var(--r)] border border-dashed border-line bg-white px-4 py-3">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-ink3">
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-border bg-surface px-4 py-3">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-3">
               Kategori kosong
             </span>
             {emptyCategories.map((cat) => (
@@ -1245,9 +1285,10 @@ export function RoomDetailInteractive({
                 key={cat.value}
                 type="button"
                 onClick={() => addRow(cat.value)}
-                className="rounded-[20px] border-[1.5px] border-line bg-line2 px-3 py-[5px] text-[11px] font-bold text-ink3 transition-colors hover:border-teal3 hover:bg-teal4 hover:text-teal"
+                className="inline-flex h-7 items-center gap-1 rounded-sm border border-border bg-surface px-2.5 text-[11px] font-semibold text-text-2 transition-colors duration-150 hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
               >
-                ＋ {cat.label}
+                <Plus size={12} weight="bold" aria-hidden />
+                {cat.label}
               </button>
             ))}
           </div>
@@ -1286,42 +1327,49 @@ export function RoomDetailInteractive({
 
       {/* Hapus ruangan — GAS delRoom memakai confirm(), di sini dialog bergaya GAS */}
       <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)} size="sm">
-        <div
-          className="flex shrink-0 items-center justify-between px-[22px] py-[18px] text-white"
-          style={{ background: "linear-gradient(135deg, #7f1d1d, #b91c1c)" }}
-        >
+        {/* Head — netral, bukan gradasi: warna status hanya di ikon. */}
+        <div className="flex shrink-0 items-center gap-3 border-b border-border px-5 py-3.5">
+          <span
+            className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-danger-soft text-danger"
+            aria-hidden
+          >
+            <Warning size={16} weight="fill" />
+          </span>
           <div className="min-w-0">
-            <div className="text-base font-extrabold leading-tight">
-              🗑 Hapus Ruangan
+            <div className="text-[15px] font-semibold leading-tight text-foreground">
+              Hapus Ruangan
             </div>
-            <div className="mt-[3px] truncate text-[11px] opacity-75">
+            <div className="mt-0.5 truncate text-[12px] text-text-3">
               {room.icon} {room.name}
             </div>
           </div>
         </div>
 
-        <div className="px-[22px] py-5">
-          <p className="text-[13px] leading-relaxed text-ink2">
-            Ruangan <b>{room.name}</b> beserta <b>{totalItems}</b> item di
+        <div className="px-5 py-4">
+          <p className="text-[13px] leading-relaxed text-text-2">
+            Ruangan{" "}
+            <b className="font-semibold text-foreground">{room.name}</b> beserta{" "}
+            <b className="font-semibold text-foreground">{totalItems}</b> item di
             dalamnya akan dihapus dari daftar. Tindakan ini tidak dapat
             dibatalkan.
           </p>
         </div>
 
-        <div className="flex shrink-0 justify-end gap-2 border-t border-line bg-bg px-[22px] py-3.5">
+        <div className="flex shrink-0 justify-end gap-2 border-t border-border bg-surface-subtle px-5 py-3.5">
           <button
             type="button"
             onClick={() => setDeleteOpen(false)}
-            className="rounded-[10px] border-[1.5px] border-line bg-white px-4 py-2 text-xs font-bold text-ink2 transition-colors hover:border-ink3"
+            className="inline-flex h-9 items-center justify-center rounded-sm border border-border bg-surface px-4 text-[13px] font-semibold text-foreground transition-colors duration-150 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
           >
             Batal
           </button>
           <button
             type="button"
             onClick={confirmDeleteRoom}
-            className="rounded-[10px] border-none bg-[#b91c1c] px-[22px] py-2 text-[13px] font-extrabold text-white shadow-[0_4px_12px_rgba(185,28,28,0.3)] transition-colors hover:bg-[#991b1b]"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-sm bg-danger px-4 text-[13px] font-semibold text-white transition-colors duration-150 hover:bg-danger/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/35"
           >
-            🗑 Ya, Hapus Ruangan
+            <Trash size={15} aria-hidden />
+            Ya, Hapus Ruangan
           </button>
         </div>
       </Dialog>

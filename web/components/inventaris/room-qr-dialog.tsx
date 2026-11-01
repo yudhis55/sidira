@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useIsClient } from "@/lib/use-is-client";
 import { QRCodeSVG } from "qrcode.react";
+import { QrCode } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -108,26 +109,29 @@ export function RoomQrDialog({ roomId, roomName }: RoomQrDialogProps) {
         <DialogTrigger asChild>
           <button
             type="button"
-            className="px-[14px] py-[6px] rounded-lg text-xs font-bold border-[1.5px] border-[#bfdbfe] bg-[#eff6ff] text-[#1d4ed8] hover:bg-[#1d4ed8] hover:text-white transition-colors"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-sm border border-border bg-surface px-4 text-[13px] font-semibold text-foreground transition-colors duration-150 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
           >
-            {"\u25A6"} QR Ruangan
+            <QrCode size={15} aria-hidden className="text-text-3" />
+            QR Ruangan
           </button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="gap-5 rounded-lg sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>QR Ruangan</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-[15px] font-semibold">
+              QR Ruangan
+            </DialogTitle>
+            <DialogDescription className="text-[13px] text-text-3">
               Pindai kode untuk membuka halaman inventaris ruangan ini.
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col items-center gap-3">
-            <p className="text-sm font-bold text-center text-neutral-900">
+            <p className="text-center text-[13px] font-semibold text-foreground">
               {roomName}
             </p>
             <div
               ref={qrWrapRef}
-              className="rounded-lg border border-neutral-200 bg-white p-4"
+              className="rounded-md border border-border bg-white p-4"
             >
               {qrValue ? (
                 <QRCodeSVG
@@ -141,19 +145,19 @@ export function RoomQrDialog({ roomId, roomName }: RoomQrDialogProps) {
                 <div
                   aria-hidden
                   style={{ width: QR_DISPLAY_SIZE, height: QR_DISPLAY_SIZE }}
-                  className="animate-pulse rounded bg-neutral-100"
+                  className="animate-pulse rounded-sm bg-surface-muted"
                 />
               )}
             </div>
-            <div className="w-full rounded-lg bg-neutral-100 px-3 py-2">
-              <p className="text-xs text-neutral-600 break-all">
+            <div className="w-full rounded-sm border border-border bg-surface-muted px-3 py-2">
+              <p className="break-all font-mono text-[11px] text-text-2">
                 {qrValue || "Menyiapkan tautan…"}
               </p>
             </div>
             <div className="flex w-full flex-wrap justify-center gap-2">
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={handleCopy}
               >
@@ -161,7 +165,7 @@ export function RoomQrDialog({ roomId, roomName }: RoomQrDialogProps) {
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={handleDownloadPng}
               >

@@ -43,32 +43,32 @@ type FilterKey =
 
 const FILTER_BUTTONS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "Semua" },
-  { key: "mendesak", label: "🔴 Mendesak" },
-  { key: "penting", label: "🟡 Penting" },
-  { key: "rencana", label: "🔵 Rencana" },
+  { key: "mendesak", label: "Mendesak" },
+  { key: "penting", label: "Penting" },
+  { key: "rencana", label: "Rencana" },
   { key: "diajukan", label: "Diajukan" },
-  { key: "disetujui", label: "✅ Disetujui" },
+  { key: "disetujui", label: "Disetujui" },
 ];
 
 const KAT_OPTIONS: { value: ItemCategory; label: string }[] = [
-  { value: "alkes", label: "🩺 Alkes" },
-  { value: "meubelair", label: "🪑 Meubelair" },
-  { value: "elektronik", label: "💻 Elektronik" },
-  { value: "lainnya", label: "📦 Lainnya" },
+  { value: "alkes", label: "Alkes" },
+  { value: "meubelair", label: "Meubelair" },
+  { value: "elektronik", label: "Elektronik" },
+  { value: "lainnya", label: "Lainnya" },
 ];
 
 const PRIO_OPTIONS: { value: UsulanPrioritas; label: string }[] = [
-  { value: "mendesak", label: "🔴 Mendesak" },
-  { value: "penting", label: "🟡 Penting" },
-  { value: "rencana", label: "🔵 Rencana" },
+  { value: "mendesak", label: "Mendesak" },
+  { value: "penting", label: "Penting" },
+  { value: "rencana", label: "Rencana" },
 ];
 
 const STATUS_OPTIONS: { value: UsulanStatus; label: string }[] = [
-  { value: "diajukan", label: "📤 Diajukan" },
-  { value: "disetujui", label: "✅ Disetujui" },
-  { value: "ditolak", label: "❌ Ditolak" },
-  { value: "proses", label: "🔄 Diproses" },
-  { value: "selesai", label: "🎉 Selesai" },
+  { value: "diajukan", label: "Diajukan" },
+  { value: "disetujui", label: "Disetujui" },
+  { value: "ditolak", label: "Ditolak" },
+  { value: "proses", label: "Diproses" },
+  { value: "selesai", label: "Selesai" },
 ];
 
 const KAT_LABELS: Record<ItemCategory, string> = {
@@ -80,43 +80,75 @@ const KAT_LABELS: Record<ItemCategory, string> = {
 
 /** GAS `.uprio-*` — warna select prioritas mengikuti nilainya. */
 const PRIO_TINT: Record<UsulanPrioritas, CSSProperties> = {
-  mendesak: { background: "#fee2e2", color: "#b91c1c", borderColor: "#fca5a5" },
-  penting: { background: "#fef3c7", color: "#92400e", borderColor: "#fcd34d" },
-  rencana: { background: "#dbeafe", color: "#1e40af", borderColor: "#93c5fd" },
+  mendesak: {
+    background: "var(--danger-soft)",
+    color: "var(--danger)",
+    borderColor: "transparent",
+  },
+  penting: {
+    background: "var(--warning-soft)",
+    color: "var(--warning)",
+    borderColor: "transparent",
+  },
+  rencana: {
+    background: "var(--info-soft)",
+    color: "var(--info)",
+    borderColor: "transparent",
+  },
 };
 
 /** GAS `.ustatus-*`. */
 const STATUS_TINT: Record<UsulanStatus, CSSProperties> = {
-  diajukan: { background: "#fef9c3", color: "#854d0e", borderColor: "#fde047" },
-  disetujui: { background: "#dcfce7", color: "#166534", borderColor: "#86efac" },
-  ditolak: { background: "#fee2e2", color: "#b91c1c", borderColor: "#fca5a5" },
-  proses: { background: "#e0f2fe", color: "#0369a1", borderColor: "#7dd3fc" },
-  selesai: { background: "#d4f0eb", color: "#0e7c6b", borderColor: "#6ee7b7" },
+  diajukan: {
+    background: "var(--warning-soft)",
+    color: "var(--warning)",
+    borderColor: "transparent",
+  },
+  disetujui: {
+    background: "var(--success-soft)",
+    color: "var(--success)",
+    borderColor: "transparent",
+  },
+  ditolak: {
+    background: "var(--danger-soft)",
+    color: "var(--danger)",
+    borderColor: "transparent",
+  },
+  proses: {
+    background: "var(--info-soft)",
+    color: "var(--info)",
+    borderColor: "transparent",
+  },
+  selesai: {
+    background: "var(--primary-soft)",
+    color: "var(--primary)",
+    borderColor: "transparent",
+  },
 };
 
 /* ── Gaya sel (GAS .usulan-tbl input/select/textarea) ── */
 
 const CELL: CSSProperties = {
   padding: "8px 10px",
-  borderBottom: "1px solid #f3f4f6",
+  borderBottom: "1px solid var(--border)",
   verticalAlign: "top",
 };
 
 const FIELD: CSSProperties = {
   width: "100%",
   fontFamily: "inherit",
-  fontSize: 12,
+  fontSize: 12.5,
   padding: "5px 8px",
   borderRadius: 6,
-  border: "1.5px solid #e5e7eb",
-  background: "#fff",
-  color: "#111827",
+  border: "1px solid var(--border)",
+  background: "var(--surface)",
+  color: "var(--foreground)",
   outline: "none",
 };
 
 const TINTED_SELECT: CSSProperties = {
   ...FIELD,
-  fontWeight: 700,
+  fontWeight: 600,
   cursor: "pointer",
 };
 
@@ -195,46 +227,73 @@ function exportCsv(rows: UsulanRow[], roomName: string) {
 
 /* ── Kartu ringkasan (GAS .usum-card, updateUsulanStats ~22164) ── */
 
+type SummaryTone = "violet" | "danger" | "warning" | "info" | "success";
+
+const SUMMARY_TONE: Record<SummaryTone, { fg: string; bg: string; tile: string }> = {
+  violet: {
+    fg: "var(--violet)",
+    bg: "var(--surface)",
+    tile: "var(--violet2)",
+  },
+  danger: { fg: "var(--danger)", bg: "var(--surface)", tile: "var(--danger-soft)" },
+  warning: { fg: "var(--warning)", bg: "var(--surface)", tile: "var(--warning-soft)" },
+  info: { fg: "var(--info)", bg: "var(--surface)", tile: "var(--info-soft)" },
+  success: { fg: "var(--success)", bg: "var(--surface)", tile: "var(--success-soft)" },
+};
+
 function SummaryCard({
-  icon,
+  tone,
   value,
   label,
-  bg,
-  color,
 }: {
-  icon: string;
+  tone: SummaryTone;
   value: number;
   label: string;
-  bg: string;
-  color: string;
 }) {
+  const t = SUMMARY_TONE[tone];
   return (
     <div
       style={{
         flex: 1,
         minWidth: 120,
-        padding: "10px 14px",
-        borderRadius: 10,
-        border: "1px solid #ede9fe",
+        padding: "9px 13px",
+        borderRadius: "var(--radius-sm)",
+        border: "1px solid var(--border)",
         display: "flex",
         alignItems: "center",
-        gap: 10,
-        background: bg,
+        gap: 9,
+        background: t.bg,
       }}
     >
-      <div style={{ fontSize: 20 }} aria-hidden>
-        {icon}
-      </div>
+      <span
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
+          background: t.tile,
+          flexShrink: 0,
+        }}
+        aria-hidden
+      />
       <div>
-        <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1, color }}>
+        <div
+          style={{
+            fontSize: 18,
+            fontWeight: 600,
+            lineHeight: 1,
+            color: "var(--foreground)",
+            fontFamily: "var(--font-jetbrains-mono)",
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
           {value}
         </div>
         <div
           style={{
-            fontSize: "10.5px",
-            color: "#6b7280",
+            fontSize: "11px",
+            color: "var(--text-3)",
             fontWeight: 600,
-            marginTop: 2,
+            marginTop: 3,
           }}
         >
           {label}
@@ -319,8 +378,8 @@ export function RoomUsulanSection({
     <div
       style={{
         marginTop: 28,
-        borderRadius: "var(--r, 10px)",
-        border: "2px solid #7c3aed22",
+        borderRadius: "var(--radius-md)",
+        border: "1px solid var(--border)",
         overflow: "hidden",
       }}
     >
@@ -331,44 +390,45 @@ export function RoomUsulanSection({
           display: "flex",
           alignItems: "center",
           gap: 10,
-          padding: "11px 18px",
-          background: "linear-gradient(135deg, #4c1d9510, #7c3aed15)",
-          borderBottom: collapsed ? "none" : "1px solid #7c3aed22",
+          padding: "10px 16px",
+          background: "var(--surface)",
+          borderBottom: collapsed ? "none" : "1px solid var(--border)",
           cursor: "pointer",
           userSelect: "none",
         }}
       >
         <span
           style={{
-            width: 10,
-            height: 10,
+            width: 8,
+            height: 8,
             borderRadius: "50%",
-            background: "#7c3aed",
+            background: "var(--violet)",
             flexShrink: 0,
           }}
+          aria-hidden
         />
 
         <span
           style={{
-            fontSize: 12,
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "0.8px",
-            color: "#7c3aed",
+            fontSize: 13,
+            fontWeight: 600,
+            color: "var(--foreground)",
           }}
         >
-          📋 Usulan Sarana Prasarana &amp; Alkes
+          Usulan Sarana Prasarana &amp; Alkes
         </span>
 
         <span
           style={{
             fontSize: 11,
-            color: "#6d28d9",
-            padding: "2px 9px",
-            borderRadius: 10,
-            background: "#ede9fe",
-            fontWeight: 700,
-            marginLeft: 6,
+            color: "var(--text-3)",
+            padding: "2px 8px",
+            borderRadius: "var(--radius-sm)",
+            border: "1px solid var(--border)",
+            background: "var(--surface)",
+            fontWeight: 600,
+            marginLeft: 4,
+            fontVariantNumeric: "tabular-nums",
           }}
         >
           {total} usulan
@@ -379,11 +439,12 @@ export function RoomUsulanSection({
           style={{
             marginLeft: "auto",
             fontSize: 11,
-            fontWeight: 700,
-            padding: "2px 10px",
-            borderRadius: 20,
-            background: mendesak > 0 ? "#b91c1c" : "#7c3aed",
-            color: "#fff",
+            fontWeight: 600,
+            padding: "2px 8px",
+            borderRadius: "var(--radius-sm)",
+            background: mendesak > 0 ? "var(--danger-soft)" : "var(--surface-muted)",
+            color: mendesak > 0 ? "var(--danger)" : "var(--text-3)",
+            fontVariantNumeric: "tabular-nums",
           }}
         >
           {mendesak} mendesak
@@ -392,20 +453,19 @@ export function RoomUsulanSection({
         <span
           style={{
             fontSize: 11,
-            color: "#7c3aed",
+            color: "var(--text-3)",
             marginLeft: 6,
             transition: "transform 0.2s",
             transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)",
             display: "inline-block",
           }}
         >
-          ▼
         </span>
       </div>
 
       {/* ── Body (GAS .usulan-body) ── */}
       {!collapsed && (
-        <div style={{ background: "#fff", padding: "16px 18px" }}>
+        <div style={{ background: "var(--surface)", padding: "14px 16px" }}>
           {total > 0 && (
             <>
               {/* Ringkasan 5 kartu */}
@@ -417,41 +477,11 @@ export function RoomUsulanSection({
                   marginBottom: 14,
                 }}
               >
-                <SummaryCard
-                  icon="📋"
-                  value={total}
-                  label="Total Usulan"
-                  bg="#f5f3ff"
-                  color="#7c3aed"
-                />
-                <SummaryCard
-                  icon="🔴"
-                  value={mendesak}
-                  label="Mendesak"
-                  bg="#fef2f2"
-                  color="#b91c1c"
-                />
-                <SummaryCard
-                  icon="🟡"
-                  value={penting}
-                  label="Penting"
-                  bg="#fffbeb"
-                  color="#92400e"
-                />
-                <SummaryCard
-                  icon="🔵"
-                  value={rencana}
-                  label="Rencana"
-                  bg="#eff6ff"
-                  color="#1e40af"
-                />
-                <SummaryCard
-                  icon="✅"
-                  value={disetujui}
-                  label="Disetujui"
-                  bg="#dcfce7"
-                  color="#166534"
-                />
+                <SummaryCard tone="violet" value={total} label="Total Usulan" />
+                <SummaryCard tone="danger" value={mendesak} label="Mendesak" />
+                <SummaryCard tone="warning" value={penting} label="Penting" />
+                <SummaryCard tone="info" value={rencana} label="Rencana" />
+                <SummaryCard tone="success" value={disetujui} label="Disetujui" />
               </div>
 
               {/* ── Toolbar (GAS .usulan-toolbar) ── */}
@@ -473,16 +503,16 @@ export function RoomUsulanSection({
                       type="button"
                       onClick={() => setActiveFilter(btn.key)}
                       style={{
-                        padding: "5px 13px",
-                        borderRadius: 20,
-                        border: `1.5px solid ${isActive ? "#7c3aed" : "#e5e7eb"}`,
-                        background: isActive ? "#7c3aed" : "#fff",
-                        color: isActive ? "#fff" : "#374151",
-                        fontSize: "11.5px",
+                        padding: "5px 12px",
+                        borderRadius: "var(--radius-sm)",
+                        border: `1px solid ${isActive ? "transparent" : "var(--border)"}`,
+                        background: isActive ? "var(--primary)" : "var(--surface)",
+                        color: isActive ? "var(--primary-foreground)" : "var(--text-2)",
+                        fontSize: "12px",
                         fontWeight: 600,
                         cursor: "pointer",
                         fontFamily: "inherit",
-                        transition: "0.15s",
+                        transition: "background-color 0.15s, color 0.15s",
                       }}
                     >
                       {btn.label}
@@ -495,18 +525,18 @@ export function RoomUsulanSection({
                   onClick={() => exportCsv(filtered, roomName)}
                   style={{
                     marginLeft: "auto",
-                    padding: "5px 13px",
-                    borderRadius: 8,
-                    border: "1.5px solid #7c3aed44",
-                    background: "#ede9fe",
-                    color: "#6d28d9",
-                    fontSize: "11.5px",
-                    fontWeight: 700,
+                    padding: "5px 12px",
+                    borderRadius: "var(--radius-sm)",
+                    border: "1px solid var(--border)",
+                    background: "var(--surface)",
+                    color: "var(--foreground)",
+                    fontSize: "12px",
+                    fontWeight: 600,
                     cursor: "pointer",
                     fontFamily: "inherit",
                   }}
                 >
-                  ⬇ Export CSV
+                  Export CSV
                 </button>
               </div>
 
@@ -515,7 +545,7 @@ export function RoomUsulanSection({
                 style={{
                   overflowX: "auto",
                   borderRadius: "var(--r2, 8px)",
-                  border: "1px solid #e5e7eb",
+                  border: "1px solid var(--border)",
                   marginBottom: 12,
                 }}
               >
@@ -527,7 +557,7 @@ export function RoomUsulanSection({
                   }}
                 >
                   <thead>
-                    <tr style={{ background: "#f5f3ff" }}>
+                    <tr style={{ background: "var(--surface-muted)" }}>
                       {(
                         [
                           ["No", 34, "center"],
@@ -550,11 +580,11 @@ export function RoomUsulanSection({
                             padding: "9px 10px",
                             textAlign: align,
                             fontSize: 11,
-                            fontWeight: 700,
-                            color: "#6d28d9",
+                            fontWeight: 600,
+                            color: "var(--text-3)",
                             textTransform: "uppercase",
-                            letterSpacing: "0.5px",
-                            borderBottom: "2px solid #ddd6fe",
+                            letterSpacing: "0.04em",
+                            borderBottom: "1px solid var(--border)",
                             whiteSpace: "nowrap",
                             minWidth: minW,
                           }}
@@ -571,8 +601,8 @@ export function RoomUsulanSection({
                           style={{
                             ...CELL,
                             textAlign: "center",
-                            fontWeight: 700,
-                            color: "#7c3aed",
+                            fontWeight: 600,
+                            color: "var(--text-3)",
                             fontSize: 12,
                           }}
                         >
@@ -731,7 +761,7 @@ export function RoomUsulanSection({
                           style={{
                             ...CELL,
                             fontSize: 12,
-                            color: "#6b7280",
+                            color: "var(--text-2)",
                             whiteSpace: "nowrap",
                           }}
                         >
@@ -748,9 +778,9 @@ export function RoomUsulanSection({
                               width: 24,
                               height: 24,
                               borderRadius: 6,
-                              border: "1px solid #fca5a5",
-                              background: "#fee2e2",
-                              color: "#b91c1c",
+                              border: "1px solid transparent",
+                              background: "transparent",
+                              color: "var(--text-3)",
                               fontSize: 12,
                               fontWeight: 700,
                               cursor: "pointer",
@@ -760,7 +790,6 @@ export function RoomUsulanSection({
                               lineHeight: 1,
                             }}
                           >
-                            ✕
                           </button>
                         </td>
                       </tr>
@@ -773,7 +802,7 @@ export function RoomUsulanSection({
                           style={{
                             padding: "24px 10px",
                             textAlign: "center",
-                            color: "#9ca3af",
+                            color: "var(--text-3)",
                             fontSize: 13,
                           }}
                         >
@@ -793,14 +822,11 @@ export function RoomUsulanSection({
               style={{
                 textAlign: "center",
                 padding: "32px 0",
-                color: "#9ca3af",
+                color: "var(--text-3)",
               }}
             >
-              <div style={{ fontSize: 32, marginBottom: 8 }} aria-hidden>
-                📋
-              </div>
               <div>Belum ada usulan untuk ruangan ini.</div>
-              <div style={{ fontSize: 12, color: "#c4b5fd", marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 4 }}>
                 Klik tombol di bawah untuk menambahkan usulan.
               </div>
             </div>
@@ -814,17 +840,16 @@ export function RoomUsulanSection({
             style={{
               width: "100%",
               padding: "10px 18px",
-              borderRadius: 10,
-              border: "1.5px dashed #c4b5fd",
-              background: "#faf5ff",
-              color: "#6d28d9",
-              fontSize: 12,
-              fontWeight: 700,
+              borderRadius: "var(--radius-sm)",
+              border: "1px dashed var(--border)",
+              background: "var(--surface)",
+              color: "var(--text-2)",
+              fontSize: 12.5,
+              fontWeight: 600,
               fontFamily: "inherit",
               cursor: "pointer",
             }}
-          >
-            ＋ Tambah Usulan Baru
+         > Tambah Usulan Baru
           </button>
         </div>
       )}
@@ -838,19 +863,19 @@ export function RoomUsulanSection({
       >
         <div
           style={{
-            padding: "18px 22px",
-            background: "linear-gradient(135deg, #4c1d95, #7c3aed)",
-            color: "#fff",
+            padding: "14px 20px",
+            borderBottom: "1px solid var(--border)",
+            background: "var(--surface)",
           }}
         >
-          <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}>
-            🗑 Hapus Usulan
+          <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.2, color: "var(--foreground)" }}>
+            Hapus Usulan
           </div>
-          <div style={{ fontSize: 11, opacity: 0.75, marginTop: 3 }}>
+          <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 3 }}>
             {roomName}
           </div>
         </div>
-        <div style={{ padding: "18px 22px", fontSize: 13, color: "#374151" }}>
+        <div style={{ padding: "16px 20px", fontSize: 13, color: "var(--text-2)" }}>
           Hapus <strong>{pendingDelete?.nama || "usulan ini"}</strong> dari
           daftar usulan? Tindakan ini tidak dapat dibatalkan.
         </div>
@@ -859,22 +884,23 @@ export function RoomUsulanSection({
             display: "flex",
             justifyContent: "flex-end",
             gap: 8,
-            padding: "14px 22px",
-            borderTop: "1px solid #ede9fe",
-            background: "#faf5ff",
+            padding: "12px 20px",
+            borderTop: "1px solid var(--border)",
+            background: "var(--surface-subtle)",
           }}
         >
           <button
             type="button"
             onClick={() => setPendingDelete(null)}
             style={{
-              padding: "9px 16px",
-              borderRadius: 10,
-              border: "1.5px solid #e5e7eb",
-              background: "#fff",
-              color: "#374151",
-              fontSize: 12,
-              fontWeight: 700,
+              height: 36,
+              padding: "0 16px",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--border)",
+              background: "var(--surface)",
+              color: "var(--foreground)",
+              fontSize: 13,
+              fontWeight: 600,
               fontFamily: "inherit",
               cursor: "pointer",
             }}
@@ -885,18 +911,19 @@ export function RoomUsulanSection({
             type="button"
             onClick={confirmDelete}
             style={{
-              padding: "9px 22px",
-              borderRadius: 10,
+              height: 36,
+              padding: "0 16px",
+              borderRadius: "var(--radius-sm)",
               border: "none",
-              background: "#b91c1c",
+              background: "var(--danger)",
               color: "#fff",
               fontSize: 13,
-              fontWeight: 800,
+              fontWeight: 600,
               fontFamily: "inherit",
               cursor: "pointer",
             }}
           >
-            ✕ Hapus
+            Hapus
           </button>
         </div>
       </Dialog>

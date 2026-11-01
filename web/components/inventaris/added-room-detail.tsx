@@ -8,6 +8,7 @@
  */
 
 import Link from "next/link";
+import { ArrowLeft, DoorOpen } from "@phosphor-icons/react";
 import { RoomDetailInteractive } from "@/components/inventaris/room-detail-interactive";
 import { RoomUsulanSection } from "@/components/inventaris/room-usulan-section";
 import {
@@ -48,7 +49,7 @@ export function AddedRoomDetail({
   if (!mounted) {
     return (
       <div className="container mx-auto py-6">
-        <div className="rounded-lg border border-line bg-white px-6 py-10 text-center text-[13px] text-ink3">
+        <div className="rounded-md border border-border bg-surface px-6 py-10 text-center text-[13px] text-text-3">
           Memuat ruangan…
         </div>
       </div>
@@ -58,22 +59,26 @@ export function AddedRoomDetail({
   if (!room) {
     return (
       <div className="container mx-auto py-6">
-        <div className="rounded-lg border border-line bg-white px-6 py-12 text-center">
-          <div className="text-[34px] leading-none" aria-hidden>
-            🏚️
-          </div>
-          <h1 className="mt-3 text-base font-extrabold text-ink">
+        <div className="rounded-md border border-border bg-surface px-6 py-12 text-center">
+          <span
+            className="mx-auto mb-3 flex size-11 items-center justify-center rounded-md bg-surface-muted text-text-3"
+            aria-hidden
+          >
+            <DoorOpen size={22} />
+          </span>
+          <h1 className="text-[15px] font-semibold text-foreground">
             Ruangan tidak ditemukan
           </h1>
-          <p className="mx-auto mt-1 max-w-[420px] text-[12.5px] text-ink3">
+          <p className="mx-auto mt-1 max-w-[42ch] text-[13px] leading-relaxed text-text-3">
             Ruangan ini mungkin sudah dihapus, atau ditambahkan di peramban
             lain — data ruangan tambahan masih tersimpan lokal.
           </p>
           <Link
             href="/inventaris"
-            className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-br from-teal2 to-teal px-5 py-[9px] text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(14,124,107,0.3)] transition-all duration-[180ms] hover:-translate-y-px hover:shadow-[0_6px_18px_rgba(14,124,107,0.4)]"
+            className="mt-5 inline-flex h-9 items-center justify-center gap-2 rounded-sm border border-border bg-surface px-4 text-[13px] font-semibold text-foreground transition-colors duration-150 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
           >
-            ← Kembali ke Inventaris
+            <ArrowLeft size={15} aria-hidden className="text-text-3" />
+            Kembali ke Inventaris
           </Link>
         </div>
       </div>

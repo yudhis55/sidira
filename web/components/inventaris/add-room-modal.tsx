@@ -1,13 +1,13 @@
-"use client";
+﻿"use client";
 
 /**
- * Modal Tambah Ruangan — port GAS `#modalOverlay` / `submitTambahRuangan`
- * (index.html 8609–8654, 19575–19636).
+ * Modal Tambah Ruangan â€” port GAS `#modalOverlay` / `submitTambahRuangan`
+ * (index.html 8609â€“8654, 19575â€“19636).
  */
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Button } from "@/components/gas/button";
+import { Plus } from "@phosphor-icons/react";
 import { Modal } from "@/components/gas/modal";
 import {
   EmojiGrid,
@@ -17,8 +17,8 @@ import {
 } from "@/components/gas/emoji-picker";
 import { createRoom } from "@/lib/auth/rooms";
 
-/** GAS membuka modal dengan ikon 🏠 terpilih. */
-const DEFAULT_ICON = "🏠";
+/** GAS membuka modal dengan ikon ðŸ  terpilih. */
+const DEFAULT_ICON = "ðŸ ";
 
 interface AddRoomModalProps {
   open: boolean;
@@ -59,7 +59,7 @@ export function AddRoomModal({ open, onClose, onCreated }: AddRoomModalProps) {
       toast.error(typeof res.error === "string" ? res.error : "Gagal menyimpan");
       return;
     }
-    // id = slug nama (lihat createRoom) — samakan agar langsung dibuka.
+    // id = slug nama (lihat createRoom) â€” samakan agar langsung dibuka.
     const slug = nama.toLowerCase().replace(/\s+/g, "-");
     toast.success(`Ruangan "${nama}" berhasil ditambahkan`);
     onClose();
@@ -72,24 +72,28 @@ export function AddRoomModal({ open, onClose, onCreated }: AddRoomModalProps) {
     <Modal
       open={open}
       onClose={onClose}
-      headVariant="gas"
       size="md"
       icon={icon}
       title="Tambah Ruangan Baru"
       subtitle="Isi informasi ruangan yang akan ditambahkan"
       footer={
         <>
-          <Button type="button" variant="modal-cancel" onClick={onClose}>
-            Batal
-          </Button>
-          <Button
+          <button
             type="button"
-            variant="modal-ok"
+            onClick={onClose}
+            className="inline-flex h-9 items-center justify-center rounded-sm border border-border bg-surface px-4 text-[13px] font-semibold text-foreground transition-colors duration-150 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
             onClick={submit}
             disabled={saving}
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-sm bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 disabled:pointer-events-none disabled:opacity-50"
           >
-            {saving ? "Menyimpan…" : "＋ Tambah Ruangan"}
-          </Button>
+            <Plus size={15} weight="bold" aria-hidden />
+            {saving ? "Menyimpanâ€¦" : "Tambah Ruangan"}
+          </button>
         </>
       }
     >
@@ -117,7 +121,7 @@ export function AddRoomModal({ open, onClose, onCreated }: AddRoomModalProps) {
           onKeyDown={(e) => {
             if (e.key === "Enter") submit();
           }}
-          className={`${MODAL_INPUT_CLASS} ${invalid ? "border-red" : ""}`}
+          className={`${MODAL_INPUT_CLASS} ${invalid ? "border-danger focus:border-danger" : ""}`}
         />
       </ModalField>
 

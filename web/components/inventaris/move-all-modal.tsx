@@ -10,6 +10,16 @@
  */
 import * as React from "react";
 import { Dialog } from "@/components/gas/dialog";
+import {
+  ArrowsLeftRight,
+  Chair,
+  Check,
+  DesktopTower,
+  MagnifyingGlass,
+  Package,
+  Stethoscope,
+  X,
+} from "@phosphor-icons/react";
 import type { Item, ItemCategory, Room } from "@/types/database";
 
 export interface MoveAllModalProps {
@@ -29,18 +39,21 @@ export interface MoveAllModalProps {
   ) => void;
 }
 
-const KAT_ICON: Record<ItemCategory, string> = {
-  alkes: "🩺",
-  meubelair: "🪑",
-  elektronik: "💻",
-  lainnya: "📦",
+const KAT_ICON: Record<
+  ItemCategory,
+  React.ComponentType<{ size?: number; "aria-hidden"?: boolean }>
+> = {
+  alkes: Stethoscope,
+  meubelair: Chair,
+  elektronik: DesktopTower,
+  lainnya: Package,
 };
 
-const KAT_BG: Record<ItemCategory, string> = {
-  alkes: "#ccfbf1",
-  meubelair: "#fef3c7",
-  elektronik: "#dbeafe",
-  lainnya: "#f3f4f6",
+const KAT_TILE: Record<ItemCategory, string> = {
+  alkes: "bg-primary-soft text-primary",
+  meubelair: "bg-warning-soft text-warning",
+  elektronik: "bg-info-soft text-info",
+  lainnya: "bg-surface-muted text-text-2",
 };
 
 const KAT_LABEL: Record<ItemCategory, string> = {
@@ -52,10 +65,10 @@ const KAT_LABEL: Record<ItemCategory, string> = {
 
 const KAT_CHIPS: { value: "all" | ItemCategory; label: string }[] = [
   { value: "all", label: "Semua" },
-  { value: "alkes", label: "🩺 Alkes" },
-  { value: "meubelair", label: "🪑 Meubelair" },
-  { value: "elektronik", label: "💻 Elektronik" },
-  { value: "lainnya", label: "📦 Lainnya" },
+  { value: "alkes", label: "Alkes" },
+  { value: "meubelair", label: "Meubelair" },
+  { value: "elektronik", label: "Elektronik" },
+  { value: "lainnya", label: "Lainnya" },
 ];
 
 function itemMeta(item: Item): string {
@@ -149,88 +162,95 @@ export function MoveAllModal({
 
   return (
     <Dialog open={open} onClose={onClose} size="md" zIndex={3500}>
-      {/* Head — GAS .mv-modal-head */}
-      <div
-        className="flex shrink-0 items-center justify-between px-[22px] py-[18px] text-white"
-        style={{ background: "linear-gradient(135deg, #1e3a5f, #1d4ed8)" }}
-      >
-        <div className="min-w-0">
-          <div className="text-base font-extrabold leading-tight">
-            ↗ Pindah Item ke Ruangan Lain
+      {/* Head — netral berbatas; tidak ada gradasi. */}
+      <div className="flex shrink-0 items-center gap-3 border-b border-border px-5 py-3.5">
+        <span
+          className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-primary-soft text-primary"
+          aria-hidden
+        >
+          <ArrowsLeftRight size={16} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[15px] font-semibold leading-tight text-foreground">
+            Pindah Item ke Ruangan Lain
           </div>
-          <div className="mt-[3px] truncate text-[11px] opacity-75">
-            Pilih item dari {fromRoom.icon} {fromRoom.name} —{" "}
-            {namedItems.length} item tersedia
+          <div className="mt-0.5 truncate text-[12px] text-text-3">
+            Pilih item dari {fromRoom.icon} {fromRoom.name} · {namedItems.length}{" "}
+            item tersedia
           </div>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="ml-3 shrink-0 rounded-lg border-[1.5px] border-white/30 bg-white/15 px-3.5 py-1.5 text-xs font-bold text-white transition-colors hover:bg-white/28"
+          aria-label="Tutup"
+          className="inline-flex size-8 shrink-0 items-center justify-center rounded-sm text-text-3 transition-colors duration-150 hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
         >
-          ✕ Tutup
+          <X size={16} aria-hidden />
         </button>
       </div>
 
       {/* Body — GAS .mv-modal-body */}
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
         {/* Daftar centang item — GAS #mvaList */}
-        <div className="rounded-xl border-[1.5px] border-[#bfdbfe] bg-[#eff6ff] p-3">
+        <div className="rounded-md border border-border bg-surface-subtle p-3">
           <div className="flex flex-wrap items-center gap-2">
-            <label className="flex cursor-pointer items-center gap-2 text-[12px] font-extrabold text-[#1d4ed8]">
+            <label className="flex cursor-pointer items-center gap-2 text-[12px] font-semibold text-foreground">
               <input
                 type="checkbox"
                 checked={allVisibleChecked}
                 onChange={toggleAll}
-                className="size-4 cursor-pointer accent-[#1d4ed8]"
+                className="size-4 cursor-pointer accent-[var(--primary)]"
               />
               Pilih Semua
             </label>
-            <span className="rounded-full bg-[#dbeafe] px-2.5 py-[3px] text-[11px] font-bold text-[#1d4ed8]">
+            <span className="rounded-sm border border-border bg-surface px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-text-2">
               {selectedCount} dipilih
             </span>
-            <input
-              type="text"
-              value={itemQ}
-              onChange={(e) => setItemQ(e.target.value)}
-              placeholder="🔍 Cari item..."
-              className="ml-auto min-w-0 flex-1 rounded-lg border-[1.5px] border-[#bfdbfe] bg-white px-2.5 py-1 text-[12px] text-ink outline-none placeholder:text-ink3 focus:border-[#1d4ed8] sm:max-w-[180px]"
-            />
+            <div className="ml-auto flex h-8 min-w-0 flex-1 items-center gap-1.5 rounded-sm border border-border bg-surface px-2 transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-ring/20 sm:max-w-[200px]">
+              <MagnifyingGlass size={13} className="shrink-0 text-text-3" aria-hidden />
+              <input
+                type="text"
+                value={itemQ}
+                onChange={(e) => setItemQ(e.target.value)}
+                placeholder="Cari item..."
+                className="min-w-0 flex-1 border-none bg-transparent text-[12px] text-foreground outline-none placeholder:text-text-3"
+              />
+            </div>
           </div>
 
-          <div className="mt-2.5 max-h-[180px] overflow-y-auto rounded-lg border border-[#bfdbfe] bg-white">
+          <div className="mt-2.5 max-h-[180px] overflow-y-auto rounded-sm border border-border bg-surface">
             {visibleItems.length === 0 ? (
-              <div className="px-3 py-6 text-center text-[12px] text-ink3">
+              <div className="px-3 py-6 text-center text-[12px] text-text-3">
                 Tidak ada item yang cocok
               </div>
             ) : (
               visibleItems.map((item) => {
                 const kat = item.category;
                 const meta = itemMeta(item);
+                const KatIcon = KAT_ICON[kat];
                 return (
                   <label
                     key={item.id}
-                    className="flex cursor-pointer items-center gap-2.5 border-b border-line px-2.5 py-[7px] last:border-b-0 hover:bg-[#f8faff]"
+                    className="flex cursor-pointer items-center gap-2.5 border-b border-border px-2.5 py-2 transition-colors duration-150 last:border-b-0 hover:bg-surface-muted"
                   >
                     <input
                       type="checkbox"
                       checked={selectedSet.has(item.id)}
                       onChange={() => toggleItem(item.id)}
-                      className="size-4 shrink-0 cursor-pointer accent-[#1d4ed8]"
+                      className="size-4 shrink-0 cursor-pointer accent-[var(--primary)]"
                     />
                     <span
-                      className="flex size-7 shrink-0 items-center justify-center rounded-lg text-sm"
-                      style={{ background: KAT_BG[kat] }}
+                      className={`flex size-7 shrink-0 items-center justify-center rounded-sm ${KAT_TILE[kat]}`}
                       aria-hidden
                     >
-                      {KAT_ICON[kat]}
+                      <KatIcon size={14} />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[12.5px] font-bold text-ink">
+                      <span className="block truncate text-[12.5px] font-semibold text-foreground">
                         {item.name || "(tanpa nama)"}
                       </span>
                       {meta ? (
-                        <span className="block truncate text-[10.5px] text-ink3">
+                        <span className="block truncate text-[11px] text-text-3">
                           {meta}
                         </span>
                       ) : null}
@@ -243,22 +263,20 @@ export function MoveAllModal({
         </div>
 
         {/* Cari ruangan tujuan — GAS #mvSearchInput */}
-        <div className="flex items-center gap-2 rounded-[10px] border-[1.5px] border-line bg-bg px-3.5 py-2 transition-[border-color] focus-within:border-[#1d4ed8]">
-          <span className="text-sm text-ink3" aria-hidden>
-            🔍
-          </span>
+        <div className="flex h-9 items-center gap-2 rounded-sm border border-border bg-surface px-3 transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-ring/20">
+          <MagnifyingGlass size={14} className="shrink-0 text-text-3" aria-hidden />
           <input
             type="text"
             value={roomQ}
             onChange={(e) => setRoomQ(e.target.value)}
             placeholder="Cari ruangan tujuan..."
-            className="min-w-0 flex-1 border-none bg-transparent text-[13px] text-ink outline-none placeholder:text-ink3"
+            className="min-w-0 flex-1 border-none bg-transparent text-[13px] text-foreground outline-none placeholder:text-text-3"
           />
         </div>
 
         {/* Chip kategori tujuan — GAS mvSetKat */}
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-bold text-ink3">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-3">
             Kategori tujuan:
           </span>
           {KAT_CHIPS.map((chip) => {
@@ -268,11 +286,12 @@ export function MoveAllModal({
                 key={chip.value}
                 type="button"
                 onClick={() => setFilterKat(chip.value)}
-                className={
+                aria-pressed={on}
+                className={`rounded-sm border px-2.5 py-1 text-[11px] font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 ${
                   on
-                    ? "rounded-2xl border-[1.5px] border-[#1d4ed8] bg-[#1d4ed8] px-3 py-1 text-[11px] font-bold text-white transition-colors"
-                    : "rounded-2xl border-[1.5px] border-line bg-white px-3 py-1 text-[11px] font-bold text-ink3 transition-colors hover:border-[#1d4ed8] hover:text-[#1d4ed8]"
-                }
+                    ? "border-transparent bg-primary text-primary-foreground"
+                    : "border-border bg-surface text-text-2 hover:bg-surface-muted hover:text-foreground"
+                }`}
               >
                 {chip.label}
               </button>
@@ -283,8 +302,9 @@ export function MoveAllModal({
         {/* Daftar ruangan — GAS mvRenderRooms */}
         <div className="flex min-h-[160px] flex-col gap-1.5">
           {filteredRooms.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-ink3">
-              Tidak ada ruangan yang cocok
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+              <MagnifyingGlass size={22} aria-hidden className="text-text-3" />
+              <p className="text-[13px] text-text-3">Tidak ada ruangan yang cocok</p>
             </div>
           ) : (
             filteredRooms.map((r) => {
@@ -294,29 +314,36 @@ export function MoveAllModal({
                   key={r.id}
                   type="button"
                   onClick={() => setDestRoomId(r.id)}
-                  className={
+                  aria-pressed={selected}
+                  className={`flex w-full items-center gap-3 rounded-sm border px-3.5 py-2.5 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 ${
                     selected
-                      ? "flex w-full items-center gap-3 rounded-[10px] border-[1.5px] border-[#1d4ed8] bg-[#dbeafe] px-3.5 py-2.5 text-left shadow-[0_0_0_3px_rgba(29,78,216,0.15)] transition-all"
-                      : "flex w-full items-center gap-3 rounded-[10px] border-[1.5px] border-line bg-white px-3.5 py-2.5 text-left transition-all hover:translate-x-[3px] hover:border-[#1d4ed8] hover:bg-[#eff6ff]"
-                  }
+                      ? "border-primary bg-primary-soft"
+                      : "border-border bg-surface hover:bg-surface-muted"
+                  }`}
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-bg text-[22px]">
+                  <div
+                    className="flex size-9 shrink-0 items-center justify-center rounded-sm bg-surface-muted text-[18px] leading-none"
+                    aria-hidden
+                  >
                     {r.icon || "🏠"}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-[13px] font-bold text-ink">
+                    <div className="text-[13px] font-semibold text-foreground">
                       {r.name}
                     </div>
                     {r.description ? (
-                      <div className="mt-px text-[11px] text-ink3">
+                      <div className="mt-px line-clamp-1 text-[11px] text-text-3">
                         {r.description}
                       </div>
                     ) : null}
                   </div>
                   {selected ? (
-                    <span className="shrink-0 text-lg text-[#1d4ed8]" aria-hidden>
-                      ✓
-                    </span>
+                    <Check
+                      size={15}
+                      weight="bold"
+                      aria-hidden
+                      className="shrink-0 text-primary"
+                    />
                   ) : null}
                 </button>
               );
@@ -327,35 +354,40 @@ export function MoveAllModal({
 
       {/* Footer — GAS #mvFooter, muncul setelah tujuan dipilih */}
       {destRoom ? (
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2.5 border-t border-line bg-[#f8faff] px-5 py-3.5">
-          <div className="flex min-w-0 items-center gap-1.5 text-[13px] font-bold text-[#1d4ed8]">
-            <span className="text-lg" aria-hidden>
-              {destRoom.icon || "🏠"}
-            </span>
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2.5 border-t border-border bg-surface-subtle px-5 py-3.5">
+          <div className="flex min-w-0 items-center gap-1.5 text-[13px] text-text-2">
+            <span aria-hidden>{destRoom.icon || "🏠"}</span>
             <span className="min-w-0">
-              Pindah ke <b>{destRoom.name}</b>
-              {"  ·  "}
-              Kategori: <b>{destKat ? KAT_LABEL[destKat] : "ikut asal item"}</b>
-              {"  ·  "}
-              <b>{selectedCount}</b> item dipilih
+              Pindah ke{" "}
+              <b className="font-semibold text-foreground">{destRoom.name}</b>
+              {" · "}
+              Kategori:{" "}
+              <b className="font-semibold text-foreground">
+                {destKat ? KAT_LABEL[destKat] : "ikut asal item"}
+              </b>
+              {" · "}
+              <b className="font-mono tabular-nums text-foreground">
+                {selectedCount}
+              </b>{" "}
+              item dipilih
             </span>
           </div>
-          <div className="flex shrink-0 gap-2">
+          <div className="ml-auto flex shrink-0 gap-2">
             <button
               type="button"
               onClick={() => setDestRoomId(null)}
-              className="rounded-[10px] border-[1.5px] border-line bg-white px-4 py-2 text-xs font-bold text-ink2 transition-colors hover:border-[#1d4ed8] hover:text-[#1d4ed8]"
+              className="inline-flex h-9 items-center justify-center rounded-sm border border-border bg-surface px-4 text-[13px] font-semibold text-foreground transition-colors duration-150 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
             >
-              ← Pilih Lain
+              Pilih Lain
             </button>
             <button
               type="button"
               onClick={handleConfirm}
               disabled={selectedCount === 0}
-              className="rounded-[10px] border-none px-[22px] py-2 text-[13px] font-extrabold text-white shadow-[0_4px_12px_rgba(29,78,216,0.3)] transition-[filter] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-              style={{ background: "linear-gradient(135deg, #1e3a5f, #1d4ed8)" }}
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-sm bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 disabled:pointer-events-none disabled:opacity-50"
             >
-              ✅ Pindahkan Sekarang
+              <Check size={15} weight="bold" aria-hidden />
+              Pindahkan Sekarang
             </button>
           </div>
         </div>

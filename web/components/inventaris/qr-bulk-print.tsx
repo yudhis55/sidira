@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowLeft, Printer } from "@phosphor-icons/react";
 import { QRCodeSVG } from "qrcode.react";
 import { useIsClient } from "@/lib/use-is-client";
 
@@ -20,33 +21,38 @@ export function QrBulkPrint({ rooms }: { rooms: QrBulkRoom[] }) {
     : "";
 
   return (
-    <div className="min-h-screen bg-neutral-100">
+    <div className="min-h-screen bg-background">
       <style>{`@page { size: A4; margin: 10mm; }`}</style>
 
       {/* Toolbar layar — disembunyikan saat print */}
-      <div className="qr-bulk-toolbar sticky top-0 z-10 border-b border-neutral-200 bg-white print:hidden">
+      <div className="qr-bulk-toolbar sticky top-0 z-10 border-b border-border bg-surface print:hidden">
         <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-2 px-4 py-3">
           <Link
             href="/inventaris"
-            className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-sm border border-border bg-surface px-4 text-[13px] font-semibold text-foreground transition-colors duration-150 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
           >
-            ← Kembali
+            <ArrowLeft size={15} aria-hidden className="text-text-3" />
+            Kembali
           </Link>
-          <h1 className="ml-1 text-sm font-bold text-neutral-900">
-            Cetak QR Ruangan ({rooms.length})
+          <h1 className="ml-1 text-[15px] font-semibold text-foreground">
+            Cetak QR Ruangan
+            <span className="ml-1.5 font-mono text-[13px] tabular-nums text-text-3">
+              ({rooms.length})
+            </span>
           </h1>
           <button
             type="button"
             onClick={() => window.print()}
-            className="ml-auto rounded-md bg-teal-700 px-4 py-1.5 text-sm font-bold text-white hover:bg-teal-800"
+            className="ml-auto inline-flex h-9 items-center justify-center gap-2 rounded-sm bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
           >
-            🖨️ Cetak Semua
+            <Printer size={15} aria-hidden />
+            Cetak Semua
           </button>
         </div>
       </div>
 
       <div className="mx-auto w-full max-w-5xl px-4 pb-16 pt-6 print:max-w-none print:p-0">
-        <p className="mb-4 text-center text-sm text-neutral-500 print:hidden">
+        <p className="mb-4 text-center text-[13px] text-text-3 print:hidden">
           Satu kartu per halaman saat dicetak. Tempelkan di pintu tiap ruangan.
         </p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 print:block print:space-y-0">
