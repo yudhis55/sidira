@@ -17,7 +17,7 @@ export function CeklistHariIni({
     return (
       <WidgetCard
         title="Ceklist Hari Ini"
-        action={<WidgetLink href="/checklist" label="Buka ceklist →" />}
+        action={<WidgetLink href="/checklist" label="Buka ceklist" />}
       >
         <WidgetEmpty message="Belum ada ruangan ber-item untuk diceklist." />
       </WidgetCard>
@@ -29,21 +29,17 @@ export function CeklistHariIni({
   return (
     <WidgetCard
       title="Ceklist Hari Ini"
-      action={<WidgetLink href="/checklist" label="Buka ceklist →" />}
+      action={<WidgetLink href="/checklist" label="Buka ceklist" />}
     >
-      <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
+      <div className="flex items-baseline gap-2">
         <span
-          style={{
-            fontFamily: "var(--font-mono), 'JetBrains Mono', monospace",
-            fontWeight: 800,
-            fontSize: "28px",
-            lineHeight: 1.1,
-            color: pct === 100 ? "var(--teal)" : "var(--ink)",
-          }}
+          className={`font-mono text-[28px] font-bold leading-none tabular-nums ${
+            pct === 100 ? "text-success" : "text-foreground"
+          }`}
         >
           {pct}%
         </span>
-        <span style={{ fontSize: "12px", color: "var(--ink3)" }}>
+        <span className="text-[12px] text-text-2">
           {checked} dari {total} ruangan · {todayLabel}
         </span>
       </div>
@@ -53,29 +49,19 @@ export function CeklistHariIni({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label={`${checked} dari ${total} ruangan sudah ceklist hari ini`}
-        style={{
-          height: "6px",
-          borderRadius: "6px",
-          background: "var(--line)",
-          marginTop: "10px",
-          overflow: "hidden",
-        }}
+        className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-surface-subtle"
       >
         <div
-          style={{
-            height: "100%",
-            width: `${pct}%`,
-            borderRadius: "6px",
-            background: pct === 100 ? "var(--teal)" : "var(--amber)",
-          }}
+          className="h-full rounded-full bg-primary"
+          style={{ width: `${pct}%` }}
         />
       </div>
       {checked < total ? (
-        <p style={{ fontSize: "12px", color: "var(--ink3)", margin: "10px 0 0" }}>
+        <p className="mt-2.5 text-[12px] text-text-3">
           {total - checked} ruangan belum diceklist hari ini.
         </p>
       ) : (
-        <p style={{ fontSize: "12px", color: "var(--teal)", margin: "10px 0 0", fontWeight: 600 }}>
+        <p className="mt-2.5 text-[12px] font-medium text-success">
           Semua ruangan sudah diceklist hari ini.
         </p>
       )}

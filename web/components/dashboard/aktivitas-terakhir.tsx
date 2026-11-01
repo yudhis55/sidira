@@ -1,3 +1,4 @@
+import { ArrowsLeftRightIcon, ReceiptIcon } from "@phosphor-icons/react/ssr";
 import { WidgetCard, WidgetEmpty, WidgetLink } from "./widget-card";
 
 export interface AktivitasRow {
@@ -31,71 +32,41 @@ export function AktivitasTerakhir({ rows }: { rows: AktivitasRow[] }) {
   return (
     <WidgetCard
       title="Aktivitas Terakhir"
-      action={<WidgetLink href="/riwayat" label="Lihat riwayat →" />}
+      action={<WidgetLink href="/riwayat" label="Lihat riwayat" />}
     >
       {rows.length === 0 ? (
         <WidgetEmpty message="Belum ada aktivitas tercatat." />
       ) : (
-        <ul
-          style={{
-            listStyle: "none",
-            margin: 0,
-            padding: 0,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          {rows.map((row) => (
-            <li
-              key={row.key}
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: "10px",
-                padding: "7px 4px",
-                borderBottom: "1px solid var(--line)",
-              }}
-            >
-              <span
-                aria-hidden="true"
-                style={{
-                  width: "28px",
-                  height: "28px",
-                  borderRadius: "8px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "14px",
-                  flexShrink: 0,
-                  background:
-                    row.kind === "pindah" ? "var(--blue2)" : "var(--teal3)",
-                }}
+        <ul className="m-0 flex list-none flex-col p-0">
+          {rows.map((row) => {
+            const pindah = row.kind === "pindah";
+            const Icon = pindah ? ArrowsLeftRightIcon : ReceiptIcon;
+            return (
+              <li
+                key={row.key}
+                className="flex items-start gap-2.5 border-b border-border py-2.5 last:border-b-0"
               >
-                {row.kind === "pindah" ? "⇄" : "🧾"}
-              </span>
-              <span style={{ flex: 1, minWidth: 0 }}>
                 <span
-                  style={{
-                    display: "block",
-                    fontSize: "12.5px",
-                    color: "var(--ink)",
-                  }}
+                  aria-hidden="true"
+                  className={`flex size-7 shrink-0 items-center justify-center rounded-md ${
+                    pindah
+                      ? "bg-primary-soft text-primary"
+                      : "bg-info-soft text-info"
+                  }`}
                 >
-                  {row.text}
+                  <Icon size={15} weight="bold" />
                 </span>
-                <span
-                  style={{
-                    display: "block",
-                    fontSize: "11px",
-                    color: "var(--ink3)",
-                    marginTop: "2px",
-                  }}
-                >
-                  {formatRelatif(row.ts)}
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13px] text-foreground">
+                    {row.text}
+                  </span>
+                  <span className="mt-0.5 block text-[11px] text-text-3">
+                    {formatRelatif(row.ts)}
+                  </span>
                 </span>
-              </span>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </WidgetCard>

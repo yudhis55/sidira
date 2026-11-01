@@ -1,21 +1,20 @@
 /**
  * Shared design-system primitives for SIDIRA.
- * Adapted from GAS legacy layout patterns:
- *  - PageHeader (emoji icon + title + subtitle + right-side stat ring)
- *  - StatChip / StatRing (small stat block)
+ *
+ *  - PageHeader (icon tile + title + subtitle + right-side stat chips)
+ *  - StatChip (small stat block)
  *  - LegendBar (kategori + prioritas legend)
  *  - Toolbar (page-actions wrapper)
  *  - FilterChips (pill filter switcher)
  *
- * Colors come from custom CSS vars (--teal, --amber, etc.) defined in globals.css,
- * so non-shadcn components (badges, swatches) match the GAS palette exactly.
+ * Uses the semantic tokens defined in app/globals.css. Legacy GAS vars are
+ * still mapped there so untouched module pages keep rendering correctly.
  */
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /* ───────────────────────────────────────────────
- * StatChip / StatRing — small stat block (📦 12 Total Item)
- * GAS .gstat equivalent.
+ * StatChip — small stat block (📦 12 Total Item)
  * ─────────────────────────────────────────────── */
 export interface StatChipProps {
   icon?: React.ReactNode;
@@ -28,21 +27,21 @@ export interface StatChipProps {
 }
 
 const TONE_BG: Record<NonNullable<StatChipProps["tone"]>, string> = {
-  teal: "bg-[var(--teal3)]",
-  amber: "bg-[var(--amber2)]",
-  blue: "bg-[var(--blue2)]",
-  red: "bg-[var(--red2)]",
+  teal: "bg-primary-soft",
+  amber: "bg-warning-soft",
+  blue: "bg-info-soft",
+  red: "bg-danger-soft",
   violet: "bg-[var(--violet2)]",
-  slate: "bg-[var(--slate2)]",
+  slate: "bg-surface-muted",
 };
 
 const TONE_FG: Record<NonNullable<StatChipProps["tone"]>, string> = {
-  teal: "text-[var(--teal)]",
-  amber: "text-[var(--amber)]",
-  blue: "text-[var(--blue)]",
-  red: "text-[var(--red)]",
+  teal: "text-primary",
+  amber: "text-warning",
+  blue: "text-info",
+  red: "text-danger",
   violet: "text-[var(--violet)]",
-  slate: "text-[var(--slate)]",
+  slate: "text-text-2",
 };
 
 export function StatChip({
@@ -58,8 +57,9 @@ export function StatChip({
       {icon ? (
         <div
           className={cn(
-            "flex size-10 items-center justify-center text-lg leading-none",
-            TONE_BG[tone]
+            "flex size-10 items-center justify-center rounded-md text-lg leading-none",
+            TONE_BG[tone],
+            TONE_FG[tone]
           )}
         >
           {icon}
@@ -68,14 +68,14 @@ export function StatChip({
       <div className="min-w-0">
         <div
           className={cn(
-            "font-mono text-lg font-bold leading-none",
+            "font-mono text-[20px] font-semibold leading-none tracking-tight",
             TONE_FG[tone],
             valueClassName
           )}
         >
           {value}
         </div>
-        <div className="mt-1 text-xs text-muted-foreground">{label}</div>
+        <div className="mt-1 text-[12px] text-text-3">{label}</div>
       </div>
     </div>
   );
@@ -83,8 +83,6 @@ export function StatChip({
 
 /* ───────────────────────────────────────────────
  * PageHeader — baku tiap modul.
- * GAS panel header pattern: big emoji icon + title + subtitle,
- * with an optional right-side stats row.
  * ─────────────────────────────────────────────── */
 export interface PageHeaderStat {
   value: React.ReactNode;
@@ -114,40 +112,35 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between",
+        "flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between",
         className
       )}
     >
-      <div className="flex items-center gap-3">
-        <div className="flex size-11 items-center justify-center bg-[var(--teal3)] text-2xl leading-none">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary-soft text-[20px] leading-none text-primary">
           {icon}
         </div>
         <div className="min-w-0">
-          <h1 className="font-mono text-xl font-bold tracking-tight">{title}</h1>
+          <h1 className="text-balance text-[20px] font-semibold leading-tight tracking-[-0.01em] text-foreground">
+            {title}
+          </h1>
           {subtitle ? (
-            <p className="text-xs text-muted-foreground">{subtitle}</p>
+            <p className="mt-0.5 text-[13px] leading-snug text-text-3">{subtitle}</p>
           ) : null}
         </div>
       </div>
 
       {(stats?.length || actions) && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {stats?.map((s, i) => (
             <div
               key={i}
-              className="ring-1 ring-border px-3 py-1.5 text-right"
+              className="min-w-[64px] rounded-sm border border-border bg-surface px-3 py-1.5 text-right"
             >
-              <div
-                className={cn(
-                  "font-mono text-lg font-bold leading-none",
-                  s.tone ? TONE_FG[s.tone] : "text-foreground"
-                )}
-              >
+              <div className="font-mono text-[16px] font-semibold leading-none tracking-tight text-foreground">
                 {s.value}
               </div>
-              <div className="mt-1 text-[10px] text-muted-foreground">
-                {s.label}
-              </div>
+              <div className="mt-1 text-[11px] leading-none text-text-3">{s.label}</div>
             </div>
           ))}
           {actions}
@@ -159,7 +152,6 @@ export function PageHeader({
 
 /* ───────────────────────────────────────────────
  * Toolbar — page-actions wrapper (GAS .page-actions).
- * Holds primary action buttons (Export CSV, Simpan, Tambah, etc.)
  * ─────────────────────────────────────────────── */
 export function Toolbar({
   children,
@@ -191,22 +183,22 @@ const KAT_LEGEND = [
 ];
 
 const PRIO_LEGEND = [
-  { label: "Wajib", className: "bg-[#fef3c7] text-[#92400e]" },
-  { label: "Penting", className: "bg-[var(--blue2)] text-[var(--blue)]" },
-  { label: "Pendukung", className: "bg-[var(--slate2)] text-[var(--slate)]" },
+  { label: "Wajib", className: "bg-warning-soft text-warning" },
+  { label: "Penting", className: "bg-info-soft text-info" },
+  { label: "Pendukung", className: "bg-surface-muted text-text-2" },
 ];
 
 export function LegendBar({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-x-4 gap-y-2 rounded-none border border-border bg-card px-4 py-2.5 text-xs",
+        "flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-border bg-surface px-4 py-2.5 text-[12px]",
         className
       )}
     >
-      <span className="mr-1 font-bold text-ink2">Keterangan:</span>
+      <span className="mr-1 font-semibold text-text-2">Keterangan:</span>
       {KAT_LEGEND.map((k) => (
-        <span key={k.label} className="inline-flex items-center gap-1.5 text-ink3">
+        <span key={k.label} className="inline-flex items-center gap-1.5 text-text-2">
           <span
             className="size-2.5 rounded-full"
             style={{ backgroundColor: k.color }}
@@ -214,11 +206,14 @@ export function LegendBar({ className }: { className?: string }) {
           {k.label}
         </span>
       ))}
-      <span className="ml-auto flex items-center gap-2">
+      <span className="ml-auto flex flex-wrap items-center gap-2">
         {PRIO_LEGEND.map((p) => (
           <span
             key={p.label}
-            className={cn("rounded-[20px] px-[9px] py-[3px] text-[10.5px] font-bold whitespace-nowrap", p.className)}
+            className={cn(
+              "rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap",
+              p.className
+            )}
           >
             {p.label}
           </span>
@@ -257,10 +252,10 @@ export function FilterChips({
             type="button"
             onClick={() => onPick(c.key)}
             className={cn(
-              "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+              "rounded-full border px-3 py-1 text-[12px] font-semibold transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring/35",
               on
-                ? "border-transparent bg-[var(--teal)] text-white"
-                : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "border-transparent bg-primary text-primary-foreground"
+                : "border-border bg-surface text-text-2 hover:bg-surface-muted hover:text-foreground"
             )}
             aria-pressed={on}
           >
@@ -273,13 +268,13 @@ export function FilterChips({
 }
 
 /* ───────────────────────────────────────────────
- * CategoryBadge / PriorityBadge — colored pills.
+ * CategoryBadge / PriorityBadge — colored pills (data).
  * ─────────────────────────────────────────────── */
 const KAT_BADGE: Record<string, string> = {
-  alkes: "bg-[var(--red2)] text-[var(--red)]",
-  meubelair: "bg-[var(--amber2)] text-[var(--amber)]",
-  elektronik: "bg-[var(--blue2)] text-[var(--blue)]",
-  lainnya: "bg-[var(--slate2)] text-[var(--slate)]",
+  alkes: "bg-danger-soft text-danger",
+  meubelair: "bg-warning-soft text-warning",
+  elektronik: "bg-info-soft text-info",
+  lainnya: "bg-surface-muted text-text-2",
 };
 
 export function CategoryBadge({
@@ -305,9 +300,9 @@ export function CategoryBadge({
 }
 
 const PRIO_BADGE: Record<string, string> = {
-  wajib: "bg-[var(--amber2)] text-[var(--amber)]",
-  penting: "bg-[var(--blue2)] text-[var(--blue)]",
-  pendukung: "bg-[var(--slate2)] text-[var(--slate)]",
+  wajib: "bg-warning-soft text-warning",
+  penting: "bg-info-soft text-info",
+  pendukung: "bg-surface-muted text-text-2",
 };
 
 export function PriorityBadge({
@@ -333,20 +328,20 @@ export function PriorityBadge({
 }
 
 /* ───────────────────────────────────────────────
- * KondisiBadge — condition display with icon + tone.
+ * KondisiBadge — condition display with tone.
  * ─────────────────────────────────────────────── */
 const KONDISI_STYLE: Record<string, string> = {
-  baik: "bg-[var(--teal3)] text-[var(--teal)]",
-  rr: "bg-[var(--amber2)] text-[var(--amber)]",
-  rb: "bg-[var(--red2)] text-[var(--red)]",
-  ta: "bg-[var(--slate2)] text-[var(--slate)]",
+  baik: "bg-success-soft text-success",
+  rr: "bg-warning-soft text-warning",
+  rb: "bg-danger-soft text-danger",
+  ta: "bg-surface-muted text-text-2",
 };
 
 const KONDISI_LABEL: Record<string, string> = {
-  baik: "✅ Baik",
-  rr: "⚠️ Rusak Ringan",
-  rb: "🔴 Rusak Berat",
-  ta: "— Tidak Ada",
+  baik: "Baik",
+  rr: "Rusak Ringan",
+  rb: "Rusak Berat",
+  ta: "Tidak Ada",
 };
 
 export function KondisiBadge({

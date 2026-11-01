@@ -18,17 +18,18 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(
-          "inline-flex items-center justify-center rounded-md font-semibold text-[13px] transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50",
+          "inline-flex items-center justify-center rounded-sm border border-transparent font-semibold text-[13px] transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring/35 disabled:pointer-events-none disabled:opacity-50",
           {
-            "bg-teal text-white px-[18px] py-[10px] hover:opacity-92": variant === "primary",
-            "bg-transparent border border-line text-ink hover:bg-line2": variant === "ghost",
-            // GAS .btn-modal-cancel — putih bergaris, bukan abu solid.
-            "rounded-lg border-[1.5px] border-line bg-white text-ink2 px-5 py-[9px] font-bold hover:border-ink3":
+            "bg-primary px-[18px] py-[10px] text-primary-foreground hover:bg-primary/90":
+              variant === "primary",
+            "border-border bg-transparent text-foreground hover:bg-surface-muted":
+              variant === "ghost",
+            "border-border bg-surface px-5 py-[9px] font-semibold text-text-2 hover:bg-surface-muted hover:text-foreground":
               variant === "modal-cancel",
-            // GAS .btn-modal-ok — gradasi teal + bayangan, terangkat saat hover.
-            "rounded-lg border-none bg-gradient-to-br from-teal2 to-teal text-white px-[22px] py-[9px] font-bold shadow-[0_4px_12px_rgba(14,124,107,0.3)] transition-all duration-[180ms] hover:-translate-y-px hover:shadow-[0_6px_18px_rgba(14,124,107,0.4)]":
+            "bg-primary px-[22px] py-[9px] font-semibold text-primary-foreground hover:bg-primary/90":
               variant === "modal-ok",
           },
+          size ? sizeClasses[size] : null,
           className
         )}
         {...props}

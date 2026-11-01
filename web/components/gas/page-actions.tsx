@@ -1,6 +1,15 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import type { ReactNode } from "react";
+import {
+  ArrowsLeftRight,
+  ChartBar,
+  ClipboardText,
+  DownloadSimple,
+  FileText,
+  FloppyDisk,
+  Printer,
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
 export interface PageActionsProps {
@@ -18,27 +27,33 @@ export interface PageActionsProps {
   className?: string;
 }
 
-const btnBase: CSSProperties = {
-  padding: "10px 18px",
-  borderRadius: "var(--r2)",
-  fontFamily: "inherit",
-  fontSize: "13px",
-  fontWeight: 700,
-  cursor: "pointer",
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "7px",
-  transition: "all 0.18s",
-};
+/** Tombol sekunder: putih, border 1px, hover permukaan lembut. */
+function SecondaryButton({
+  onClick,
+  icon,
+  children,
+}: {
+  onClick: () => void;
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex h-9 items-center justify-center gap-2 rounded-sm border border-border bg-surface px-4 text-[13px] font-semibold text-foreground transition-colors duration-150 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 max-md:w-full"
+    >
+      <span aria-hidden className="text-text-3">
+        {icon}
+      </span>
+      {children}
+    </button>
+  );
+}
 
 /**
- * GAS `.page-actions` toolbar — full 7-button set.
- * Optional handlers keep older call sites backward-compatible.
- *
- * Density match GAS:
- * - gap 10px, justify flex-end
- * - margin-top 28px, padding-top 20px, border-top 1px var(--line)
- * - btn: padding 10px 22px, font 13px/700, gap 7px, radius var(--r2)
+ * Toolbar aksi halaman. Satu aksi primer (teal solid) — sisanya sekunder.
+ * Ikon Phosphor (bukan emoji), tanpa gradient/shadow.
  */
 export function PageActions({
   onOpenLaporan,
@@ -55,126 +70,70 @@ export function PageActions({
   return (
     <div
       className={cn(
-        // Desktop: rata kanan biasa. Layar kecil: tombol jadi full-width
-        // tersusun vertikal supaya 7 tombol Muat tidak meluber keluar layar.
-        "page-actions flex flex-wrap justify-end gap-[10px] max-md:flex-col max-md:items-stretch",
-        className,
+        "page-actions flex flex-wrap justify-end gap-2.5 max-md:flex-col max-md:items-stretch",
+        className
       )}
-      style={{
-        display: "flex",
-        gap: "10px",
-        justifyContent: "flex-end",
-        ...(withDivider
+      style={
+        withDivider
           ? {
               marginTop: "28px",
               paddingTop: "20px",
-              borderTop: "1px solid var(--line)",
+              borderTop: "1px solid var(--border)",
             }
-          : {}),
-      }}
+          : undefined
+      }
     >
-      <button
-        type="button"
-        onClick={onOpenLaporan}
-        style={{
-          ...btnBase,
-          border: "none",
-          background: "linear-gradient(135deg, #7c3aed, #a855f7)",
-          color: "#fff",
-        }}
-        className="max-md:w-full max-md:justify-center"
-      >
-        📄 Laporan Monitoring
-      </button>
+      <SecondaryButton onClick={onOpenLaporan} icon={<FileText size={15} />}>
+        Laporan Monitoring
+      </SecondaryButton>
+
       {onOpenRekap && (
-        <button
-          type="button"
-          onClick={onOpenRekap}
-          className="max-md:w-full max-md:justify-center"
-          style={{
-            ...btnBase,
-            border: "none",
-            background: "linear-gradient(135deg, #1d4ed8, #3b82f6)",
-            color: "#fff",
-          }}
-        >
-          📊 Rekap Kondisi Sarana & Alkes
-        </button>
+        <SecondaryButton onClick={onOpenRekap} icon={<ChartBar size={15} />}>
+          Rekap Kondisi Sarana &amp; Alkes
+        </SecondaryButton>
       )}
+
       {onPrint && (
-        <button
-          type="button"
-          onClick={onPrint}
-          className="max-md:w-full max-md:justify-center"
-          style={{
-            ...btnBase,
-            background: "#fff",
-            border: "1.5px solid var(--line)",
-            color: "var(--ink2)",
-          }}
-        >
-          🖨️ Cetak
-        </button>
+        <SecondaryButton onClick={onPrint} icon={<Printer size={15} />}>
+          Cetak
+        </SecondaryButton>
       )}
+
       {showRiwayat && (
-        <button
-          type="button"
+        <SecondaryButton
           onClick={onOpenRiwayat}
-          className="max-md:w-full max-md:justify-center"
-          style={{
-            ...btnBase,
-            background: "#fff",
-            border: "1.5px solid var(--line)",
-            color: "var(--ink2)",
-          }}
+          icon={<ArrowsLeftRight size={15} />}
         >
-          📦 Riwayat Pindah
-        </button>
+          Riwayat Pindah
+        </SecondaryButton>
       )}
+
       {onExportUsulan && (
-        <button
-          type="button"
+        <SecondaryButton
           onClick={onExportUsulan}
-          className="max-md:w-full max-md:justify-center"
-          style={{
-            ...btnBase,
-            background: "#fff",
-            border: "1.5px solid var(--line)",
-            color: "var(--ink2)",
-          }}
+          icon={<ClipboardText size={15} />}
         >
-          📋 Export Rekap Usulan
-        </button>
+          Export Rekap Usulan
+        </SecondaryButton>
       )}
+
       {onExportCsv && (
-        <button
-          type="button"
+        <SecondaryButton
           onClick={onExportCsv}
-          className="max-md:w-full max-md:justify-center"
-          style={{
-            ...btnBase,
-            background: "#fff",
-            border: "1.5px solid var(--line)",
-            color: "var(--ink2)",
-          }}
+          icon={<DownloadSimple size={15} />}
         >
-          📥 Export CSV
-        </button>
+          Export CSV
+        </SecondaryButton>
       )}
+
       {onSimpan && (
         <button
           type="button"
           onClick={onSimpan}
-          className="max-md:w-full max-md:justify-center"
-          style={{
-            ...btnBase,
-            border: "none",
-            background: "linear-gradient(135deg, var(--teal2), var(--teal))",
-            color: "#fff",
-            boxShadow: "0 4px 12px rgba(14, 124, 107, 0.28)",
-          }}
+          className="inline-flex h-9 items-center justify-center gap-2 rounded-sm bg-primary px-5 text-[13px] font-semibold text-primary-foreground transition-colors duration-150 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 max-md:w-full"
         >
-          💾 Simpan Data
+          <FloppyDisk size={15} aria-hidden />
+          Simpan Data
         </button>
       )}
     </div>

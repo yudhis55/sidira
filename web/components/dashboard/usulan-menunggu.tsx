@@ -11,10 +11,10 @@ export interface UsulanMenungguRow {
   satuan: string;
 }
 
-const PRIORITAS_STYLE: Record<UsulanPrioritas, { bg: string; color: string }> = {
-  mendesak: { bg: "#fef3c7", color: "#92400e" },
-  penting: { bg: "var(--blue2)", color: "var(--blue)" },
-  rencana: { bg: "var(--slate2)", color: "var(--slate)" },
+const PRIORITAS_CLASS: Record<UsulanPrioritas, string> = {
+  mendesak: "bg-danger-soft text-danger",
+  penting: "bg-warning-soft text-warning",
+  rencana: "bg-surface-muted text-text-2",
 };
 
 /**
@@ -31,93 +31,39 @@ export function UsulanMenunggu({
     <WidgetCard
       title="Usulan Menunggu"
       action={
-        hasMore ? (
-          <WidgetLink href="/usulan" label="Lihat semua →" />
-        ) : undefined
+        hasMore ? <WidgetLink href="/usulan" label="Lihat semua" /> : undefined
       }
     >
       {rows.length === 0 ? (
         <WidgetEmpty message="Tidak ada usulan menunggu." />
       ) : (
-        <ul
-          style={{
-            listStyle: "none",
-            margin: 0,
-            padding: 0,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          {rows.map((row, i) => {
-            const style = PRIORITAS_STYLE[row.prioritas];
-            return (
-              <li
-                key={`${row.usulanId}-${i}`}
-                style={{
-                  padding: "7px 4px",
-                  borderBottom: "1px solid var(--line)",
-                }}
+        <ul className="m-0 flex list-none flex-col p-0">
+          {rows.map((row, i) => (
+            <li
+              key={`${row.usulanId}-${i}`}
+              className="border-b border-border last:border-b-0"
+            >
+              <a
+                href={`/usulan/${row.usulanId}`}
+                aria-label={`Usulan ${row.nama} dari ${row.roomName}, prioritas ${row.prioritas}`}
+                className="block py-2.5 text-inherit no-underline"
               >
-                <a
-                  href={`/usulan/${row.usulanId}`}
-                  aria-label={`Usulan ${row.nama} dari ${row.roomName}, prioritas ${row.prioritas}`}
-                  style={{
-                    textDecoration: "none",
-                    color: "inherit",
-                    display: "block",
-                  }}
-                >
+                <span className="flex items-center gap-2">
                   <span
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
+                    className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${PRIORITAS_CLASS[row.prioritas]}`}
                   >
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        padding: "2px 8px",
-                        borderRadius: "20px",
-                        fontSize: "10.5px",
-                        fontWeight: 700,
-                        whiteSpace: "nowrap",
-                        background: style.bg,
-                        color: style.color,
-                      }}
-                    >
-                      {USULAN_PRIORITAS_LABELS[row.prioritas]}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "12.5px",
-                        fontWeight: 600,
-                        color: "var(--ink)",
-                        flex: 1,
-                        minWidth: 0,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {row.nama} × {row.qty} {row.satuan}
-                    </span>
+                    {USULAN_PRIORITAS_LABELS[row.prioritas]}
                   </span>
-                  <span
-                    style={{
-                      display: "block",
-                      fontSize: "11.5px",
-                      color: "var(--ink3)",
-                      marginTop: "3px",
-                    }}
-                  >
-                    {row.roomName}
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
+                    {row.nama} × {row.qty} {row.satuan}
                   </span>
-                </a>
-              </li>
-            );
-          })}
+                </span>
+                <span className="mt-0.5 block text-[11px] text-text-3">
+                  {row.roomName}
+                </span>
+              </a>
+            </li>
+          ))}
         </ul>
       )}
     </WidgetCard>

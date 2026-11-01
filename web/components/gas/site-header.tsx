@@ -1,10 +1,18 @@
 "use client";
 
 import * as React from "react";
+import {
+  CalendarBlank,
+  CaretDown,
+  Check,
+  List,
+  SignOut,
+} from "@phosphor-icons/react";
 import { GlobalSearchBar } from "@/components/gas/global-search-bar";
 import { logout } from "@/lib/auth/actions";
 import { AVAILABLE_YEARS, useActiveYear } from "@/lib/year-store";
 import { useNavUi } from "@/lib/nav-ui-store";
+import { cn } from "@/lib/utils";
 
 export interface SiteHeaderProfile {
   nama: string;
@@ -43,79 +51,54 @@ function YearChip() {
   }, [open]);
 
   return (
-    <div ref={wrapRef} className="sh-chip" style={{ position: "relative" }}>
+    <div ref={wrapRef} className="relative shrink-0">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
         title="Ganti tahun inventaris aktif"
-        style={{
-          borderRadius: "20px",
-          background: "rgba(255,255,255,0.09)",
-          border: "1px solid rgba(255,255,255,0.16)",
-          padding: "4px 12px",
-          fontSize: "10.5px",
-          color: "rgba(255,255,255,0.7)",
-          fontWeight: 600,
-          whiteSpace: "nowrap",
-          cursor: "pointer",
-          fontFamily: "inherit",
-        }}
+        className="inline-flex h-8 items-center gap-1.5 rounded-sm border border-border bg-surface px-2.5 text-[12px] font-medium text-text-2 transition-colors duration-150 outline-none hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-ring/35"
       >
-        📅 KIR {year} — Aktif ▾
+        <CalendarBlank size={15} aria-hidden="true" />
+        <span>
+          <span className="hidden sm:inline">KIR </span>
+          <span className="font-mono text-[12px] font-semibold text-foreground">{year}</span>
+        </span>
+        <CaretDown size={11} aria-hidden="true" className="text-text-3" />
       </button>
       {open && (
         <div
           role="listbox"
           aria-label="Pilih tahun inventaris"
-          style={{
-            position: "absolute",
-            right: 0,
-            top: "calc(100% + 6px)",
-            minWidth: "132px",
-            background: "#0a3d32",
-            border: "1px solid rgba(255,255,255,0.16)",
-            borderRadius: "10px",
-            padding: "4px",
-            zIndex: 200,
-            boxShadow: "0 12px 32px rgba(0,0,0,0.35)",
-          }}
+          className="absolute right-0 top-[calc(100%+6px)] z-[60] min-w-[148px] rounded-lg border border-border bg-surface p-1 shadow-[0_12px_32px_rgba(15,23,42,0.12)]"
         >
-          {AVAILABLE_YEARS.map((y) => (
-            <button
-              key={y}
-              type="button"
-              role="option"
-              aria-selected={y === year}
-              onClick={() => {
-                setYear(y);
-                setOpen(false);
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                width: "100%",
-                padding: "7px 10px",
-                borderRadius: "7px",
-                border: "none",
-                background:
-                  y === year ? "rgba(32,224,160,0.15)" : "transparent",
-                color: y === year ? "#5fffc8" : "rgba(255,255,255,0.75)",
-                fontSize: "12px",
-                fontWeight: y === year ? 800 : 500,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                textAlign: "left",
-              }}
-            >
-              <span style={{ width: "14px", flexShrink: 0 }}>
-                {y === year ? "✓" : ""}
-              </span>
-              KIR {y}
-            </button>
-          ))}
+          {AVAILABLE_YEARS.map((y) => {
+            const active = y === year;
+            return (
+              <button
+                key={y}
+                type="button"
+                role="option"
+                aria-selected={active}
+                onClick={() => {
+                  setYear(y);
+                  setOpen(false);
+                }}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-sm px-2.5 py-1.5 text-left text-[12px] transition-colors",
+                  active
+                    ? "bg-primary-soft font-semibold text-primary"
+                    : "font-medium text-text-2 hover:bg-surface-muted hover:text-foreground"
+                )}
+              >
+                <span className="flex w-3.5 shrink-0 justify-center">
+                  {active ? <Check size={12} weight="bold" aria-hidden="true" /> : null}
+                </span>
+                KIR {y}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -123,11 +106,8 @@ function YearChip() {
 }
 
 /**
- * Topbar ramping SIDIRA — pengganti hero header.
- * Sticky ~60px di atas kolom konten saja (sidebar kiri full-height terpisah):
- * hamburger, search global, chip tahun, avatar + keluar. Logo "SIDIRA" kini
- * hidup di slot teratas sidebar (lihat RoomNav). Gradien gelap dipertahankan
- * untuk kontinuitas brand.
+ * Topbar ramping SIDIRA — 60px, sticky di atas kolom konten saja.
+ * Hamburger, search global, chip tahun, avatar + popover keluar.
  */
 export function SiteHeader({ profile }: SiteHeaderProps) {
   const toggleCollapsed = useNavUi((s) => s.toggleCollapsed);
@@ -135,11 +115,11 @@ export function SiteHeader({ profile }: SiteHeaderProps) {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const accountRef = React.useRef<HTMLDivElement | null>(null);
 
-  // Tanpa profil (belum login / fallback) tampilkan akun default GAS
-  // agar tidak ada pergeseran layout.
+  // Tanpa profil (belum login / fallback) tampilkan akun default.
   const nama = profile?.nama ?? "Administrator SIDIRA";
   const jabatan = profile?.jabatan ?? "Admin Sistem";
-  const avatar = profile?.avatar ?? nama.charAt(0).toUpperCase();
+  // Inisial dari nama — emoji avatar (data lama) tidak dipakai sebagai ikon UI.
+  const avatar = nama.trim().charAt(0).toUpperCase();
 
   // Popover akun: tutup saat klik di luar atau tekan Escape.
   React.useEffect(() => {
@@ -179,79 +159,28 @@ export function SiteHeader({ profile }: SiteHeaderProps) {
   };
 
   return (
-    <header
-      className="text-white"
-      style={{
-        background:
-          "linear-gradient(150deg, #062820 0%, #0a3d32 35%, #0e6654 75%, #12876e 100%)",
-        position: "sticky",
-        top: 0,
-        zIndex: 50,
-        minHeight: "60px",
-      }}
-    >
-      <style>{`
-@media (max-width: 767.98px) {
-  .sh-usermeta { display: none !important; }
-}
-`}</style>
-      <div
-        className="sh-topbar"
-        style={{
-          maxWidth: "1200px",
-          margin: "0 auto",
-          padding: "8px 16px",
-          minHeight: "60px",
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          flexWrap: "wrap",
-        }}
-      >
+    <header className="sticky top-0 z-50 h-[60px] border-b border-border bg-surface">
+      <div className="mx-auto flex h-full w-full max-w-[1280px] items-center gap-2 px-3 sm:px-4 md:gap-3">
         {/* ── Hamburger ── */}
         <button
           type="button"
           aria-label="Buka/tutup navigasi"
           onClick={handleHamburger}
-          style={{
-            flexShrink: 0,
-            width: 36,
-            height: 36,
-            borderRadius: 9,
-            border: "1px solid rgba(255,255,255,0.25)",
-            background: "rgba(255,255,255,0.08)",
-            color: "#fff",
-            fontSize: 17,
-            lineHeight: 1,
-            cursor: "pointer",
-          }}
+          className="flex size-9 shrink-0 items-center justify-center rounded-sm border border-border bg-surface text-text-2 transition-colors duration-150 outline-none hover:bg-surface-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/35"
         >
-          ☰
+          <List size={18} />
         </button>
 
-        {/* ── Search global — flex-1, baris kedua full-width di mobile ── */}
-        <div
-          className="sh-search"
-          style={{ flex: "1 1 200px", minWidth: 0, maxWidth: "480px" }}
-        >
+        {/* ── Search global ── */}
+        <div className="min-w-0 max-w-[460px] flex-1">
           <GlobalSearchBar />
         </div>
 
-        {/* ── Kanan: chip tahun + user ── */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            marginLeft: "auto",
-            flexShrink: 0,
-            minWidth: 0,
-          }}
-        >
+        {/* ── Kanan: chip tahun + akun ── */}
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           <YearChip />
 
-          {/* ── Blok akun: klik → popover identitas + keluar ── */}
-          <div ref={accountRef} style={{ position: "relative", flexShrink: 0 }}>
+          <div ref={accountRef} className="relative shrink-0">
             <button
               type="button"
               aria-haspopup="menu"
@@ -262,183 +191,67 @@ export function SiteHeader({ profile }: SiteHeaderProps) {
                 setMenuOpen((v) => !v);
                 setConfirmingLogout(false);
               }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "9px",
-                background: menuOpen
-                  ? "rgba(255,255,255,0.14)"
-                  : "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(255,255,255,0.22)",
-                borderRadius: "10px",
-                padding: "4px 10px 4px 4px",
-                color: "#fff",
-                cursor: "pointer",
-                transition: "background 0.15s",
-                minHeight: 0,
-              }}
+              className={cn(
+                "flex h-9 items-center gap-2 rounded-sm border border-border px-1.5 pr-2 text-foreground transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring/35",
+                menuOpen ? "bg-surface-muted" : "bg-surface hover:bg-surface-muted"
+              )}
             >
               <span
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "50%",
-                  background: "linear-gradient(135deg, #14a98f, #0e7c6b)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: 800,
-                  fontSize: "13px",
-                  color: "#ffffff",
-                  flexShrink: 0,
-                }}
                 aria-hidden
+                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[12px] font-semibold text-primary"
               >
                 {avatar}
               </span>
-              <span
-                className="sh-usermeta"
-                style={{
-                  fontWeight: 700,
-                  fontSize: "12px",
-                  lineHeight: 1.2,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  maxWidth: "140px",
-                  display: "block",
-                }}
-              >
+              <span className="hidden max-w-[140px] truncate text-[12px] font-semibold md:block">
                 {nama}
               </span>
+              <CaretDown size={11} aria-hidden="true" className="text-text-3" />
             </button>
 
             {menuOpen && (
               <div
                 role="menu"
                 aria-label="Menu akun"
-                style={{
-                  position: "absolute",
-                  top: "calc(100% + 8px)",
-                  right: 0,
-                  width: "248px",
-                  maxWidth: "calc(100vw - 24px)",
-                  background: "#fff",
-                  border: "1px solid var(--line)",
-                  borderRadius: "14px",
-                  boxShadow: "0 10px 32px rgba(2, 20, 16, 0.28)",
-                  overflow: "hidden",
-                  zIndex: 60,
-                }}
+                className="absolute right-0 top-[calc(100%+8px)] z-[60] w-[260px] max-w-[calc(100vw-24px)] overflow-hidden rounded-lg border border-border bg-surface shadow-[0_16px_40px_rgba(15,23,42,0.14)]"
               >
                 {/* Identitas */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    padding: "14px 16px 12px",
-                  }}
-                >
+                <div className="flex items-center gap-3 px-4 py-3.5">
                   <span
-                    style={{
-                      width: "40px",
-                      height: "40px",
-                      borderRadius: "50%",
-                      background: "linear-gradient(135deg, #14a98f, #0e7c6b)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontWeight: 800,
-                      fontSize: "16px",
-                      color: "#fff",
-                      flexShrink: 0,
-                    }}
                     aria-hidden
+                    className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[15px] font-semibold text-primary"
                   >
                     {avatar}
                   </span>
-                  <div style={{ minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontWeight: 800,
-                        fontSize: "13px",
-                        color: "var(--ink)",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
+                  <div className="min-w-0">
+                    <div className="truncate text-[13px] font-semibold text-foreground">
                       {nama}
                     </div>
-                    <div
-                      style={{
-                        fontSize: "11px",
-                        color: "var(--ink3)",
-                        marginTop: "2px",
-                      }}
-                    >
-                      {jabatan}
-                    </div>
+                    <div className="mt-0.5 truncate text-[11px] text-text-3">{jabatan}</div>
                   </div>
                 </div>
 
-                <div style={{ height: 1, background: "var(--line)" }} />
+                <div className="h-px bg-border" />
 
-                {/* Aksi keluar — konfirmasi dua langkah di dalam popover */}
                 {confirmingLogout ? (
-                  <div
-                    style={{
-                      padding: "12px 14px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "8px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: "12px",
-                        color: "var(--ink2)",
-                        lineHeight: 1.4,
-                      }}
-                    >
+                  <div className="flex flex-col gap-2 px-4 py-3">
+                    <div className="text-[12px] leading-snug text-text-2">
                       Keluar dari SIDIRA sekarang?
                     </div>
-                    <div style={{ display: "flex", gap: "8px" }}>
+                    <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => setConfirmingLogout(false)}
-                        style={{
-                          flex: 1,
-                          background: "var(--line2)",
-                          border: "none",
-                          borderRadius: "9px",
-                          padding: "8px 10px",
-                          color: "var(--ink2)",
-                          fontSize: "12px",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                        }}
+                        className="h-8 flex-1 rounded-sm border border-border bg-surface text-[12px] font-semibold text-text-2 transition-colors hover:bg-surface-muted"
                       >
                         Batal
                       </button>
                       <button
                         type="button"
                         onClick={handleLogout}
-                        style={{
-                          flex: 1,
-                          background: "var(--red2)",
-                          border: "1.5px solid rgba(185, 28, 28, 0.4)",
-                          borderRadius: "9px",
-                          padding: "8px 10px",
-                          color: "var(--red)",
-                          fontSize: "12px",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          whiteSpace: "nowrap",
-                        }}
+                        className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-sm border border-danger/50 bg-surface text-[12px] font-semibold text-danger transition-colors hover:bg-danger-soft"
                       >
-                        ⏻ Ya, keluar
+                        <SignOut size={13} aria-hidden="true" />
+                        Ya, keluar
                       </button>
                     </div>
                   </div>
@@ -446,34 +259,10 @@ export function SiteHeader({ profile }: SiteHeaderProps) {
                   <button
                     type="button"
                     role="menuitem"
-                    onClick={() => {
-                      setConfirmingLogout(true);
-                    }}
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "9px",
-                      background: "transparent",
-                      border: "none",
-                      padding: "11px 16px",
-                      color: "var(--ink2)",
-                      fontSize: "12.5px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      textAlign: "left",
-                      transition: "background 0.12s",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "var(--red2)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "transparent";
-                    }}
+                    onClick={() => setConfirmingLogout(true)}
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-[12.5px] font-semibold text-text-2 transition-colors hover:bg-danger-soft hover:text-danger"
                   >
-                    <span aria-hidden style={{ fontSize: "14px" }}>
-                      ⏻
-                    </span>
+                    <SignOut size={16} aria-hidden="true" />
                     Keluar dari akun
                   </button>
                 )}

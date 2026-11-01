@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
+import { TrayIcon } from "@phosphor-icons/react/ssr";
 
 /**
- * Cangkang kartu widget dashboard — menyamakan gaya legend-bar/gstat:
- * putih, border var(--line), radius var(--r).
+ * Cangkang kartu widget dashboard: permukaan putih, 1px border, radius 10.
+ * Tanpa shadow — elevasi hanya dari border sesuai DESIGN.md.
  */
 export function WidgetCard({
   title,
@@ -16,38 +17,15 @@ export function WidgetCard({
   return (
     <section
       aria-label={title}
-      style={{
-        background: "#fff",
-        border: "1px solid var(--line)",
-        borderRadius: "var(--r)",
-        padding: "16px",
-        minWidth: 0,
-      }}
+      className="flex h-full min-w-0 flex-col rounded-md border border-border bg-surface p-4 sm:p-5"
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "8px",
-          marginBottom: "12px",
-        }}
-      >
-        <h2
-          style={{
-            fontSize: "10.5px",
-            color: "var(--ink3)",
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "0.3px",
-            margin: 0,
-          }}
-        >
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="m-0 text-[13px] font-semibold leading-none text-foreground">
           {title}
         </h2>
         {action}
       </div>
-      {children}
+      <div className="flex min-w-0 flex-1 flex-col">{children}</div>
     </section>
   );
 }
@@ -56,13 +34,7 @@ export function WidgetLink({ href, label }: { href: string; label: string }) {
   return (
     <a
       href={href}
-      style={{
-        fontSize: "11.5px",
-        fontWeight: 700,
-        color: "var(--teal)",
-        textDecoration: "none",
-        whiteSpace: "nowrap",
-      }}
+      className="whitespace-nowrap text-[12px] font-medium text-primary no-underline hover:underline"
     >
       {label}
     </a>
@@ -71,15 +43,9 @@ export function WidgetLink({ href, label }: { href: string; label: string }) {
 
 export function WidgetEmpty({ message }: { message: string }) {
   return (
-    <p
-      style={{
-        fontSize: "12.5px",
-        color: "var(--ink3)",
-        margin: 0,
-        padding: "8px 0",
-      }}
-    >
-      {message}
-    </p>
+    <div className="flex flex-1 flex-col items-center justify-center gap-2 py-6 text-center">
+      <TrayIcon size={22} aria-hidden="true" className="text-text-3" />
+      <p className="m-0 text-[12.5px] text-text-3">{message}</p>
+    </div>
   );
 }

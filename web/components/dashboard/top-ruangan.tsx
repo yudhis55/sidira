@@ -23,15 +23,13 @@ export interface TopRuanganRow {
 }
 
 /**
- * Hex dari var token globals.css — atribut SVG Recharts tidak bisa pakai
- * CSS var secara andalan, jadi nilai yang sama di-hardcode di sini.
- * --red #b91c1c · --amber #b45309 · --line2 #f0f4f8 · --ink2 #2d3f50
+ * Warna diambil dari design token globals.css. Atribut SVG Recharts
+ * menerima `var(...)`, jadi tidak ada hex yang di-hardcode di sini.
  */
-const RED = "#b91c1c";
-const AMBER = "#b45309";
-const LINE2 = "#f0f4f8";
-const INK2 = "#2d3f50";
-const FONT_MONO = "'JetBrains Mono', monospace";
+const DANGER = "var(--danger)";
+const TRACK = "var(--surface-subtle)";
+const TEXT_2 = "var(--text-2)";
+const FONT_MONO = "var(--font-mono)";
 
 /** Lebar sumbu kategori — cukup untuk nama ruangan panjang (mis. "POLINDES PAKIS"). */
 const Y_AXIS_WIDTH = 136;
@@ -44,7 +42,7 @@ type BarDatum = {
   total: number;
 };
 
-/** Tooltip minimal: kartu putih kecil, border tipis, teks Indonesia faktual. */
+/** Tooltip minimal: kartu permukaan, border 1px, angka mono. */
 function RuanganTooltip({
   active,
   payload,
@@ -56,26 +54,17 @@ function RuanganTooltip({
   const d = payload[0]?.payload;
   if (!d) return null;
   return (
-    <div
-      style={{
-        background: "#fff",
-        border: "1px solid #e2e8ef",
-        borderRadius: "8px",
-        padding: "6px 10px",
-        fontSize: "12px",
-        color: "#0f1923",
-        whiteSpace: "nowrap",
-      }}
-    >
-      <strong>{d.name}</strong>: {d.pct}% perlu perhatian ({d.perhatian} dari{" "}
-      {d.total} item)
+    <div className="whitespace-nowrap rounded-md border border-border bg-surface px-2.5 py-1.5 text-[12px] text-text-2">
+      <strong className="font-semibold text-foreground">{d.name}</strong>:{" "}
+      <span className="font-mono tabular-nums">{d.pct}%</span> perlu perhatian (
+      <span className="font-mono tabular-nums">{d.perhatian}</span> dari{" "}
+      <span className="font-mono tabular-nums">{d.total}</span> item)
     </div>
   );
 }
 
 /**
- * Label % di ujung bar — warna mengikuti tingkat keparahan baris
- * (merah ≥50%, amber di bawahnya), font mono agar match kartu lain.
+ * Label % di ujung bar — mono 11px, warna danger mengikuti bar.
  */
 type PctLabelProps = {
   x?: number | string;
@@ -83,36 +72,24 @@ type PctLabelProps = {
   width?: number | string;
   height?: number | string;
   value?: number | string;
-  index?: number;
 };
 
-function makePctLabel(rows: TopRuanganRow[]) {
-  return function PctLabel({
-    x,
-    y,
-    width,
-    height,
-    value,
-    index,
-  }: PctLabelProps) {
-    if (x == null || y == null || width == null) return null;
-    const row = rows[index ?? -1];
-    if (!row) return null;
-    const h = height != null ? Number(height) : ROW_HEIGHT;
-    return (
-      <text
-        x={Number(x) + Number(width) + 6}
-        y={Number(y) + h / 2 + 4}
-        textAnchor="start"
-        fontSize={11.5}
-        fontWeight={700}
-        fontFamily={FONT_MONO}
-        fill={row.pct >= 50 ? RED : AMBER}
-      >
-        {Number(value)}%
-      </text>
-    );
-  };
+function PctLabel({ x, y, width, height, value }: PctLabelProps) {
+  if (x == null || y == null || width == null) return null;
+  const h = height != null ? Number(height) : ROW_HEIGHT;
+  return (
+    <text
+      x={Number(x) + Number(width) + 6}
+      y={Number(y) + h / 2 + 4}
+      textAnchor="start"
+      fontSize={11}
+      fontWeight={700}
+      fontFamily={FONT_MONO}
+      fill={DANGER}
+    >
+      {Number(value)}%
+    </text>
+  );
 }
 
 /**
@@ -128,7 +105,7 @@ export function TopRuangan({ rows }: { rows: TopRuanganRow[] }) {
   return (
     <WidgetCard
       title="Ruangan Perlu Perhatian"
-      action={<WidgetLink href="/inventaris" label="Lihat semua →" />}
+      action={<WidgetLink href="/inventaris" label="Lihat semua" />}
     >
       {rows.length === 0 ? (
         <WidgetEmpty message="Belum ada data inventaris per ruangan." />
@@ -142,17 +119,13 @@ export function TopRuangan({ rows }: { rows: TopRuanganRow[] }) {
               total: r.total,
             }));
             const height = rows.length * ROW_HEIGHT + 16;
-            const PctLabel = makePctLabel(rows);
 
             if (!isClient) {
               return (
                 <div
                   aria-hidden="true"
-                  style={{
-                    height,
-                    borderRadius: "8px",
-                    background: "var(--line2)",
-                  }}
+                  className="rounded-md bg-surface-subtle"
+                  style={{ height }}
                 />
               );
             }
@@ -172,9 +145,8 @@ export function TopRuangan({ rows }: { rows: TopRuanganRow[] }) {
                     tickLine={false}
                     axisLine={false}
                     tick={{
-                      fontSize: 10.5,
-                      fill: INK2,
-                      fontFamily: FONT_MONO,
+                      fontSize: 11,
+                      fill: TEXT_2,
                     }}
                     tickFormatter={(v: string) =>
                       v.length > 20 ? `${v.slice(0, 19)}…` : v
@@ -188,13 +160,10 @@ export function TopRuangan({ rows }: { rows: TopRuanganRow[] }) {
                     /* Animasi dimatikan: ResponsiveContainer memicu ulang
                        animasi tiap resize — bar "menghilang" sesaat. */
                     isAnimationActive={false}
-                    background={{ fill: LINE2 }}
+                    background={{ fill: TRACK }}
                   >
                     {data.map((d, i) => (
-                      <Cell
-                        key={rows[i]?.roomId ?? i}
-                        fill={d.pct >= 50 ? RED : AMBER}
-                      />
+                      <Cell key={rows[i]?.roomId ?? i} fill={DANGER} />
                     ))}
                     <LabelList dataKey="pct" content={<PctLabel />} />
                   </Bar>

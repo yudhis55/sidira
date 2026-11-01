@@ -3,43 +3,81 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   SIDIRA design tokens â€” "Clinical SaaS"
+   Neutral slate surfaces + one teal accent. Elevation = 1px border.
+   Shadows are reserved for floating layers only (popover/modal/dropdown).
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @theme inline {
+  /* Surfaces */
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-sora);
-  --font-mono: var(--font-jetbrains-mono);
-  --font-heading: var(--font-jetbrains-mono);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-bg: var(--background);
   --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
+  --color-border-strong: var(--border-strong);
 
-  /* GAS v3 color tokens → Tailwind utilities */
+  /* Text */
+  --color-foreground: var(--foreground);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+
+  /* Brand */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-foreground: var(--primary-soft-foreground);
+  --color-ring: var(--ring);
+
+  /* Status */
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-foreground: var(--info-foreground);
+
+  /* shadcn compatibility mappings */
+  --color-card: var(--surface);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--foreground);
+  --color-secondary: var(--surface-muted);
+  --color-secondary-foreground: var(--foreground);
+  --color-muted: var(--surface-muted);
+  --color-muted-foreground: var(--text-2);
+  --color-accent: var(--primary-soft);
+  --color-accent-foreground: var(--primary-soft-foreground);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--danger-foreground);
+  --color-input: var(--border);
+  --color-sidebar: var(--surface);
+  --color-sidebar-foreground: var(--foreground);
+  --color-sidebar-primary: var(--primary);
+  --color-sidebar-primary-foreground: var(--primary-foreground);
+  --color-sidebar-accent: var(--primary-soft);
+  --color-sidebar-accent-foreground: var(--primary-soft-foreground);
+  --color-sidebar-border: var(--border);
+  --color-sidebar-ring: var(--ring);
+  --color-chart-1: var(--primary);
+  --color-chart-2: var(--warning);
+  --color-chart-3: var(--info);
+  --color-chart-4: var(--danger);
+  --color-chart-5: var(--violet);
+
+  /* Typography */
+  --font-sans: var(--font-jakarta);
+  --font-heading: var(--font-jakarta);
+  --font-mono: var(--font-jetbrains-mono);
+
+  /* Legacy GAS v3 tokens â†’ Tailwind utilities (kept for module pages) */
   --color-ink: var(--ink);
   --color-ink2: var(--ink2);
   --color-ink3: var(--ink3);
@@ -64,69 +102,101 @@
   --color-slate: var(--slate);
   --color-slate2: var(--slate2);
 
-  /* GAS v3 radius tokens */
-  --radius-sm: var(--r2);
-  --radius-md: var(--r2);
-  --radius-lg: var(--r);
-  --radius-xl: var(--r);
-  --radius-2xl: var(--r);
-  --radius-3xl: calc(var(--r) * 2.2);
-  --radius-4xl: calc(var(--r) * 2.6);
+  /* Radii â€” inputs/buttons 6 Â· cards 10 Â· panels/modals 14 */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 14px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
+  --radius-4xl: 24px;
 }
 
 :root {
-  /* SIDIRA — teal-based palette, adapted from GAS legacy.
-     GAS hex values converted to oklch to stay native to shadcn v4 tokens. */
-  --background: oklch(0.975 0.005 230);          /* #f4f7fb app bg */
-  --foreground: oklch(0.22 0.03 240);            /* #0f1923 ink */
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.03 240);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.03 240);
-  --primary: oklch(0.51 0.09 175);               /* #0e7c6b teal */
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.96 0.008 230);            /* #f0f4f8 line2 */
-  --secondary-foreground: oklch(0.22 0.03 240);
-  --muted: oklch(0.965 0.006 230);
-  --muted-foreground: oklch(0.48 0.02 245);      /* #5e7080 ink3 */
-  --accent: oklch(0.94 0.03 170);                /* #d4f0eb teal3 */
-  --accent-foreground: oklch(0.51 0.09 175);
-  --destructive: oklch(0.5 0.18 27);             /* #b91c1c red */
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.9 0.008 235);                /* #e2e8ef line */
-  --input: oklch(0.9 0.008 235);
-  --ring: oklch(0.51 0.09 175);                  /* teal ring */
-  --chart-1: oklch(0.51 0.09 175);               /* teal */
-  --chart-2: oklch(0.62 0.14 65);                /* amber */
-  --chart-3: oklch(0.5 0.17 260);                /* blue */
-  --chart-4: oklch(0.5 0.18 27);                 /* red */
-  --chart-5: oklch(0.45 0.16 300);               /* violet */
-  --radius: 0.625rem;                            /* ~10px GAS --r */
+  /* Surfaces */
+  --background: oklch(0.982 0.002 240);
+  --surface: oklch(1 0 0);
+  --surface-muted: oklch(0.965 0.003 240);
+  --surface-subtle: oklch(0.987 0.0015 240);
+  --border: oklch(0.915 0.004 245);
+  --border-strong: oklch(0.86 0.006 245);
 
-  /* Sidebar — GAS uses a dark navy/teal sidebar; keep light for now,
-     primary accent = teal. */
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.22 0.03 240);
-  --sidebar-primary: oklch(0.51 0.09 175);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.94 0.03 170);
-  --sidebar-accent-foreground: oklch(0.51 0.09 175);
-  --sidebar-border: oklch(0.9 0.008 235);
-  --sidebar-ring: oklch(0.51 0.09 175);
+  /* Text */
+  --foreground: oklch(0.235 0.015 245);
+  --text-2: oklch(0.45 0.012 245);
+  --text-3: oklch(0.585 0.01 245);
 
-  /* ── SIDIRA category / status color tokens (from GAS :root) ──
-     Exposed as plain CSS vars so non-shadcn components (badges, swatches,
-     kondisi selects) can reference them directly. */
+  /* Brand â€” teal */
+  --primary: oklch(0.52 0.09 178);
+  --primary-foreground: oklch(0.99 0 0);
+  --primary-soft: oklch(0.962 0.025 178);
+  --primary-soft-foreground: oklch(0.42 0.08 178);
+  --ring: oklch(0.52 0.09 178);
+
+  /* Status */
+  --success: oklch(0.52 0.11 165); /* ~#0f7a5f */
+  --success-soft: oklch(0.96 0.03 165);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.52 0.12 70); /* readable amber-brown */
+  --warning-soft: oklch(0.97 0.04 85);
+  --warning-foreground: oklch(0.28 0.05 70);
+  --danger: oklch(0.53 0.18 27); /* ~#b91c1c */
+  --danger-soft: oklch(0.96 0.03 27);
+  --danger-foreground: oklch(0.99 0 0);
+  --info: oklch(0.55 0.14 255);
+  --info-soft: oklch(0.96 0.03 255);
+  --info-foreground: oklch(0.99 0 0);
+
+  /* shadcn legacy aliases */
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  --secondary: var(--surface-muted);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface-muted);
+  --muted-foreground: var(--text-2);
+  --accent: var(--primary-soft);
+  --accent-foreground: var(--primary-soft-foreground);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--danger-foreground);
+  --input: var(--border);
+  --radius: 10px;
+  --chart-1: var(--primary);
+  --chart-2: var(--warning);
+  --chart-3: var(--info);
+  --chart-4: var(--danger);
+  --chart-5: var(--violet);
+
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--primary-soft);
+  --sidebar-accent-foreground: var(--primary-soft-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+
+  /* Font family aliases (layout sets --font-jakarta / --font-jetbrains-mono) */
+  --font-sora: var(--font-jakarta);
+  --font-inter: var(--font-jakarta);
+  --font-sans: var(--font-jakarta);
+  --font-heading: var(--font-jakarta);
+  --font-mono: var(--font-jetbrains-mono);
+
+  /* â”€â”€ Legacy GAS v3 category / status tokens â”€â”€
+     ~30 untouched module files reference these by name. Keep them defined
+     and mapped to sensible values of the new palette. */
   --teal: #0e7c6b;
   --teal2: #14a98f;
-  --teal3: #d4f0eb;
-  --teal4: #edfaf7;
-  --amber: #b45309;
-  --amber2: #fef3c7;
+  --teal3: #d9eeea;
+  --teal4: #eff8f6;
+  --amber: #a15c07;
+  --amber2: #fdf1d6;
   --red: #b91c1c;
-  --red2: #fee2e2;
+  --red2: #fde8e8;
   --blue: #1d4ed8;
-  --blue2: #dbeafe;
+  --blue2: #e3edfd;
   --violet: #6d28d9;
   --violet2: #ede9fe;
   --orange: #c2410c;
@@ -134,70 +204,75 @@
   --rose: #be185d;
   --rose2: #fce7f3;
   --slate: #475569;
-  --slate2: #f1f5f9;
-  --ink: #0f1923;
-  --ink2: #2d3f50;
-  --ink3: #5e7080;
-  --line: #e2e8ef;
-  --line2: #f0f4f8;
+  --slate2: #eef1f5;
+  --ink: #151c24;
+  --ink2: #354253;
+  --ink3: #66717f;
+  --line: #e4e8ed;
+  --line2: #f1f3f6;
   --white: #fff;
   --r: 10px;
   --r2: 6px;
-  --app-bg: #f4f7fb;
-  --white: #fff;
-  --r: 10px;
-  --r2: 6px;
+  --app-bg: var(--background);
 }
 
 .dark {
-  --background: oklch(0.18 0.02 240);
-  --foreground: oklch(0.96 0.005 230);
-  --card: oklch(0.23 0.02 240);
-  --card-foreground: oklch(0.96 0.005 230);
-  --popover: oklch(0.23 0.02 240);
-  --popover-foreground: oklch(0.96 0.005 230);
-  --primary: oklch(0.68 0.11 170);                /* lighter teal for dark */
-  --primary-foreground: oklch(0.18 0.02 240);
-  --secondary: oklch(0.28 0.02 240);
-  --secondary-foreground: oklch(0.96 0.005 230);
-  --muted: oklch(0.28 0.02 240);
-  --muted-foreground: oklch(0.72 0.01 235);
-  --accent: oklch(0.34 0.05 175);
-  --accent-foreground: oklch(0.82 0.08 170);
-  --destructive: oklch(0.65 0.18 27);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.68 0.11 170);
-  --chart-1: oklch(0.68 0.11 170);
-  --chart-2: oklch(0.72 0.14 65);
-  --chart-3: oklch(0.65 0.17 260);
-  --chart-4: oklch(0.65 0.18 27);
-  --chart-5: oklch(0.6 0.16 300);
-  --sidebar: oklch(0.21 0.02 240);
-  --sidebar-foreground: oklch(0.96 0.005 230);
-  --sidebar-primary: oklch(0.68 0.11 170);
-  --sidebar-primary-foreground: oklch(0.18 0.02 240);
-  --sidebar-accent: oklch(0.28 0.02 240);
-  --sidebar-accent-foreground: oklch(0.96 0.005 230);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.68 0.11 170);
+  --background: oklch(0.18 0.01 245);
+  --surface: oklch(0.225 0.012 245);
+  --surface-muted: oklch(0.265 0.012 245);
+  --surface-subtle: oklch(0.205 0.011 245);
+  --border: oklch(1 0 0 / 12%);
+  --border-strong: oklch(1 0 0 / 20%);
+  --foreground: oklch(0.96 0.005 240);
+  --text-2: oklch(0.74 0.01 240);
+  --text-3: oklch(0.62 0.01 240);
+  --primary: oklch(0.7 0.11 175);
+  --primary-foreground: oklch(0.18 0.01 245);
+  --primary-soft: oklch(0.32 0.05 178);
+  --primary-soft-foreground: oklch(0.86 0.07 175);
+  --ring: oklch(0.7 0.11 175);
+  --success: oklch(0.68 0.12 165);
+  --success-soft: oklch(0.32 0.05 165);
+  --warning: oklch(0.76 0.13 80);
+  --warning-soft: oklch(0.34 0.06 80);
+  --danger: oklch(0.66 0.18 27);
+  --danger-soft: oklch(0.34 0.07 27);
+  --info: oklch(0.68 0.14 255);
+  --info-soft: oklch(0.33 0.06 255);
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  --secondary: var(--surface-muted);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface-muted);
+  --muted-foreground: var(--text-2);
+  --accent: var(--primary-soft);
+  --accent-foreground: var(--primary-soft-foreground);
+  --destructive: var(--danger);
+  --input: var(--border);
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    font-family: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  }
   body {
     @apply bg-background text-foreground;
-    background-color: var(--app-bg);
-    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    background-color: var(--background);
+    font-family: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+    line-height: 1.5;
   }
-  html {
-    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 22%, transparent);
   }
-  /* Mono headings — GAS uses JetBrains Mono for numeric/data headings.
-     Apply via .font-mono utility (already mapped to --font-mono). */
 }
 
 @layer utilities {
@@ -217,11 +292,11 @@
     transition-timing-function: cubic-bezier(0.76, 0, 0.24, 1);
   }
 }
-/* ══════════════════════════════════════════════════════════════════
-   Cetak dokumen laporan — port GAS `@media print` untuk #laporanDoc.
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   Cetak dokumen laporan â€” port GAS `@media print` untuk #laporanDoc.
    Class `printing-laporan` dipasang di <body> oleh LaporanModal
    tepat sebelum window.print() dan dilepas setelahnya.
-   ══════════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 @media print {
   body.printing-laporan * {
     visibility: hidden;
@@ -248,11 +323,11 @@
   }
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   Cetak dokumen SBBK & Pakta dari modal pratinjau — port GAS
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   Cetak dokumen SBBK & Pakta dari modal pratinjau â€” port GAS
    `body.printing-sbbk` / `body.printing-pakta`. Class dipasang oleh
    SbbkPrintModal / PaktaPrintModal tepat sebelum window.print().
-   ══════════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 @media print {
   @page {
     size: A4;
@@ -284,12 +359,12 @@
   }
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   Cetak halaman ruangan — port GAS `@media print` (index.html 1222):
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   Cetak halaman ruangan â€” port GAS `@media print` (index.html 1222):
    `.room-nav-outer, .page-actions, .add-btn, .del-btn` disembunyikan,
    panel ruangan tampil penuh di atas putih. Class `no-print`
    dipasang pada tombol aksi interaktif (tambah/pindah/hapus/filter).
-   ══════════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 @media print {
   @page {
     size: A4 portrait;
@@ -318,13 +393,13 @@
   }
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   Cetak rekap kondisi dari RekapModal — pola yang sama dengan
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   Cetak rekap kondisi dari RekapModal â€” pola yang sama dengan
    `body.printing-sbbk`: isolasi `#rekap-print-area` (yang SUDAH
    mengikuti scope Semua Ruangan / Ruangan Aktif + filter kategori
    dan kondisi) agar halaman dashboard di belakangnya tidak ikut
    tercetak. Class dipasang oleh RekapModal tepat sebelum print.
-   ══════════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 @media print {
   body.printing-rekap * {
     visibility: hidden;
@@ -347,12 +422,12 @@
   }
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   .scroll-hide — sembunyikan scrollbar visual, scroll tetap aktif.
-   Dipakai sidebar navigasi (room-nav) yang gelap: scroll harus bisa
-   lewat sentuhan HP juga (bukan hanya hover mouse), tapi garis
-   scrollbar di latar gelap mengganggu.
-   ══════════════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   .scroll-hide â€” sembunyikan scrollbar visual, scroll tetap aktif.
+   Dipakai sidebar navigasi (room-nav): scroll harus bisa lewat
+   sentuhan HP juga (bukan hanya hover mouse), tapi garis scrollbar
+   mengganggu.
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .scroll-hide {
   scrollbar-width: none; /* Firefox */
 }

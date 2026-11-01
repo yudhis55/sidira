@@ -1,27 +1,33 @@
 "use client";
 
 /**
- * Search bar global di header — port GAS `.global-search-bar` / `#gsDropdown`
- * (index.html ~6955 & ~8070).
+ * Search bar global di header — port GAS `.global-search-bar` / `#gsDropdown`.
  *
- * Beda dengan versi palette sebelumnya: kolom pencarian selalu terlihat di
- * header (lengkap dengan badge Ctrl+K dan tombol bersihkan), sedangkan hasil
- * tampil sebagai dropdown putih di bawahnya. Dropdown dirender lewat portal
- * (posisi fixed mengikuti kolom pencarian) agar tidak terpotong.
+ * Kolom pencarian selalu terlihat di header (lengkap dengan badge Ctrl+K dan
+ * tombol bersihkan), sedangkan hasil tampil sebagai dropdown putih di bawahnya.
+ * Dropdown dirender lewat portal (posisi fixed mengikuti kolom pencarian) agar
+ * tidak terpotong.
  */
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import {
+  Buildings,
+  FileText,
+  MagnifyingGlass,
+  Package,
+  X,
+} from "@phosphor-icons/react";
 import { globalSearch, type SearchResult } from "@/lib/auth/global-search";
 import { mockGlobalSearch } from "@/lib/mock-data/global-search";
 import { useIsClient } from "@/lib/use-is-client";
 
 const IS_MOCK = process.env.NEXT_PUBLIC_MOCK_AUTH === "true";
 
-const GROUP_ICON: Record<SearchResult["group"], string> = {
-  Ruangan: "🏥",
-  Item: "📦",
-  Usulan: "📝",
+const GROUP_ICON: Record<SearchResult["group"], React.ReactNode> = {
+  Ruangan: <Buildings size={13} />,
+  Item: <Package size={13} />,
+  Usulan: <FileText size={13} />,
 };
 
 interface Anchor {
@@ -143,16 +149,17 @@ export function GlobalSearchBar() {
   const showDropdown = focused && q.trim().length > 0;
 
   return (
-    <div className="w-full min-w-0 basis-full px-1 pb-1">
-      {/* GAS .gsb-wrap */}
+    <div className="w-full min-w-0">
       <div
         ref={wrapRef}
         onClick={() => inputRef.current?.focus()}
-        className="flex w-full max-w-[480px] cursor-text items-center gap-2 rounded-xl border-[1.5px] border-white/20 bg-white/[0.14] px-3.5 py-2 transition-all focus-within:border-white/50 focus-within:bg-white/20 focus-within:shadow-[0_0_0_3px_rgba(255,255,255,0.1)]"
+        className="flex h-9 w-full cursor-text items-center gap-2 rounded-sm border border-border bg-surface-subtle px-2.5 transition-colors focus-within:border-ring focus-within:bg-surface focus-within:ring-2 focus-within:ring-ring/35"
       >
-        <span className="shrink-0 text-[15px] opacity-70" aria-hidden>
-          🔍
-        </span>
+        <MagnifyingGlass
+          size={16}
+          aria-hidden="true"
+          className="shrink-0 text-text-3"
+        />
         <input
           ref={inputRef}
           type="text"
@@ -165,7 +172,7 @@ export function GlobalSearchBar() {
           placeholder="Cari barang, alat, sarana... (Ctrl+K)"
           autoComplete="off"
           aria-label="Pencarian global"
-          className="min-w-0 flex-1 border-none bg-transparent text-[13px] text-white outline-none placeholder:text-[12.5px] placeholder:text-white/55"
+          className="min-w-0 flex-1 border-none bg-transparent text-[13px] text-foreground outline-none placeholder:text-text-2"
         />
         {q ? (
           <button
@@ -176,58 +183,60 @@ export function GlobalSearchBar() {
               inputRef.current?.focus();
             }}
             aria-label="Bersihkan pencarian"
-            className="flex size-5 shrink-0 items-center justify-center rounded-full border-none bg-white/15 p-0 text-[11px] text-white/70 transition-colors hover:bg-white/30 hover:text-white"
+            className="flex size-5 shrink-0 items-center justify-center rounded-full border-none bg-surface-muted p-0 text-text-2 transition-colors hover:bg-border hover:text-foreground"
           >
-            ✕
+            <X size={11} />
           </button>
         ) : (
-          <kbd className="shrink-0 rounded-[5px] border-[1.5px] border-white/30 bg-white/10 px-1.5 py-0.5 font-mono text-[10px] tracking-[0.3px] text-white/60">
+          <kbd className="hidden shrink-0 items-center rounded-sm border border-border bg-surface px-1.5 py-0.5 font-mono text-[10px] text-text-3 sm:inline-flex">
             Ctrl+K
           </kbd>
         )}
       </div>
 
-      {/* GAS #gsDropdown — di-portal agar tidak terpotong header */}
+      {/* #gsDropdown — di-portal agar tidak terpotong header */}
       {mounted && showDropdown && anchor
         ? createPortal(
             <div
-              className="fixed z-[900] max-h-[520px] overflow-y-auto rounded-[14px] border-[1.5px] border-line bg-white shadow-[0_20px_60px_rgba(0,0,0,0.18)]"
+              className="fixed z-[900] max-h-[520px] overflow-y-auto rounded-lg border border-border bg-surface shadow-[0_20px_60px_rgba(15,23,42,0.16)]"
               style={{
                 left: anchor.left,
                 top: anchor.top,
                 width: Math.max(anchor.width, 480),
               }}
             >
-              {/* GAS .gs-drop-head */}
-              <div className="sticky top-0 z-[1] flex items-center gap-2.5 border-b border-line bg-bg px-4 py-2.5">
-                <span className="text-[11px] font-bold text-ink3">
+              {/* .gs-drop-head */}
+              <div className="sticky top-0 z-[1] flex items-center gap-2.5 border-b border-border bg-surface px-4 py-2.5">
+                <span className="text-[11px] font-semibold text-text-3">
                   {loading ? (
                     "Mencari…"
                   ) : (
                     <>
-                      <b className="font-mono text-teal">{results.length}</b>{" "}
-                      hasil untuk “{q.trim()}”
+                      <b className="font-mono text-primary">{results.length}</b> hasil untuk “
+                      {q.trim()}”
                     </>
                   )}
                 </span>
-                <span className="ml-auto text-[10px] text-ink3">
+                <span className="ml-auto text-[10px] text-text-3">
                   ↑↓ pilih · Enter buka · Esc tutup
                 </span>
               </div>
 
               {!loading && results.length === 0 ? (
-                <div className="px-4 py-8 text-center text-[12.5px] text-ink3">
+                <div className="px-4 py-8 text-center text-[12.5px] text-text-3">
                   {q.trim().length < 2
                     ? "Ketik minimal 2 karakter untuk mencari"
                     : "Tidak ada hasil ditemukan"}
                 </div>
               ) : (
                 grouped.map(([group, list]) => (
-                  <div key={group} className="border-b border-line last:border-b-0">
-                    <div className="sticky top-[41px] flex items-center gap-2 bg-bg px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.4px] text-ink2">
-                      <span aria-hidden>{GROUP_ICON[group]}</span>
+                  <div key={group} className="border-b border-border last:border-b-0">
+                    <div className="sticky top-[41px] flex items-center gap-2 bg-surface px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-text-3">
+                      <span aria-hidden className="text-text-3">
+                        {GROUP_ICON[group]}
+                      </span>
                       {group}
-                      <span className="ml-auto rounded-[10px] bg-line2 px-[7px] py-px text-[10px] font-bold text-ink3">
+                      <span className="ml-auto rounded-full bg-surface-muted px-[7px] py-px text-[10px] font-semibold text-text-2">
                         {list.length}
                       </span>
                     </div>
@@ -241,15 +250,15 @@ export function GlobalSearchBar() {
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => go(r)}
                           onMouseEnter={() => setActiveIdx(idx)}
-                          className={`flex w-full items-center gap-2.5 border-b border-line px-4 py-[9px] pl-8 text-left last:border-b-0 transition-colors ${
-                            on ? "bg-teal4" : "hover:bg-teal4"
+                          className={`flex w-full items-center gap-2.5 border-b border-border px-4 py-[9px] pl-8 text-left last:border-b-0 transition-colors ${
+                            on ? "bg-primary-soft" : "hover:bg-surface-muted"
                           }`}
                         >
-                          <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-ink">
+                          <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-foreground">
                             {r.label}
                           </span>
                           {r.sub ? (
-                            <span className="shrink-0 truncate text-[11px] text-ink3">
+                            <span className="shrink-0 truncate text-[11px] text-text-3">
                               {r.sub}
                             </span>
                           ) : null}

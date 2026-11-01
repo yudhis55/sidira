@@ -3,11 +3,23 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import {
+  ArrowSquareOut,
+  CaretDown,
+  ChartBar,
+  FileText,
+  GearSix,
+  Plus,
+  SquaresFour,
+  UsersThree,
+  X,
+} from "@phosphor-icons/react";
 import { AddRoomModal } from "@/components/inventaris/add-room-modal";
 import { AddUtilitasModal } from "@/components/utilitas/add-utilitas-modal";
 import { useRoomList } from "@/lib/room-store";
 import { useUtilitasList } from "@/lib/utilitas-store";
 import { useNavUi } from "@/lib/nav-ui-store";
+import { cn } from "@/lib/utils";
 import type { Room, UtilMeta } from "@/types/database";
 
 export interface RoomNavProps {
@@ -27,19 +39,17 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
   const rooms = useRoomList(baseRooms);
   const utilitas = useUtilitasList(baseUtilitas);
 
-  // Mode lipat (icon rail) khusus desktop (>=md) — store dibuat agen lain
-  // (persist key "sidira:nav-ui", field `collapsed: boolean`).
+  // Mode lipat (icon rail) khusus desktop (>=md) — store persist "sidira:nav-ui".
   // Di mobile (<md) nilai ini diabaikan: drawer selalu 220px penuh karena
   // semua penyesuaian rail memakai varian `md:` (base `w-[220px]` tetap).
   const railCollapsed = useNavUi((s) => s.collapsed);
 
-  // GAS membuka modal langsung dari sidebar (openModal / openUtilModal).
+  // Modal tambah ruangan/utilitas dibuka langsung dari sidebar.
   const [addRoomOpen, setAddRoomOpen] = React.useState(false);
   const [addUtilOpen, setAddUtilOpen] = React.useState(false);
 
-  // Drawer off-canvas di mobile (<md): dibuka via tombol hamburger di
-  // SiteHeader lewat custom window event (tanpa prop-drilling — AppLayout
-  // adalah server component). Di desktop (>=md) selalu terlihat via CSS.
+  // Drawer off-canvas di mobile (<md): dibuka via hamburger di SiteHeader
+  // lewat custom window event (tanpa prop-drilling — AppLayout server comp).
   const [open, setOpen] = React.useState(false);
 
   React.useEffect(() => {
@@ -47,9 +57,6 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
     window.addEventListener("sidira:toggle-nav", onToggle);
     return () => window.removeEventListener("sidira:toggle-nav", onToggle);
   }, []);
-
-  // Drawer ditutup via onClick tiap tab (lihat makeTab), overlay, tombol ✕,
-  // dan onCreated modal di bawah — tanpa effect agar lolos react-hooks/set-state-in-effect.
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
@@ -72,8 +79,7 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
     }
   }, [collapsed]);
 
-  // Seksi yang memuat path aktif selalu dianggap terbuka (tanpa setState
-  // di effect agar lolos react-hooks/set-state-in-effect).
+  // Seksi yang memuat path aktif selalu dianggap terbuka.
   const sectionOfPath = (p: string): string | null => {
     if (p.startsWith("/inventaris/")) return "ruangan";
     if (p.startsWith("/utilitas/")) return "utilitas";
@@ -88,15 +94,6 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
   const toggleSection = (key: string) =>
     setCollapsed((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
 
-  const sectionHeaderStyle: React.CSSProperties = {
-    padding: "10px 12px 4px",
-    fontSize: 9,
-    fontWeight: 800,
-    letterSpacing: "0.12em",
-    color: "rgba(255,255,255,0.35)",
-    textTransform: "uppercase",
-  };
-
   const renderSectionHeader = (key: string, label: string) => {
     const shut = isCollapsed(key);
     return (
@@ -106,75 +103,29 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
         aria-label={label}
         title={label}
         onClick={() => toggleSection(key)}
-        className={railCollapsed ? "justify-between md:justify-center" : "justify-between"}
-        style={{
-          ...sectionHeaderStyle,
-          display: "flex",
-          alignItems: "center",
-          width: "100%",
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          textAlign: "left",
-        }}
+        className={cn(
+          "mt-2 flex w-full items-center justify-between gap-2 px-2 pb-1 pt-3 text-left text-[11px] font-semibold uppercase tracking-[0.04em] text-text-3",
+          railCollapsed && "md:justify-center md:px-0"
+        )}
       >
-        {/* Label + chevron terlihat di mobile & mode penuh; di mode lipat
-            desktop (>=md) disembunyikan dan diganti divider tipis agar
-            tinggi ritme seksi tetap terjaga. */}
         <span className={railCollapsed ? "md:hidden" : undefined}>{label}</span>
-        <span
+        <CaretDown
+          size={12}
           aria-hidden="true"
-          className={railCollapsed ? "md:hidden" : undefined}
-          style={{ fontSize: 9 }}
-        >
-          {shut ? "▸" : "▾"}
-        </span>
+          className={cn(
+            "shrink-0 transition-transform duration-150",
+            shut && "-rotate-90",
+            railCollapsed && "md:hidden"
+          )}
+        />
         {railCollapsed && (
-          <span
-            aria-hidden="true"
-            className="hidden md:block"
-            style={{ height: 1, width: 24, background: "rgba(255,255,255,0.2)" }}
-          />
+          <span aria-hidden="true" className="hidden h-px w-6 bg-border md:block" />
         )}
       </button>
     );
   };
 
-  const tabStyle = (active: boolean) => ({
-    color: active ? "#4eebd0" : "rgba(255,255,255,0.55)",
-    borderLeft: active ? "3px solid #4eebd0" : "3px solid transparent",
-    background: active ? "rgba(78,235,208,0.1)" : "transparent",
-  });
-
-  const iconStyle = (active: boolean) => ({
-    width: 20,
-    height: 20,
-    borderRadius: 5,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 11,
-    flexShrink: 0,
-    background: active ? "rgba(78,235,208,0.18)" : "rgba(255,255,255,0.1)",
-  });
-
-  const tabHover = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    const el = e.currentTarget;
-    if (!el.classList.contains("active")) {
-      el.style.color = "rgba(255,255,255,0.9)";
-      el.style.background = "rgba(255,255,255,0.07)";
-    }
-  };
-
-  const tabLeave = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    const el = e.currentTarget;
-    if (!el.classList.contains("active")) {
-      el.style.color = "rgba(255,255,255,0.55)";
-      el.style.background = "transparent";
-    }
-  };
-
-  const makeTab = (href: string, icon: string, label: string, active?: boolean) => {
+  const makeTab = (href: string, icon: React.ReactNode, label: string, active?: boolean) => {
     const act = active ?? isActive(href);
     return (
       <Link
@@ -182,345 +133,205 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
         href={href}
         title={label}
         aria-label={label}
-        className={`${act ? "active" : ""}${railCollapsed ? " md:justify-center" : ""}`}
-        onMouseEnter={tabHover}
-        onMouseLeave={tabLeave}
+        aria-current={act ? "page" : undefined}
+        className={cn(
+          "flex h-8 w-full items-center gap-2 rounded-sm px-2 text-[13px] font-medium no-underline transition-colors duration-150",
+          act
+            ? "bg-primary-soft text-primary"
+            : "text-text-2 hover:bg-surface-muted hover:text-foreground",
+          railCollapsed && "md:justify-center md:gap-0 md:px-0"
+        )}
         onClick={() => setOpen(false)}
-        style={{
-          ...tabStyle(act),
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "8px 10px",
-          fontSize: "11.5px",
-          fontWeight: 600,
-          borderRadius: 7,
-          transition: "all 0.15s",
-          whiteSpace: "nowrap",
-          textAlign: "left",
-          textDecoration: "none",
-          width: "100%",
-        }}
       >
-        <span style={iconStyle(act)}>{icon}</span>
-        {/* Label disembunyikan hanya di desktop (>=md) saat mode lipat;
-            di drawer mobile label selalu terlihat. */}
-        <span className={railCollapsed ? "md:hidden" : undefined}>{label}</span>
+        <span className="flex size-[18px] shrink-0 items-center justify-center">{icon}</span>
+        <span className={cn("truncate", railCollapsed && "md:hidden")}>{label}</span>
       </Link>
     );
   };
 
+  const roomIcon = (icon: string) => (
+    <span className="flex size-7 items-center justify-center rounded-sm bg-surface-muted text-[16px] leading-none">
+      {icon}
+    </span>
+  );
+
+  const navIcon = (node: React.ReactNode) => (
+    <span className="text-[18px] leading-none">{node}</span>
+  );
+
+  const addButton = (
+    kind: "Ruangan" | "Utilitas",
+    onClick: () => void
+  ) => (
+    <button
+      type="button"
+      title={`Tambah ${kind}`}
+      aria-label={`Tambah ${kind}`}
+      onClick={onClick}
+      className={cn(
+        "flex h-8 w-full items-center gap-2 rounded-sm px-2 text-left text-[13px] font-medium text-text-3 transition-colors duration-150 hover:bg-surface-muted hover:text-foreground",
+        railCollapsed && "md:justify-center md:gap-0 md:px-0"
+      )}
+    >
+      <span className="flex size-[18px] shrink-0 items-center justify-center">
+        <Plus size={16} />
+      </span>
+      <span className={cn("truncate", railCollapsed && "md:hidden")}>Tambah {kind}</span>
+    </button>
+  );
+
   return (
     <>
-      {/* Overlay gelap di mobile — klik menutup drawer. Di bawah drawer
-          (z-[55] < z-[60]), di atas topbar sticky (z-50) agar seluruh layar
-          termasuk topbar ikut redup dan bisa diklik untuk menutup. */}
+      {/* Overlay di mobile — klik menutup drawer. Di bawah drawer (z-[55] < z-[60]),
+          di atas topbar sticky (z-50) agar seluruh layar ikut redup. */}
       {open && (
         <button
           type="button"
           aria-label="Tutup navigasi"
           onClick={() => setOpen(false)}
-          className="fixed inset-0 z-[55] md:hidden"
-          style={{
-            background: "rgba(0,0,0,0.5)",
-            border: "none",
-            padding: 0,
-            cursor: "default",
-          }}
+          className="fixed inset-0 z-[55] bg-foreground/40 md:hidden"
         />
       )}
       <aside
         aria-label="Navigasi utama"
-        className={`scroll-hide z-[60] w-[220px] transition-all duration-200 ${
-          railCollapsed ? "md:w-16" : "md:w-[220px]"
-        } ${
-          open ? "visible translate-x-0" : "invisible -translate-x-full md:visible md:translate-x-0"
-        } fixed inset-y-0 left-0 md:sticky md:top-0 md:h-[100vh]`}
-        style={{
-          flexShrink: 0,
-          background: "#0a3d32",
-          borderRight: "1px solid rgba(255,255,255,0.1)",
-          display: "flex",
-          flexDirection: "column",
-          // GAS `.room-nav-outer`: sidebar yang sticky, bukan header.
-          // Positioning di mobile (fixed off-canvas) vs desktop (sticky)
-          // diatur via className Tailwind di atas; di sini hanya visual.
-          // Scroll selalu aktif (juga sentuhan HP — bukan hanya hover mouse):
-          // scrollbar disembunyikan visual via .scroll-hide di globals.css.
-          overflowY: "auto",
-          overflowX: "hidden",
-        }}
+        className={cn(
+          "scroll-hide fixed inset-y-0 left-0 z-[60] flex w-[220px] flex-col overflow-y-auto overflow-x-hidden border-r border-border bg-surface transition-[width,transform] duration-200",
+          "md:sticky md:top-0 md:h-screen md:translate-x-0",
+          railCollapsed ? "md:w-16" : "md:w-[220px]",
+          open ? "visible translate-x-0" : "invisible -translate-x-full md:visible"
+        )}
       >
-      {/* ═══ Blok logo — slot teratas sidebar ═══
-          Tinggi band 60px = minHeight topbar agar garis horizontal topbar
-          menyambung mulus ke border bawah blok logo. Di mode lipat desktop
-          (>=md) wordmark disembunyikan, ikon 32px dipusatkan di rail 64px.
-          Di drawer mobile logo selalu tampil penuh. */}
-      <div
-        className={railCollapsed ? "md:justify-center md:px-0!" : undefined}
-        style={{
-          height: 60,
-          flexShrink: 0,
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "0 14px",
-          borderBottom: "1px solid rgba(255,255,255,0.1)",
-        }}
-      >
-        <Link
-          href="/"
-          style={{
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            textDecoration: "none",
-            color: "inherit",
-          }}
+        {/* ═══ Blok logo — 60px, menyambung border topbar ═══ */}
+        <div
+          className={cn(
+            "flex h-[60px] shrink-0 items-center gap-2 border-b border-border px-3.5",
+            railCollapsed && "md:justify-center md:px-0"
+          )}
         >
-          <span
-            style={{
-              width: "32px",
-              height: "32px",
-              borderRadius: "9px",
-              overflow: "hidden",
-              border: "1px solid rgba(255,255,255,0.25)",
-              background: "rgba(255,255,255,0.08)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
+          <Link
+            href="/"
+            className="flex shrink-0 items-center gap-2 no-underline"
+            aria-label="SIDIRA — Dashboard"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo-puskesmas.png"
-              alt="Puskesmas Baruharjo"
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-                borderRadius: "inherit",
-              }}
-            />
-          </span>
-          <span
-            className={railCollapsed ? "md:hidden" : undefined}
-            style={{
-              fontSize: "16px",
-              fontWeight: 800,
-              letterSpacing: "0.5px",
-              color: "#fff",
-              fontFamily: "Inter, system-ui, sans-serif",
-              whiteSpace: "nowrap",
-            }}
-          >
-            SIDIRA
-          </span>
-        </Link>
-        {/* Tombol tutup drawer — hanya di mobile, di ujung kanan band logo */}
-        <button
-          type="button"
-          aria-label="Tutup navigasi"
-          onClick={() => setOpen(false)}
-          className="ml-auto md:hidden"
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 8,
-            border: "1px solid rgba(255,255,255,0.2)",
-            background: "rgba(255,255,255,0.08)",
-            color: "#fff",
-            fontSize: 14,
-            lineHeight: 1,
-            cursor: "pointer",
-            flexShrink: 0,
-          }}
-        >
-          ✕
-        </button>
-      </div>
-      {/* ═══ Menu utama ═══ */}
-      <div style={sectionHeaderStyle} className={railCollapsed ? "md:hidden" : undefined}>
-        🏠 Utama
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
-        {makeTab("/", "🏠", "Dashboard", pathname === "/")}
-      </div>
-
-      {/* ═══ Divider ═══ */}
-      <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "6px 12px" }} />
-
-      {/* ═══ Seksi Ruangan ═══ */}
-      {renderSectionHeader("ruangan", "🏥 Ruangan")}
-
-      {!isCollapsed("ruangan") && (
-        <>
-          <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
-            {rooms.map((room) => makeTab(`/inventaris/${room.id}`, room.icon, room.name))}
-          </div>
-
+            <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-border bg-surface-muted">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo-puskesmas.png"
+                alt="Puskesmas Baruharjo"
+                className="size-full object-contain"
+              />
+            </span>
+            <span
+              className={cn(
+                "whitespace-nowrap text-[16px] font-extrabold tracking-tight text-foreground",
+                railCollapsed && "md:hidden"
+              )}
+            >
+              <span className="text-primary">SIDI</span>RA
+            </span>
+          </Link>
+          {/* Tombol tutup drawer — hanya di mobile */}
           <button
             type="button"
-            title="Tambah Ruangan"
-            aria-label="Tambah Ruangan"
-            onClick={() => setAddRoomOpen(true)}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "rgba(255,255,255,0.9)";
-              e.currentTarget.style.background = "rgba(255,255,255,0.07)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = "rgba(255,255,255,0.35)";
-              e.currentTarget.style.background = "transparent";
-            }}
-            style={{
-              display: "block",
-              padding: "8px 10px",
-              margin: "0 8px",
-              fontSize: "11.5px",
-              fontWeight: 600,
-              borderRadius: 7,
-              color: "rgba(255,255,255,0.35)",
-              background: "transparent",
-              border: "none",
-              textAlign: "left",
-              cursor: "pointer",
-              transition: "all 0.15s",
-              whiteSpace: "nowrap",
-            }}
-            className={railCollapsed ? "md:mx-auto! md:text-center!" : undefined}
+            aria-label="Tutup navigasi"
+            onClick={() => setOpen(false)}
+            className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-sm border border-border bg-surface text-text-2 transition-colors hover:bg-surface-muted hover:text-foreground md:hidden"
           >
-            <span className={railCollapsed ? "md:hidden" : undefined}>＋ Tambah Ruangan</span>
-            {railCollapsed && (
-              <span aria-hidden="true" className="hidden md:inline">
-                ＋
-              </span>
-            )}
+            <X size={16} />
           </button>
-        </>
-      )}
+        </div>
 
-      {/* ═══ Divider ═══ */}
-      <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "6px 12px" }} />
-
-      {/* ═══ Seksi Utilitas ═══ */}
-      {renderSectionHeader("utilitas", "⚙️ Utilitas")}
-
-      {!isCollapsed("utilitas") && (
-        <>
-          <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
-            {utilitas.map((u) => makeTab(`/utilitas/${u.util_id}`, u.icon, u.label))}
+        {/* ═══ Menu utama ═══ */}
+        <div className="flex flex-1 flex-col px-2 pb-4">
+          {renderSectionHeader("utama", "Utama")}
+          <div className="flex flex-col gap-0.5">
+            {makeTab("/", navIcon(<SquaresFour size={18} />), "Dashboard", pathname === "/")}
           </div>
 
-          <button
-            type="button"
-            title="Tambah Utilitas"
-            aria-label="Tambah Utilitas"
-            onClick={() => setAddUtilOpen(true)}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "rgba(255,255,255,0.9)";
-              e.currentTarget.style.background = "rgba(255,255,255,0.07)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = "rgba(255,255,255,0.35)";
-              e.currentTarget.style.background = "transparent";
-            }}
-            style={{
-              display: "block",
-              padding: "8px 10px",
-              margin: "0 8px",
-              fontSize: "11.5px",
-              fontWeight: 600,
-              borderRadius: 7,
-              color: "rgba(255,255,255,0.35)",
-              background: "transparent",
-              border: "none",
-              textAlign: "left",
-              cursor: "pointer",
-              transition: "all 0.15s",
-              whiteSpace: "nowrap",
-            }}
-            className={railCollapsed ? "md:mx-auto! md:text-center!" : undefined}
-          >
-            <span className={railCollapsed ? "md:hidden" : undefined}>＋ Tambah Utilitas</span>
-            {railCollapsed && (
-              <span aria-hidden="true" className="hidden md:inline">
-                ＋
-              </span>
-            )}
-          </button>
-        </>
-      )}
+          <div className="my-2 h-px bg-border" />
 
-      {/* ═══ Divider ═══ */}
-      <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "6px 12px" }} />
+          {/* ═══ Ruangan ═══ */}
+          {renderSectionHeader("ruangan", "Ruangan")}
+          {!isCollapsed("ruangan") && (
+            <div className="flex flex-col gap-0.5">
+              {rooms.map((room) => makeTab(`/inventaris/${room.id}`, roomIcon(room.icon), room.name))}
+              {addButton("Ruangan", () => setAddRoomOpen(true))}
+            </div>
+          )}
 
-      {/* ═══ Seksi Barang Keluar (SBBK) ═══ */}
-      {renderSectionHeader("sbbk", "📋 Barang Keluar")}
+          <div className="my-2 h-px bg-border" />
 
-      {!isCollapsed("sbbk") && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
-          {makeTab("/sbbk", "📤", "SBBK")}
+          {/* ═══ Utilitas ═══ */}
+          {renderSectionHeader("utilitas", "Utilitas")}
+          {!isCollapsed("utilitas") && (
+            <div className="flex flex-col gap-0.5">
+              {makeTab("/utilitas", navIcon(<GearSix size={18} />), "Semua Utilitas")}
+              {utilitas.map((u) => makeTab(`/utilitas/${u.util_id}`, roomIcon(u.icon), u.label))}
+              {addButton("Utilitas", () => setAddUtilOpen(true))}
+            </div>
+          )}
+
+          <div className="my-2 h-px bg-border" />
+
+          {/* ═══ Barang Keluar (SBBK) ═══ */}
+          {renderSectionHeader("sbbk", "Barang Keluar")}
+          {!isCollapsed("sbbk") && (
+            <div className="flex flex-col gap-0.5">
+              {makeTab("/sbbk", navIcon(<ArrowSquareOut size={18} />), "SBBK")}
+            </div>
+          )}
+
+          <div className="my-2 h-px bg-border" />
+
+          {/* ═══ Rekap Inventaris ═══ */}
+          {renderSectionHeader("rekap", "Rekap Inventaris")}
+          {!isCollapsed("rekap") && (
+            <div className="flex flex-col gap-0.5">
+              {makeTab("/rekap", navIcon(<ChartBar size={18} />), "Pemegang Inventaris")}
+            </div>
+          )}
+
+          <div className="my-2 h-px bg-border" />
+
+          {/* ═══ Pakta Integritas ═══ */}
+          {renderSectionHeader("pakta", "Pakta Integritas")}
+          {!isCollapsed("pakta") && (
+            <div className="flex flex-col gap-0.5">
+              {makeTab("/pakta", navIcon(<FileText size={18} />), "Pakta")}
+            </div>
+          )}
+
+          <div className="my-2 h-px bg-border" />
+
+          {/* ═══ Admin ═══ */}
+          {renderSectionHeader("admin", "Admin")}
+          {!isCollapsed("admin") && (
+            <div className="flex flex-col gap-0.5">
+              {makeTab("/admin", navIcon(<UsersThree size={18} />), "Users")}
+            </div>
+          )}
+
         </div>
-      )}
 
-      {/* ═══ Divider ═══ */}
-      <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "6px 12px" }} />
-
-      {/* ═══ Seksi Rekap Inventaris ═══ */}
-      {renderSectionHeader("rekap", "📊 Rekap Inventaris")}
-
-      {!isCollapsed("rekap") && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
-          {makeTab("/rekap", "📊", "Pemegang Inventaris")}
-        </div>
-      )}
-
-      {/* ═══ Divider ═══ */}
-      <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "6px 12px" }} />
-
-      {/* ═══ Seksi Pakta Integritas ═══ */}
-      {renderSectionHeader("pakta", "📝 Pakta Integritas")}
-
-      {!isCollapsed("pakta") && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
-          {makeTab("/pakta", "📝", "Pakta")}
-        </div>
-      )}
-
-      {/* ═══ Divider ═══ */}
-      <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "6px 12px" }} />
-
-      {/* ═══ Seksi Admin ═══ */}
-      {renderSectionHeader("admin", "🛡️ Admin")}
-
-      {!isCollapsed("admin") && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "4px 8px" }}>
-          {makeTab("/admin", "👥", "Users")}
-        </div>
-      )}
-
-      {/* GAS #modalOverlay & #utilModalOverlay — dibuka dari sidebar */}
-      <AddRoomModal
-        key={addRoomOpen ? "room-open" : "room-closed"}
-        open={addRoomOpen}
-        onClose={() => setAddRoomOpen(false)}
-        onCreated={(roomId) => {
-          setOpen(false);
-          router.push(`/inventaris/${roomId}`);
-        }}
-      />
-      <AddUtilitasModal
-        key={addUtilOpen ? "util-open" : "util-closed"}
-        open={addUtilOpen}
-        onClose={() => setAddUtilOpen(false)}
-        onCreated={(utilId) => {
-          setOpen(false);
-          router.push(`/utilitas/${utilId}`);
-        }}
-      />
+        {/* Modals dibuka dari sidebar */}
+        <AddRoomModal
+          key={addRoomOpen ? "room-open" : "room-closed"}
+          open={addRoomOpen}
+          onClose={() => setAddRoomOpen(false)}
+          onCreated={(roomId) => {
+            setOpen(false);
+            router.push(`/inventaris/${roomId}`);
+          }}
+        />
+        <AddUtilitasModal
+          key={addUtilOpen ? "util-open" : "util-closed"}
+          open={addUtilOpen}
+          onClose={() => setAddUtilOpen(false)}
+          onCreated={(utilId) => {
+            setOpen(false);
+            router.push(`/utilitas/${utilId}`);
+          }}
+        />
       </aside>
     </>
   );

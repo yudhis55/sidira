@@ -5,36 +5,20 @@ import { useIsClient } from "@/lib/use-is-client";
 import { WidgetCard, WidgetEmpty, WidgetLink } from "./widget-card";
 
 const SEGMENTS = [
-  { key: "baik", label: "Baik", color: "var(--teal)" },
-  { key: "rr", label: "Rusak ringan", color: "var(--amber)" },
-  { key: "rb", label: "Rusak berat", color: "var(--red)" },
-  { key: "ta", label: "Tidak aktif", color: "var(--slate)" },
+  { key: "baik", label: "Baik", color: "var(--success)" },
+  { key: "rr", label: "Rusak ringan", color: "var(--warning)" },
+  { key: "rb", label: "Rusak berat", color: "var(--danger)" },
+  { key: "ta", label: "Tidak aktif", color: "var(--text-3)" },
 ] as const;
 
 export type KondisiKey = (typeof SEGMENTS)[number]["key"];
-
-/**
- * Hex dari var token globals.css — atribut SVG Recharts tidak bisa pakai
- * CSS var secara andalan, jadi nilai yang sama di-hardcode di sini.
- * --teal #0e7c6b · --amber #b45309 · --red #b91c1c · --slate #475569
- */
-const SEGMENT_HEX: Record<KondisiKey, string> = {
-  baik: "#0e7c6b",
-  rr: "#b45309",
-  rb: "#b91c1c",
-  ta: "#475569",
-};
-
-const INK = "#0f1923";
-const LINE = "#e2e8ef";
-const FONT_MONO = "'JetBrains Mono', monospace";
 
 /** Tinggi tetap donat — dipakai chart & placeholder pra-hidrasi. */
 const CHART_HEIGHT = 260;
 
 type DonutDatum = { key: KondisiKey; name: string; value: number };
 
-/** Tooltip minimal: kartu putih kecil, border tipis, teks Indonesia. */
+/** Tooltip minimal: kartu permukaan, border 1px, angka mono. */
 function DonutTooltip({
   active,
   payload,
@@ -49,19 +33,10 @@ function DonutTooltip({
   const value = Number(item.value ?? 0);
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
-    <div
-      style={{
-        background: "#fff",
-        border: `1px solid ${LINE}`,
-        borderRadius: "8px",
-        padding: "6px 10px",
-        fontSize: "12px",
-        color: INK,
-        fontFamily: FONT_MONO,
-        whiteSpace: "nowrap",
-      }}
-    >
-      {item.name}: {value} ({pct}%)
+    <div className="whitespace-nowrap rounded-md border border-border bg-surface px-2.5 py-1.5 text-[12px] text-text-2">
+      {item.name}:{" "}
+      <span className="font-mono tabular-nums text-foreground">{value}</span> (
+      <span className="font-mono tabular-nums">{pct}%</span>)
     </div>
   );
 }
@@ -82,7 +57,7 @@ export function DonutKondisi({
 
   if (total === 0) {
     return (
-      <WidgetCard title="Kondisi Aset" action={<WidgetLink href="/laporan" label="Lihat laporan →" />}>
+      <WidgetCard title="Kondisi Aset" action={<WidgetLink href="/laporan" label="Lihat laporan" />}>
         <WidgetEmpty message="Belum ada data item." />
       </WidgetCard>
     );
@@ -103,7 +78,8 @@ export function DonutKondisi({
     <div
       role="img"
       aria-label={`Ringkasan kondisi ${total} item: ${summary}`}
-      style={{ position: "relative", width: "100%", height: CHART_HEIGHT }}
+      className="relative w-full"
+      style={{ height: CHART_HEIGHT }}
     >
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <PieChart>
@@ -123,7 +99,11 @@ export function DonutKondisi({
             isAnimationActive={false}
           >
             {data.map((d) => (
-              <Cell key={d.key} fill={SEGMENT_HEX[d.key]} />
+              <Cell
+                key={d.key}
+                fill={SEGMENTS.find((seg) => seg.key === d.key)?.color}
+                fillOpacity={d.key === "ta" ? 0.4 : 1}
+              />
             ))}
           </Pie>
           <Tooltip
@@ -135,36 +115,12 @@ export function DonutKondisi({
       {/* Teks tengah di atas ResponsiveContainer (absolute overlay). */}
       <div
         aria-hidden="true"
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          pointerEvents: "none",
-        }}
+        className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"
       >
-        <span
-          style={{
-            fontFamily: FONT_MONO,
-            fontWeight: 800,
-            fontSize: "28px",
-            lineHeight: 1.1,
-            color: INK,
-          }}
-        >
+        <span className="font-mono text-[26px] font-bold leading-none tabular-nums text-foreground">
           {total}
         </span>
-        <span
-          style={{
-            fontSize: "11px",
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "0.4px",
-            color: "#5e7080",
-          }}
-        >
+        <span className="mt-1 text-[11px] font-medium uppercase tracking-wide text-text-3">
           item
         </span>
       </div>
@@ -172,67 +128,35 @@ export function DonutKondisi({
   );
 
   return (
-    <WidgetCard title="Kondisi Aset" action={<WidgetLink href="/laporan" label="Lihat laporan →" />}>
+    <WidgetCard title="Kondisi Aset" action={<WidgetLink href="/laporan" label="Lihat laporan" />}>
       {!isClient ? (
         // Placeholder pra-hidrasi: tinggi sama, tanpa markup chart.
         <div
           aria-hidden="true"
-          style={{
-            height: CHART_HEIGHT,
-            borderRadius: "50%",
-            background: "var(--line2)",
-            margin: "0 auto",
-            width: CHART_HEIGHT,
-            maxWidth: "100%",
-          }}
+          className="mx-auto max-w-full rounded-full bg-surface-subtle"
+          style={{ height: CHART_HEIGHT, width: CHART_HEIGHT }}
         />
       ) : (
         chart
       )}
 
-      {/* Legenda: titik warna + label + hitungan (gaya sama seperti sebelumnya). */}
-      <ul
-        style={{
-          listStyle: "none",
-          margin: "12px 0 0",
-          padding: 0,
-          display: "grid",
-          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-          gap: "6px 20px",
-        }}
-      >
+      {/* Legenda: titik warna + label + hitungan. */}
+      <ul className="mt-3 grid list-none grid-cols-2 gap-x-5 gap-y-1.5 p-0">
         {SEGMENTS.map((seg) => (
           <li
             key={seg.key}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              fontSize: "12.5px",
-              color: "var(--ink2)",
-              minWidth: 0,
-            }}
+            className="flex min-w-0 items-center gap-2 text-[12px] text-text-2"
           >
             <span
               aria-hidden="true"
+              className="size-2 shrink-0 rounded-full"
               style={{
-                width: "10px",
-                height: "10px",
-                borderRadius: "50%",
-                background: SEGMENT_HEX[seg.key],
-                flexShrink: 0,
+                background: seg.color,
+                opacity: seg.key === "ta" ? 0.4 : 1,
               }}
             />
-            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {seg.label}
-            </span>
-            <span
-              style={{
-                fontFamily: FONT_MONO,
-                fontWeight: 700,
-                flexShrink: 0,
-              }}
-            >
+            <span className="flex-1 truncate">{seg.label}</span>
+            <span className="shrink-0 font-mono text-[12px] tabular-nums text-foreground">
               {counts[seg.key] ?? 0}
             </span>
           </li>

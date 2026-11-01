@@ -1,4 +1,14 @@
 import { Suspense } from "react";
+import {
+  ArmchairIcon,
+  ArrowUpRightIcon,
+  ClipboardTextIcon,
+  FirstAidIcon,
+  LaptopIcon,
+  PackageIcon,
+  WarningIcon,
+} from "@phosphor-icons/react/ssr";
+import { cn } from "@/lib/utils";
 import { getRooms } from "@/lib/auth/rooms";
 import { getAllItems } from "@/lib/auth/items";
 import { getUsulanList } from "@/lib/auth/usulan";
@@ -213,200 +223,165 @@ export default async function DashboardPage() {
     .sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime())
     .slice(0, 7);
 
-  // GAS gstat icon bg: teal3 / teal3 / amber2 / blue2 / red2 / #f5f3ff
-  // GAS value colors: teal / teal / amber / blue / red / #7c3aed
   const pctOf = (v: number) =>
     totalItems > 0 ? Math.round((v / totalItems) * 100) : 0;
-  const stats = [
+
+  type StatTone = "neutral" | "danger" | "info";
+  const stats: Array<{
+    icon: typeof PackageIcon;
+    value: number;
+    label: string;
+    sub: string;
+    share: number;
+    tone: StatTone;
+    href?: string;
+  }> = [
     {
-      emoji: "📦",
+      icon: PackageIcon,
       value: totalItems,
       label: "Total Item",
       sub: `di ${rooms.length} ruangan`,
       share: 100,
-      bg: "var(--teal3)",
-      color: "var(--teal)",
+      tone: "neutral",
     },
     {
-      emoji: "🩺",
+      icon: FirstAidIcon,
       value: alkes,
       label: "Alat Kesehatan",
       sub: `${pctOf(alkes)}% dari total`,
       share: pctOf(alkes),
-      bg: "var(--teal3)",
-      color: "var(--teal)",
+      tone: "neutral",
     },
     {
-      emoji: "🪑",
+      icon: ArmchairIcon,
       value: meubelair,
       label: "Meubelair",
       sub: `${pctOf(meubelair)}% dari total`,
       share: pctOf(meubelair),
-      bg: "var(--amber2)",
-      color: "var(--amber)",
+      tone: "neutral",
     },
     {
-      emoji: "💻",
+      icon: LaptopIcon,
       value: elektronik,
       label: "Elektronik",
       sub: `${pctOf(elektronik)}% dari total`,
       share: pctOf(elektronik),
-      bg: "var(--blue2)",
-      color: "var(--blue)",
+      tone: "neutral",
     },
     {
-      emoji: "⚠️",
+      icon: WarningIcon,
       value: perluPerhatian,
       label: "Perlu Perhatian",
       sub: `${pctOf(perluPerhatian)}% perlu tindak lanjut`,
       share: pctOf(perluPerhatian),
-      bg: "var(--red2)",
-      color: "var(--red)",
+      tone: "danger",
       href: "/laporan",
     },
     {
-      emoji: "📋",
+      icon: ClipboardTextIcon,
       value: usulanAktif,
       label: "Usulan Aktif",
-      sub: usulanAktif > 0 ? "menunggu diproses" : "antrean kosong 🎉",
+      sub: usulanAktif > 0 ? "menunggu diproses" : "antrean kosong",
       share: usulanAktif > 0 ? 100 : 0,
-      bg: "#f5f3ff",
-      color: "#7c3aed",
+      tone: "info",
       href: "/usulan",
     },
   ];
 
   return (
     <div>
-      {/* ── Judul halaman — pola sama dengan PageHeader modul lain
-          (h1 font-mono + subtitle), tanpa aksen warna (akromatik). ── */}
-      <div style={{ marginBottom: "20px" }}>
-        <h1 className="font-mono text-xl font-bold tracking-tight text-ink">
+      {/* ── Judul halaman — sans (Jakarta) seperti PageHeader modul lain.
+          Mono hanya untuk angka, bukan judul. ── */}
+      <div className="mb-5">
+        <h1 className="text-[22px] font-bold leading-tight tracking-tight text-foreground">
           Dashboard
         </h1>
-        <p className="text-xs text-muted-foreground">
+        <p className="mt-1 text-[13px] text-text-3">
           Ringkasan aset Puskesmas Baruharjo · {todayLabel}
         </p>
       </div>
 
       {/* ── Global Stats — 6 kartu pas: 2 kolom HP, 3 tablet, 6 desktop ── */}
       <div
-        className="gstats grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6"
+        className="gstats mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6"
         id="gstats"
-        style={{
-          marginBottom: "20px",
-        }}
       >
         {stats.map((s) => {
+          const Icon = s.icon;
+          const alert = s.tone === "danger" && s.value > 0;
+          const iconClass =
+            s.tone === "danger"
+              ? alert
+                ? "bg-danger-soft text-danger"
+                : "bg-surface-muted text-text-3"
+              : s.tone === "info"
+                ? "bg-info-soft text-info"
+                : "bg-primary-soft text-primary";
+          const barClass =
+            s.tone === "danger"
+              ? "bg-danger"
+              : s.tone === "info"
+                ? "bg-info"
+                : "bg-primary";
+          const cardClass = cn(
+            "group flex h-full flex-col rounded-md border border-border bg-surface p-4 transition-colors",
+            s.href && "hover:border-border-strong"
+          );
           const body = (
             <>
               <div className="flex items-start justify-between gap-2">
-                <div
-                  className="gstat-ico"
-                  style={{
-                    width: "42px",
-                    height: "42px",
-                    borderRadius: "12px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "21px",
-                    flexShrink: 0,
-                    background: s.bg,
-                    lineHeight: 1,
-                  }}
+                <span
+                  className={cn(
+                    "flex size-10 shrink-0 items-center justify-center rounded-md",
+                    iconClass
+                  )}
                 >
-                  {s.emoji}
-                </div>
-                {"href" in s && s.href && (
-                  <span
-                    aria-hidden
-                    className="text-ink3 transition-transform group-hover:translate-x-0.5"
-                    style={{ fontSize: "15px", lineHeight: 1 }}
-                  >
-                    →
-                  </span>
+                  <Icon size={20} weight="bold" aria-hidden="true" />
+                </span>
+                {s.href && (
+                  <ArrowUpRightIcon
+                    size={14}
+                    weight="bold"
+                    aria-hidden="true"
+                    className="text-text-3 opacity-0 transition-opacity group-hover:opacity-100"
+                  />
                 )}
               </div>
               <div
-                className="gstat-v"
-                style={{
-                  fontSize: "30px",
-                  fontWeight: 800,
-                  fontFamily: "var(--font-mono), 'JetBrains Mono', monospace",
-                  color: s.color,
-                  lineHeight: 1.1,
-                  marginTop: "10px",
-                }}
+                className={cn(
+                  "mt-2.5 font-mono text-[30px] font-bold leading-none tabular-nums",
+                  alert ? "text-danger" : "text-foreground"
+                )}
               >
                 {s.value}
               </div>
-              <div
-                className="gstat-l"
-                style={{
-                  fontSize: "11px",
-                  color: "var(--ink)",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.4px",
-                  marginTop: "2px",
-                }}
-              >
+              <div className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-text-3">
                 {s.label}
               </div>
-              <div
-                style={{
-                  fontSize: "11px",
-                  color: "var(--ink3)",
-                  marginTop: "1px",
-                }}
-              >
-                {s.sub}
-              </div>
-              <div
-                className="gstat-bar"
-                style={{
-                  height: "5px",
-                  borderRadius: "99px",
-                  background: "var(--line2)",
-                  marginTop: "10px",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    height: "100%",
-                    width: `${Math.min(100, Math.max(0, s.share))}%`,
-                    borderRadius: "99px",
-                    background: s.color,
-                  }}
-                />
+              <div className="mt-0.5 text-[12px] text-text-2">{s.sub}</div>
+              <div className="mt-auto pt-2.5">
+                <div className="h-1 overflow-hidden rounded-full bg-surface-subtle">
+                  <div
+                    className={cn("h-full rounded-full", barClass)}
+                    style={{
+                      width: `${Math.min(100, Math.max(0, s.share))}%`,
+                    }}
+                  />
+                </div>
               </div>
             </>
           );
-          const cardStyle = {
-            background: "#fff",
-            border: "1px solid var(--line)",
-            borderRadius: "16px",
-            padding: "18px",
-            height: "100%",
-          } as const;
-          return "href" in s && s.href ? (
+          return s.href ? (
             <a
               key={s.label}
               href={s.href}
-              className="gstat group block transition-all hover:-translate-y-0.5 hover:shadow-md"
-              style={cardStyle}
+              className={cardClass}
               title={`Buka ${s.label.toLowerCase()}`}
             >
               {body}
             </a>
           ) : (
-            <div
-              key={s.label}
-              className="gstat"
-              style={cardStyle}
-            >
+            <div key={s.label} className={cardClass}>
               {body}
             </div>
           );
@@ -414,10 +389,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Widget overview — 5 kartu di bawah gstats ─────────────── */}
-      <div
-        className="grid gap-4 md:grid-cols-2"
-        style={{ marginBottom: "20px" }}
-      >
+      <div className="mb-5 grid gap-4 md:grid-cols-2">
         <DonutKondisi counts={donutCounts} />
         <TopRuangan rows={topRuanganRows} />
         <UsulanMenunggu
@@ -436,7 +408,7 @@ export default async function DashboardPage() {
 
       {/* ── Page Actions — Laporan + Riwayat modals (T6 wiring) ────── */}
       {riwayatError && (
-        <p role="alert" className="text-center py-4 text-[12.5px] text-ink3">
+        <p role="alert" className="text-center py-4 text-[12.5px] text-text-3">
           Gagal memuat riwayat perpindahan. Silakan muat ulang halaman.
         </p>
       )}
