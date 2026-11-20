@@ -19,7 +19,7 @@ export default async function QrBulkPrintPage() {
   try {
     await requireRole(["admin", "editor"]);
   } catch {
-    redirect("/");
+    redirect("/dashboard");
   }
 
   const rooms = await getRooms().catch(() => []);

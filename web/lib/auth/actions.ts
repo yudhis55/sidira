@@ -46,7 +46,7 @@ export async function login(formData: FormData) {
     .eq("id", profile.id);
 
   revalidatePath("/", "layout");
-  redirect("/");
+  redirect("/dashboard");
 }
 
 export async function signup(formData: FormData) {

@@ -13,7 +13,7 @@ export default async function AdminLayout({
   try {
     await requireRole(["admin"]);
   } catch {
-    redirect("/");
+    redirect("/dashboard");
   }
 
   return <>{children}</>;

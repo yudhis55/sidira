@@ -3,6 +3,7 @@ import { SiteHeader } from "./site-header";
 import { MainContent } from "./main-content";
 import { getRooms } from "@/lib/auth/rooms";
 import { getUtilMetaList } from "@/lib/auth/utilitas";
+import { getUser } from "@/lib/auth/utils";
 import type { SiteHeaderProfile } from "./site-header";
 
 /**
@@ -30,11 +31,15 @@ export async function AppLayout({
   children: React.ReactNode;
   profile?: SiteHeaderProfile | null;
 }) {
-  const [rooms, utilitas] = await Promise.all([getRooms(), getUtilMetaList()]);
+  const [rooms, utilitas, user] = await Promise.all([
+    getRooms(),
+    getUtilMetaList(),
+    getUser(),
+  ]);
 
   return (
     <div className="flex w-full flex-1 items-start">
-      <RoomNav rooms={rooms} utilitas={utilitas} />
+      <RoomNav rooms={rooms} utilitas={utilitas} role={user?.role} />
       <div className="flex min-w-0 flex-1 flex-col">
         <SiteHeader profile={profile} />
         <MainContent>{children}</MainContent>

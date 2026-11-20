@@ -4,13 +4,15 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  ArrowSquareOut,
   CaretDown,
   ChartBar,
-  FileText,
+  ClipboardText,
   GearSix,
+  Package,
   Plus,
+  Scroll,
   SquaresFour,
+  UserList,
   UsersThree,
   X,
 } from "@phosphor-icons/react";
@@ -27,12 +29,18 @@ export interface RoomNavProps {
   rooms?: Room[];
   /** Daftar utilitas dari Supabase (via AppLayout). */
   utilitas?: UtilMeta[];
+  /** Peran pengguna aktif — dipakai untuk menampilkan menu khusus admin. */
+  role?: string;
 }
 
 /** Key sessionStorage untuk status collapse seksi sidebar (per sesi). */
 const NAV_COLLAPSE_KEY = "sidira:nav-collapsed";
 
-export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: RoomNavProps) {
+export function RoomNav({
+  rooms: baseRooms = [],
+  utilitas: baseUtilitas = [],
+  role,
+}: RoomNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   // Ruangan/utilitas tambahan serta hasil sunting ikut tercermin di sidebar.
@@ -86,6 +94,10 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
     if (p.startsWith("/sbbk")) return "sbbk";
     if (p.startsWith("/rekap")) return "rekap";
     if (p.startsWith("/pakta")) return "pakta";
+    if (p.startsWith("/admin/katalog")) return "marketplace";
+    if (p.startsWith("/admin/whitelist")) return "marketplace";
+    if (p.startsWith("/katalog")) return "marketplace";
+    if (p.startsWith("/pengajuan")) return "marketplace";
     if (p.startsWith("/admin")) return "admin";
     return null;
   };
@@ -209,7 +221,7 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
           )}
         >
           <Link
-            href="/"
+            href="/dashboard"
             className="flex shrink-0 items-center gap-2 no-underline"
             aria-label="SIDIRA — Dashboard"
           >
@@ -245,8 +257,24 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
         <div className="flex flex-1 flex-col px-2 pb-4">
           {renderSectionHeader("utama", "Utama")}
           <div className="flex flex-col gap-0.5">
-            {makeTab("/", navIcon(<SquaresFour size={18} />), "Dashboard", pathname === "/")}
+            {makeTab("/dashboard", navIcon(<SquaresFour size={18} />), "Dashboard")}
           </div>
+
+          <div className="my-2 h-px bg-border" />
+
+          {/* ═══ Pengajuan & Katalog ═══ */}
+          {renderSectionHeader("marketplace", "Pengajuan & Katalog")}
+          {!isCollapsed("marketplace") && (
+            <div className="flex flex-col gap-0.5">
+              {makeTab("/pengajuan", navIcon(<ClipboardText size={18} />), "Pengajuan")}
+              {role === "admin" && (
+                <>
+                  {makeTab("/admin/katalog", navIcon(<Package size={18} />), "Kelola Katalog")}
+                  {makeTab("/admin/whitelist", navIcon(<UserList size={18} />), "Whitelist")}
+                </>
+              )}
+            </div>
+          )}
 
           <div className="my-2 h-px bg-border" />
 
@@ -277,7 +305,7 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
           {renderSectionHeader("sbbk", "Barang Keluar")}
           {!isCollapsed("sbbk") && (
             <div className="flex flex-col gap-0.5">
-              {makeTab("/sbbk", navIcon(<ArrowSquareOut size={18} />), "SBBK")}
+              {makeTab("/sbbk", navIcon(<ClipboardText size={18} />), "SBBK")}
             </div>
           )}
 
@@ -297,7 +325,7 @@ export function RoomNav({ rooms: baseRooms = [], utilitas: baseUtilitas = [] }: 
           {renderSectionHeader("pakta", "Pakta Integritas")}
           {!isCollapsed("pakta") && (
             <div className="flex flex-col gap-0.5">
-              {makeTab("/pakta", navIcon(<FileText size={18} />), "Pakta")}
+              {makeTab("/pakta", navIcon(<Scroll size={18} />), "Pakta BMD")}
             </div>
           )}
 

@@ -143,7 +143,11 @@ export default async function DashboardPage() {
   const perluPerhatian = items.filter((i) =>
     ["rr", "rb", "ta"].includes(i.condition),
   ).length;
-  const usulanAktif = usulan.length;
+  // Usulan aktif = item usulan yang belum ditolak (GAS updateGlobalUsulanStat).
+  const usulanAktif = usulan.reduce(
+    (n, u) => n + (u.payload?.items ?? []).filter((it) => it.status !== "ditolak").length,
+    0,
+  );
 
   // ── Widget overview (data asli, dihitung di server) ────────────────
   const roomNameById = new Map(rooms.map((r) => [r.id, r.name]));

@@ -1,16 +1,15 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
-  CalendarBlank,
   CaretDown,
-  Check,
+  House,
   List,
   SignOut,
 } from "@phosphor-icons/react";
 import { GlobalSearchBar } from "@/components/gas/global-search-bar";
 import { logout } from "@/lib/auth/actions";
-import { AVAILABLE_YEARS, useActiveYear } from "@/lib/year-store";
 import { useNavUi } from "@/lib/nav-ui-store";
 import { cn } from "@/lib/utils";
 
@@ -26,88 +25,8 @@ export interface SiteHeaderProps {
 }
 
 /**
- * Chip KIR — pemilih tahun aktif global (tersimpan lokal).
- * Checklist & laporan menjadikannya tahun awal.
- */
-function YearChip() {
-  const [year, setYear] = useActiveYear();
-  const [open, setOpen] = React.useState(false);
-  const wrapRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  return (
-    <div ref={wrapRef} className="relative shrink-0">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        title="Ganti tahun inventaris aktif"
-        className="inline-flex h-8 items-center gap-1.5 rounded-sm border border-border bg-surface px-2.5 text-[12px] font-medium text-text-2 transition-colors duration-150 outline-none hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-ring/35"
-      >
-        <CalendarBlank size={15} aria-hidden="true" />
-        <span>
-          <span className="hidden sm:inline">KIR </span>
-          <span className="font-mono text-[12px] font-semibold text-foreground">{year}</span>
-        </span>
-        <CaretDown size={11} aria-hidden="true" className="text-text-3" />
-      </button>
-      {open && (
-        <div
-          role="listbox"
-          aria-label="Pilih tahun inventaris"
-          className="absolute right-0 top-[calc(100%+6px)] z-[60] min-w-[148px] rounded-lg border border-border bg-surface p-1 shadow-[0_12px_32px_rgba(15,23,42,0.12)]"
-        >
-          {AVAILABLE_YEARS.map((y) => {
-            const active = y === year;
-            return (
-              <button
-                key={y}
-                type="button"
-                role="option"
-                aria-selected={active}
-                onClick={() => {
-                  setYear(y);
-                  setOpen(false);
-                }}
-                className={cn(
-                  "flex w-full items-center gap-2 rounded-sm px-2.5 py-1.5 text-left text-[12px] transition-colors",
-                  active
-                    ? "bg-primary-soft font-semibold text-primary"
-                    : "font-medium text-text-2 hover:bg-surface-muted hover:text-foreground"
-                )}
-              >
-                <span className="flex w-3.5 shrink-0 justify-center">
-                  {active ? <Check size={12} weight="bold" aria-hidden="true" /> : null}
-                </span>
-                KIR {y}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
  * Topbar ramping SIDIRA — 60px, sticky di atas kolom konten saja.
- * Hamburger, search global, chip tahun, avatar + popover keluar.
+ * Hamburger, search global, tombol katalog publik, avatar + popover keluar.
  */
 export function SiteHeader({ profile }: SiteHeaderProps) {
   const toggleCollapsed = useNavUi((s) => s.toggleCollapsed);
@@ -176,9 +95,16 @@ export function SiteHeader({ profile }: SiteHeaderProps) {
           <GlobalSearchBar />
         </div>
 
-        {/* ── Kanan: chip tahun + akun ── */}
+        {/* ── Kanan: katalog publik + akun ── */}
         <div className="ml-auto flex shrink-0 items-center gap-2">
-          <YearChip />
+          <Link
+            href="/"
+            title="Buka beranda"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-sm border border-border bg-surface px-2.5 text-[12px] font-semibold text-text-2 transition-colors duration-150 outline-none hover:bg-surface-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/35"
+          >
+            <House size={15} aria-hidden />
+            <span className="hidden sm:inline">Beranda</span>
+          </Link>
 
           <div ref={accountRef} className="relative shrink-0">
             <button

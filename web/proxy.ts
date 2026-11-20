@@ -40,12 +40,26 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Redirect unauthenticated users to login
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth") &&
-    !request.nextUrl.pathname.startsWith("/r")
-  ) {
+  // Rute publik: landing/katalog ("/"), login, auth callback, QR publik
+  // (/r/[id]), dan pelacakan pengajuan. Pencocokan per-segmen agar "/r"
+  // tidak ikut membuka "/rekap" atau "/riwayat".
+  const pathname = request.nextUrl.pathname;
+  const publicPrefixes = [
+    "/",
+    "/login",
+    "/auth",
+    "/katalog",
+    "/lacak",
+    "/riwayat-pengajuan",
+  ];
+  const isPublic =
+    pathname === "/r" ||
+    pathname.startsWith("/r/") ||
+    publicPrefixes.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    );
+
+  if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
@@ -54,7 +68,7 @@ export async function proxy(request: NextRequest) {
   // Redirect authenticated users away from login
   if (user && request.nextUrl.pathname.startsWith("/login")) {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 
