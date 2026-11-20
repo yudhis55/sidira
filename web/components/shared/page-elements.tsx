@@ -271,7 +271,7 @@ export function FilterChips({
  * CategoryBadge / PriorityBadge — colored pills (data).
  * ─────────────────────────────────────────────── */
 const KAT_BADGE: Record<string, string> = {
-  alkes: "bg-danger-soft text-danger",
+  alkes: "bg-teal4 text-teal",
   meubelair: "bg-warning-soft text-warning",
   elektronik: "bg-info-soft text-info",
   lainnya: "bg-surface-muted text-text-2",

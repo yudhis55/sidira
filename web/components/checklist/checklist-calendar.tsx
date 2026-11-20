@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, Fragment } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef, Fragment } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLocalStorageState } from "@/lib/use-local-storage";
@@ -50,6 +50,11 @@ interface ChecklistCalendarProps {
   }>;
   /** Optional seed entries (mock page passes []). */
   entries?: ChecklistEntryLocal[];
+  /**
+   * GAS `.cl-footer`: modal ruangan memakai ref ini untuk tombol
+   * "Export CSV" yang mengekspor bulan yang sedang tampil.
+   */
+  exportRef?: { current: (() => void) | null };
 }
 
 const MONTH_NAMES_SHORT = [
@@ -153,6 +158,7 @@ export function ChecklistCalendar({
   items,
   entries,
   followGlobalYear = false,
+  exportRef,
 }: ChecklistCalendarProps) {
   const [activeYear] = useActiveYear();
   const [year, setYear] = useState(initialYear);
@@ -474,6 +480,19 @@ export function ChecklistCalendar({
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  // Ekspos export bulan aktif ke footer modal (GAS .cl-footer).
+  const exportCsvRef = useRef(exportCsv);
+  useEffect(() => {
+    exportCsvRef.current = exportCsv;
+  });
+  useEffect(() => {
+    if (!exportRef) return;
+    exportRef.current = () => exportCsvRef.current();
+    return () => {
+      exportRef.current = null;
+    };
+  }, [exportRef]);
 
   const openDetail = (
     item: ChecklistCalendarProps["items"][number],

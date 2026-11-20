@@ -3,7 +3,7 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { ChecklistCalendar } from "@/components/checklist/checklist-calendar";
-import { Check } from "@phosphor-icons/react";
+import { Check, DownloadSimple } from "@phosphor-icons/react";
 import { useIsClient } from "@/lib/use-is-client";
 import type { Item, Room } from "@/types/database";
 
@@ -28,6 +28,8 @@ export function ChecklistRoomModal({
 }: ChecklistRoomModalProps) {
   const mounted = useIsClient();
   const now = React.useMemo(() => new Date(), []);
+  // Diisi ChecklistCalendar — tombol Export CSV di footer (GAS .cl-footer).
+  const exportRef = React.useRef<(() => void) | null>(null);
 
   React.useEffect(() => {
     if (!open) return;
@@ -81,12 +83,22 @@ export function ChecklistRoomModal({
               month={now.getMonth()}
               items={calendarItems}
               entries={[]}
+              exportRef={exportRef}
             />
           </div>
         </div>
 
         {/* GAS .cl-footer — Export CSV + Tutup + Simpan */}
         <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-surface-subtle px-5 py-3">
+          <button
+            type="button"
+            onClick={() => exportRef.current?.()}
+            className="mr-auto inline-flex h-9 items-center justify-center gap-2 rounded-sm border border-border bg-surface px-4 text-[13px] font-semibold text-foreground transition-colors duration-150 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
+            title="Export entri ceklist bulan ini ke CSV"
+          >
+            <DownloadSimple size={15} aria-hidden />
+            Export CSV
+          </button>
           <button
             type="button"
             onClick={onClose}

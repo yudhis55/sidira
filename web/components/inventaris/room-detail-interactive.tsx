@@ -900,6 +900,38 @@ export function RoomDetailInteractive({
         </button>
       </div>
 
+      {/* ── Legend: GAS .legend-bar (kategori + prioritas) ── */}
+      <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-border bg-surface px-4 py-2.5 text-[12px]">
+        <span className="mr-1 font-semibold text-text-2">Keterangan:</span>
+        {CATEGORY_CONFIG.map((cat) => (
+          <span
+            key={cat.value}
+            className="inline-flex items-center gap-1.5 text-text-2"
+          >
+            <span
+              className={`size-2.5 shrink-0 rounded-full ${cat.dotColor}`}
+              aria-hidden
+            />
+            {cat.label}
+          </span>
+        ))}
+        <span
+          className="mx-1 hidden h-4 w-px shrink-0 bg-border sm:block"
+          aria-hidden
+        />
+        <span className="inline-flex items-center gap-1.5 text-text-2">
+          <span className="rounded-sm bg-warning-soft px-1.5 py-0.5 text-[10px] font-semibold text-warning">
+            Wajib
+          </span>
+          <span className="rounded-sm bg-info-soft px-1.5 py-0.5 text-[10px] font-semibold text-info">
+            Penting
+          </span>
+          <span className="rounded-sm bg-surface-muted px-1.5 py-0.5 text-[10px] font-semibold text-text-2">
+            Pendukung
+          </span>
+        </span>
+      </div>
+
       {/* ── Kategori: GAS hanya merender kategori yang berisi (~19148) ── */}
       <div className="space-y-5">
         {CATEGORY_CONFIG.map((cat) => {
@@ -1028,6 +1060,8 @@ export function RoomDetailInteractive({
                       {catItems.map((item, idx) => (
                         <tr
                           key={item.id}
+                          data-item-id={item.id}
+                          data-item-condition={item.condition}
                           className="border-b border-border transition-colors duration-150 last:border-b-0 hover:bg-surface-muted"
                         >
                           {/* No — GAS .td-no */}
@@ -1248,7 +1282,7 @@ export function RoomDetailInteractive({
                                 title="Hapus"
                                 aria-label={`Hapus ${item.name || "item"}`}
                               >
-                                <Trash size={16} aria-hidden />
+                                <X size={16} aria-hidden />
                               </button>
                             </div>
                           </td>

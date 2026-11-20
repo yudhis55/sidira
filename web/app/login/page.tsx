@@ -1,14 +1,13 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import {
   ArrowRight,
-  CheckCircle,
   CircleNotch,
   Eye,
   EyeSlash,
   Lock,
-  ShieldCheck,
   User,
   WarningCircle,
 } from "@phosphor-icons/react";
@@ -29,12 +28,6 @@ async function loginAction(
   const result = await login(formData);
   return { error: result?.error ?? "" };
 }
-
-const FEATURES = [
-  "Inventaris per ruangan yang rapi dan mudah diaudit",
-  "SBBK, pakta integritas, dan rekap dalam satu alur",
-  "Akses berbasis peran: admin, editor, viewer",
-];
 
 export default function LoginPage() {
   const [state, formAction, isPending] = useActionState(
@@ -63,9 +56,6 @@ export default function LoginPage() {
         </div>
 
         <div className="max-w-[440px]">
-          <div className="mb-5 flex size-11 items-center justify-center rounded-md border border-white/15 text-[#5eead4]">
-            <ShieldCheck size={22} />
-          </div>
           <h1 className="text-balance text-[30px] font-semibold leading-tight tracking-[-0.02em] text-white">
             Sistem Digital Inventaris Ruangan Aset
           </h1>
@@ -73,15 +63,6 @@ export default function LoginPage() {
             Satu tempat untuk mencatat, memverifikasi, dan melaporkan aset
             UPTD Puskesmas Baruharjo.
           </p>
-
-          <ul className="mt-8 flex flex-col gap-3">
-            {FEATURES.map((item) => (
-              <li key={item} className="flex items-start gap-2.5 text-[13px] leading-snug text-white/70">
-                <CheckCircle size={16} weight="fill" className="mt-0.5 shrink-0 text-[#5eead4]" />
-                {item}
-              </li>
-            ))}
-          </ul>
         </div>
 
         <p className="text-[11px] text-white/35">
@@ -204,19 +185,17 @@ export default function LoginPage() {
                 )}
               </Button>
             </form>
-
-            <div className="mt-5 rounded-sm border border-border bg-surface-subtle px-3.5 py-3 text-center">
-              <p className="text-[11px] leading-relaxed text-text-3">
-                <b className="font-semibold text-text-2">Admin:</b> sidira / sidira2026
-                <br />
-                <b className="font-semibold text-text-2">Kepala Puskesmas:</b> kapus / kapus2026
-                <br />
-                <b className="font-semibold text-text-2">Pengurus Barang:</b> pengurus / barang2026
-              </p>
-            </div>
           </div>
 
-          <p className="mt-5 text-center text-[11px] text-text-3">
+          <div className="mt-5 text-center">
+            <Link
+              href="/"
+              className="text-[11px] font-semibold text-text-2 underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Kembali ke Beranda
+            </Link>
+          </div>
+          <p className="mt-3 text-center text-[11px] text-text-3">
             SIDIRA v2.0 · Puskesmas Baruharjo · Trenggalek · 2026
           </p>
         </div>
